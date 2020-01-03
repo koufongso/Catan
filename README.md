@@ -1,3 +1,3 @@
 # Catan
-* HTML/Javascript practise
+* HTML/Javascript practice
 * The final goal is to make the catan board game.
