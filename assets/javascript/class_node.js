@@ -1,7 +1,8 @@
 class node {
-    constructor(id, adj) {
+    constructor(x,y,id, adj) {
+        this.location = [x,y];
         this.id = id;
-        this.tile = adj;
+        this.tile = adj;        // adjacent tile
         this.owner = "";
         this.house = 0;
         this.houseCap = 2;

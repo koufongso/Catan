@@ -1,9 +1,11 @@
 class tile {
-    constructor(id, resource, val) {
-        this.id = id;
+    constructor(x, y, id, coord, resource, val) {
+        this.location = [x, y];
+        this.id = id;                       // tile id
+        this.coord = coord;                 // tile coordination in [x,y,z], id = coord2ID(coord)
         this.val = val
         this.resource = resource;
-        this.nodeLisener = []; // store house node
+        this.nodeLisener = [];              // store house node
         this.forbidden = false;
     }
     /* add node to this tile for getting this tile's resource*/
@@ -12,7 +14,7 @@ class tile {
     }
 
     sendResource() {
-        if(!this.forbidden){
+        if (!this.forbidden) {
             for (var i = 0; i < this.nodeLisener.length; i++) {
                 var player = this.nodeLisener[i].owner;
                 var house = this.nodeLisener[i].house;
@@ -25,10 +27,10 @@ class tile {
         }
     }
 
-    forbid(){ this.forbidden = true;}
+    forbid() { this.forbidden = true; }
 
-    free(){ this.forbidden = false;}
+    free() { this.forbidden = false; }
 
-    myNode(){return this.nodeLisener;}
+    getNode() { return this.nodeLisener; }
 
 }
