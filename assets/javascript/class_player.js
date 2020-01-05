@@ -14,7 +14,8 @@ class player {
         this.vpc = [0, 0]       // vicotry point card [2pt,2pt]
         this.house = [0, 0];    // # of house this player own [#small,#big]
         this.road = 0;          // # of road this player own
-        this.next;            // my next player
+        this.next;              // my next player
+        this.pre;             // previous player
     }
 
     addRoad(node) { this.roadNode.push(node); }
@@ -52,6 +53,8 @@ class player {
     myScore() { return this.score; }
 
     myNext() { return this.next; }
+
+    myPre() {return this.pre;}
 
     myResource() {
         return this.resource;

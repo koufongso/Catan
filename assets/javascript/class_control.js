@@ -313,8 +313,8 @@ class control {
                 var x = _this.board.nodeList[nid].location[0];
                 var y = _this.board.nodeList[nid].location[1];
                 $(`#${nid}`).html(`
-                    <rect class="node-rect" x=${x-10} y=${y-10} width="20" height="20" />
-                    <rect class ="shadow" x=${x-15} y=${y-15} width="30" height ="30" fill="#ffffe6"/>
+                    <rect class="node-rect" x=${x - 10} y=${y - 10} width="20" height="20" />
+                    <rect class ="shadow" x=${x - 15} y=${y - 15} width="30" height ="30" fill="#ffffe6"/>
                 `);
             }
 
@@ -408,10 +408,10 @@ class control {
     next() {
         console.log("next!")
         this.cancel();
-        console.log(`before:${this.players.currentPlayer.id}`);
+        // console.log(`before:${this.players.currentPlayer.id}`);
         $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "normal");
         this.players.nextPlayer();
-        console.log(`after:${this.players.currentPlayer.id}`);
+        // console.log(`after:${this.players.currentPlayer.id}`);
         $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "bold");
         $('.dice').empty();
 
@@ -433,29 +433,43 @@ class control {
         $('.node').css("visibility", "hidden");
     }
 
-    /* allow player to set house at any node to start*/
-    initial(house) {
+    initial(startPlayer, endPlayer, currentPlayer) {
+        this.RoundTrip([], startPlayer, endPlayer, 1, currentPlayer);
+    }
+
+
+
+
+    /* allow player to set house at any node to start 
+    */
+    RoundTrip(house, startPlayer, endPlayer, dir, current) {
         var _this = this;
+        $(`#player-${_this.players.currentPlayer.id}`).css("font-weight", "normal");
+        _this.players.currentPlayer = current;
+        $(`#player-${_this.players.currentPlayer.id}`).css("font-weight", "bold");
+
         $('.node').css("visibility", "visible");
-        // console.log(house);
+
+        // find available house spot for current player
         if (house == undefined) {
             var house = [];
         } else {
             for (var i = 0; i < house.length; i++) {
-                $(`#${house[i]}`).off("click");
+                $(`#${house[i]}`).off("click");                         // remove exsisting house listner
                 var houseAdj = getAdjecentNode(house[i]);
                 for (var j = 0; j < houseAdj.length; j++) {
                     // console.log(`off ${houseAdj[j]}`);
                     $(`#${houseAdj[j]}`).off("click");
-                    $(`#${houseAdj[j]}`).css("visibility", "hidden");
+                    $(`#${houseAdj[j]}`).css("visibility", "hidden");   // hide the exsisting house adjacent node
                 }
             }
         }
 
         $('.node').on("click", function () {
+            $('.node').off("click")
             var thisID = parseInt($(this).attr("id"));
             // console.log(_this.players.currentPlayer);
-            _this.board.nodeList[thisID].build(_this.players.currentPlayer);
+            _this.board.nodeList[thisID].build(current);
             // add this node to its adjacent tile
             var tile = _this.board.nodeList[parseInt($(this).attr("id"))].tile; // this node's adjacent tile coordinate
             for (var i = 0; i < tile.length; i++) {
@@ -467,38 +481,50 @@ class control {
             $(`#${thisID}`).off("click");
             $(`#${thisID}`).removeClass("node");
             $(`#${thisID}`).css({
-                "fill": _this.players.currentPlayer.color, "stroke": "white",
+                "fill": current.color, "stroke": "white",
                 "stroke-width": "4px",
                 "visibility": "visible",
                 "opacity": 1
             });
             $(`#${thisID} .shadow`).css("visibility", "hidden");
-
+            
             house.push(thisID);
+
+
             var thisAdj = getAdjecentNode(thisID);
-            // console.log(thisID);
-            // console.log(thisAdj);
+
             for (var j = 0; j < thisAdj.length; j++) {
                 $(`#${thisAdj[j]}`).css("visibility", "hidden");
             }
 
-            if (_this.players.currentPlayer.house[0] === 2) {
-                // move to next player
-                $('.node').off("click");
-                // make all node invisible
-                $('.node').css("visibility", "hidden");
-                // check if it go to the end
-                if (_this.players.nextPlayer().id != 0) {
-                    // console.log("next player")
-                    _this.initial(house);
+            console.log(`dir:${dir}`);
+            console.log(`current.id:${current.id}`);
+            console.log(`start.id:${startPlayer.id}`);
+            console.log(`end.id:${endPlayer.id}`);
 
-                } else {
-                    // console.log("initialization process done!");
-                    /* roll button*/
-                    $('.btn-roll').on("click", () => { _this.roll() });
-                    // console.log("process done. activate roll");
-                }
+
+            if (dir == 1 && current.id < endPlayer.id) {
+                console.log("going forward")
+                _this.RoundTrip(house, startPlayer, endPlayer, 1, current.myNext());
             }
+
+            if (dir == 1 && current.id == endPlayer.id) {
+                console.log("reach the end, go back")
+                _this.RoundTrip(house, startPlayer, endPlayer, -1, current);
+            }
+
+            if (dir == -1 && current.id > startPlayer.id) {
+                console.log("going backward")
+                _this.RoundTrip(house, startPlayer, endPlayer, -1, current.myPre());
+            }
+
+            if (dir == -1 && current.id == startPlayer.id) {
+                console.log("done");
+                $('.node').off("click");
+                $('.node').css("visibility","hidden");
+                $('.btn-roll').on("click", () => { _this.roll() });
+            }
+
         });
 
 
