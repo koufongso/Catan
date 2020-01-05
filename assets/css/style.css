@@ -65,7 +65,8 @@ svg{
 
 .btn{
   min-width: 120px;
-  border-radius: 20px;
+  height: 60px;
+  border-radius: 30px;
   font-size: 24px;
   border: 2px solid white;
   color:white;
@@ -78,6 +79,16 @@ svg{
 .btn:hover{
   cursor: pointer;
   opacity: 0.8;
+}
+
+.btn-glowing{
+  animation: glowing 1500ms infinite;
+}
+
+@keyframes glowing{
+  0% {background-color: brown; box-shadow: 0 0 3px brown;}
+  50% {background-color: #ff3300;; box-shadow: 0 0 10px #ff3300;;}
+  100% {background-color: brown; box-shadow: 0 0 3px brown;}
 }
 
 .node{
@@ -133,12 +144,8 @@ img , .icon{
   top:5px;
 }
 
-.player-div{
-  display: block;
-}
-
-
 .player-div p{
+  font-family: Arial, Helvetica, sans-serif;
   display: inline-block;
   margin:0px;
   margin-right:20px;

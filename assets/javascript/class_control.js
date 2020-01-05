@@ -61,6 +61,7 @@ class control {
     /* roll 2 dice, display and return the result
     */
     roll() {
+        $('.btn-roll').removeClass("btn-glowing");
         var _this = this;
         console.log("roll!")
         $('.btn').off("click"); // turn off all btn
@@ -422,6 +423,7 @@ class control {
 
         $('.btn').off("click");
         $('.btn-roll').on("click", () => { this.roll() });
+        $('.btn-roll').addClass("btn-glowing");
     }
 
 
@@ -526,6 +528,7 @@ class control {
                 $('.node').off("click");
                 $('.node').css("visibility", "hidden");
                 $('.btn-roll').on("click", () => { _this.roll() });
+                $('.btn-roll').addClass("btn-glowing");
             }
 
         });
