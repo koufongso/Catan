@@ -1,6 +1,6 @@
 class node {
-    constructor(x,y,id, adj) {
-        this.location = [x,y];
+    constructor(x, y, id, adj) {
+        this.location = [x, y];
         this.id = id;
         this.tile = adj;        // adjacent tile
         this.owner = "";
@@ -14,22 +14,50 @@ class node {
         this.connection.push(player.id);
     }
 
+    build(player) {
+        // check if this node is occupied
+        if (this.owner == "") {
+            // check if the player has enough resource to build
+            if (cost(player, { wood: 1, wool: 1, brick: 1, grain: 1 })) {
+                this.owner = player.id;
+                this.house++;
+                // register this node to all the adjacent tile to obtain resource
+
+                player.house[0]++;
+                player.addHouse(this); // add this node 
+                // build finish
+                player.addRoad(this);
+                console.log("build!");
+                return true;
+            } else {
+                // not enoguth material
+                console.log("Not enough material!");
+                return false;
+            }
+        } else {
+            console.log(`it's occupied by ${this.owner} and cannot build a new house here`);
+            return false;
+        }
+    }
 
     /* upgrade the house*/
     upgrade(player) {
         // check if the node/house owner is the current player
         // check if the house reach the max lv cap
-        if (this.owner == player.id && house <= this.houseCap) {
+        if (this.owner == player.id && this.house <= this.houseCap) {
             // check if the player has enough resource to upgrade
             if (cost(player, { grain: 2, stone: 3 })) {
-                house++;
+                this.house++;
                 player.house[0]--;
-                players.house[1]++;
+                player.house[1]++;
+                return true;
             } else {
                 alert("Not enougth material!");
+                return false;
             }
         } else {
-            // alert("It is not your house!")
+            console.log("It is not your house!");
+            return false;
         }
     }
 }
@@ -72,7 +100,7 @@ function coord2ID(coord) {
     if (x == 0 && y == 0) {
         return 0;
     }
-    
+
     var lv;
     var edge;
     var corner;

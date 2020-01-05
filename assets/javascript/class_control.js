@@ -2,8 +2,9 @@ class control {
     constructor(board, players) {
         this.board = board;
         this.players = players;
-        this.info = $('<div>');
-        // create player and add them into the list
+        this.info = $('<div>'); // to hold the control panel content;
+
+        // to display player's info
         for (var i = 0; i < this.players.nPlayer; i++) {
             this.info.append(`
                 <div class="player-div" id="player-${i}">
@@ -33,6 +34,7 @@ class control {
                 </div>
             `);
         }
+
         this.panel = $('<div>').html(`       
             <div class="player_info">${this.info.html()}</div>
             <div class="dice_panel">
@@ -52,21 +54,9 @@ class control {
                 
             </div>
         `);
-
     }
 
-    display() {
-        $('#main_panel').append(`
-            <div class="control_panel">
-                ${this.panel.html()}
-            </div>
-        `);
-        for (var i = 0; i < this.players.nPlayer; i++) {
-            this.players.list[i].updateResource();
-        }
-        $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "bold");
-    }
-
+    /*---------------------------------------button function-------------------------------*/
 
     /* roll 2 dice, display and return the result
     */
@@ -90,17 +80,10 @@ class control {
                 // go to tile list
                 tiles[i].sendResource();
                 /*build road button*/
-                $('.btn-road').on("click", () => { this.buildRoad() });
-                /*build house button*/
-                $('.btn-build').on("click", () => { this.build() });
-                /*trade button*/
-                $('.btn-trade').on("click", () => { this.trade() })
-                /*cancel button*/
-                $('.btn-cancel').on("click", () => { this.cancel() });
-                /* next button*/
-                $('.btn-next').on("click", () => { this.next(); });
-                // turn on other button after rolling
             }
+            // turn on other button after rolling
+
+
         } else {
             // 7, robber
             // free previous forbidden tile
@@ -119,7 +102,7 @@ class control {
                 // console.log($(this));
                 $(this)[0].style.fill = "black";
                 var tid = parseInt($(this).attr("id").slice(1));
-                _this.board.tileLisener[7].push(tid);
+                _this.board.tileLisener[7].push(_this.board.tileList[tid]);
                 // console.log(tid);
                 _this.board.tileList[tid].forbid();
                 var adjNode = _this.board.tileList[tid].getNode(); // get all builded node on this tile
@@ -155,27 +138,26 @@ class control {
 
                 $('.tile').off("click");
                 $('.tile').removeClass("tile-hover");
-
-                /*build road button*/
-                $('.btn-road').on("click", () => { _this.buildRoad() });
-                /*build house button*/
-                $('.btn-build').on("click", () => { _this.build() });
-                /*trade button*/
-                $('.btn-trade').on("click", () => { _this.trade() })
-                /*cancel button*/
-                $('.btn-cancel').on("click", () => { _this.cancel() });
-                /* next button*/
-                $('.btn-next').on("click", () => { _this.next(); });
-                // turn on other button after rolling
             });
-
-
-
         }
+
+
+        $('.btn-road').on("click", () => { this.buildRoad() });
+        /*build house button*/
+        $('.btn-build').on("click", () => { this.build() });
+        /* upgrade house button*/
+        $('.btn-upgrade').on("click", () => { this.upgrade() });
+        /*trade button*/
+        $('.btn-trade').on("click", () => { this.trade() })
+        /*cancel button*/
+        $('.btn-cancel').on("click", () => { this.cancel() });
+        /* next button*/
+        $('.btn-next').on("click", () => { this.next(); });
+        // console.log(`activate btn`);
     }
 
 
-    // button function
+    /* build road button function*/
     buildRoad() {
         var _this = this;
         console.log("buildRoad");
@@ -248,8 +230,7 @@ class control {
         $('.btn-cancel').on("click", this.cancel);
     }
 
-
-
+    /* build button function*/
     build() {
         var _this = this;
         console.log("buildhouse");
@@ -278,20 +259,29 @@ class control {
 
         $('.spot').css("visibility", "visible");
         $('.spot').on("click", function () {
-            _this.actionBuild(_this.players.currentPlayer, _this.board.nodeList[parseInt($(this).attr("id"))]);
-            // change this node class and style
-            $(`#${this.id}`).removeClass("node");
-            $(`#${this.id}`).css({
-                "fill": _this.players.currentPlayer.color, "stroke": "white",
-                "stroke-width": "4px",
-                "visibility": "visible",
-                "opacity": 1
-            });
-            $(`#${this.id} .shadow`).css("visibility", "hidden");
+            if (_this.board.nodeList[parseInt($(this).attr("id"))].build(_this.players.currentPlayer)) {
+                // add this node to its adjacent tile
+                var tile = _this.board.nodeList[parseInt($(this).attr("id"))].tile; // this node's adjacent tile coordinate
+                for (var i = 0; i < tile.length; i++) {
+                    var tileID = coord2ID(tile[i]);
+                    _this.board.tileList[tileID].addNode(_this.board.nodeList[parseInt($(this).attr("id"))]);
+                }
 
-            $('.node').off("click");
-            // make all node invisible
-            $('.node').css("visibility", "hidden");
+                // change this node class and style
+                $(`#${this.id}`).removeClass("node");
+                $(`#${this.id}`).removeClass("spot");
+                $(`#${this.id}`).off("click");
+                $(`#${this.id}`).css({
+                    "fill": _this.players.currentPlayer.color, "stroke": "white",
+                    "stroke-width": "4px",
+                    "visibility": "visible",
+                    "opacity": 1
+                });
+                $(`#${this.id} .shadow`).css("visibility", "hidden");
+            }
+
+            $('.spot').off("click");
+            $('.spot').css("visibility", "hidden");
             $(".spot").removeClass("spot");
 
             $('.btn-on').removeClass('btn-on');
@@ -300,6 +290,46 @@ class control {
         // assign cancel butotn
         $('.btn-cancel').on("click", _this.cancel);
     }
+
+    /* upgrad button function*/
+    upgrade() {
+        console.log("upgrade");
+        this.cancel();
+        $('.btn-upgrade').addClass('btn-on');
+        var _this = this;
+        // show the current player's house node
+        var house = _this.players.currentPlayer.houseNode;
+        for (var i = 0; i < house.length; i++) {
+            $(`#${house[i].id}`).addClass("house node-hover");
+        }
+
+        $('.house .shadow').css({ "visibility": "visible", "opacity": "0.8" });
+
+        $('.house').on("click", function () {
+            var nid = parseInt($(this).attr("id"));
+            if (_this.board.nodeList[nid].upgrade(_this.players.currentPlayer)) {
+                // change the node appreaence
+                $(`#${nid}`).empty();
+                var x = _this.board.nodeList[nid].location[0];
+                var y = _this.board.nodeList[nid].location[1];
+                $(`#${nid}`).html(`
+                    <rect class="node-rect" x=${x-10} y=${y-10} width="20" height="20" />
+                    <rect class ="shadow" x=${x-15} y=${y-15} width="30" height ="30" fill="#ffffe6"/>
+                `);
+            }
+
+            $('.house').off("click");
+            $('.node-hover').removeClass("node-hover");
+            $('.house .shadow').css("visibility", "hidden");
+            $('.house').removeClass("house");
+            $('.btn-on').removeClass('btn-on');
+        });
+
+
+        $('.btn-cancel').on("click", _this.cancel);
+
+    }
+
 
     /* use 4 same resource to get 1 specific resource*/
     trade() {
@@ -378,8 +408,10 @@ class control {
     next() {
         console.log("next!")
         this.cancel();
+        console.log(`before:${this.players.currentPlayer.id}`);
         $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "normal");
         this.players.nextPlayer();
+        console.log(`after:${this.players.currentPlayer.id}`);
         $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "bold");
         $('.dice').empty();
 
@@ -396,6 +428,8 @@ class control {
         $('.node-hover').removeClass("node-hover");
         $('.spot').off("click");
         $('.spot').removeClass("spot");
+        $('.house').off("click");
+        $('.house').removeClass("house");
         $('.node').css("visibility", "hidden");
     }
 
@@ -421,7 +455,14 @@ class control {
         $('.node').on("click", function () {
             var thisID = parseInt($(this).attr("id"));
             // console.log(_this.players.currentPlayer);
-            _this.actionBuild(_this.players.currentPlayer,_this.board.nodeList[thisID]);
+            _this.board.nodeList[thisID].build(_this.players.currentPlayer);
+            // add this node to its adjacent tile
+            var tile = _this.board.nodeList[parseInt($(this).attr("id"))].tile; // this node's adjacent tile coordinate
+            for (var i = 0; i < tile.length; i++) {
+                var tileID = coord2ID(tile[i]);
+                _this.board.tileList[tileID].addNode(_this.board.nodeList[parseInt($(this).attr("id"))]);
+            }
+
             // change this node class and style
             $(`#${thisID}`).off("click");
             $(`#${thisID}`).removeClass("node");
@@ -455,6 +496,7 @@ class control {
                     // console.log("initialization process done!");
                     /* roll button*/
                     $('.btn-roll').on("click", () => { _this.roll() });
+                    // console.log("process done. activate roll");
                 }
             }
         });
@@ -462,6 +504,26 @@ class control {
 
 
     }
+
+
+    /* Display the control panel
+    */
+    display() {
+        $('#main_panel').append(`
+        <div class="control_panel">
+            ${this.panel.html()}
+        </div>
+    `);
+        for (var i = 0; i < this.players.nPlayer; i++) {
+            this.players.list[i].updateResource();
+        }
+        $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "bold");
+    }
+
+
+    /*----------------------------------------------Helper function------------------------------------------*/
+
+
 
     /* helper function, draw a line between (x1,x2) and (x2,y2) and update the svg
     */
@@ -482,38 +544,6 @@ class control {
         $("#board").append(`<line x1=${x1 + a * ux} y1=${y1 + a * uy} x2=${x2 - a * ux} y2=${y2 - a * uy} stroke-width="10" stroke=${this.players.currentPlayer.color}/>`);
         // refresh the svg
         $('#board').html($('#board').html() + "");
-    }
-
-
-
-    actionBuild(player,node) {
-        // check if this node is occupied
-        if (node.owner == "") {
-            // check if the player has enough resource to build
-            if (cost(player, { wood: 1, wool: 1, brick: 1, grain: 1 })) {
-                node.owner = player.id;
-                node.house++;
-                // register this node to all the adjacent tile to obtain resource
-                for (var i = 0; i < node.tile.length; i++) {
-                    // console.log(this.tile[i]);
-                    var tileID = coord2ID(node.tile[i]);
-                    this.board.tileList[tileID].addNode(node);
-                    //  console.log("add this node to tile "+tileID);
-                }
-                player.house[0]++;
-                player.addHouse(node); // add this node 
-                // build finish
-                player.addRoad(node);
-                console.log("build!");
-                return true;
-            } else {
-                // not enoguth material
-                console.log("Not enough material!");
-            }
-        } else {
-            console.log(`it's occupied by ${node.owner} and cannot build a new house here`);
-            return false;
-        }
     }
 
 }
