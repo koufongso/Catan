@@ -2,10 +2,11 @@ class playerList {
     constructor(nPlayer) {
         this.nPlayer = nPlayer;  // num of players
         this.list = [];          // player list
+        this.colorSet = ["red", "green", "blue", "yellow"];
 
         // connect player
         for (var i = 0; i < nPlayer; i++) {
-            this.list.push(new player(i, { wood: 4, brick: 4, stone: 2, grain: 4, wool: 4 }));
+            this.list.push(new player(i, { wood: 4, brick: 4, stone: 2, grain: 4, wool: 4 }, this.colorSet[i]));
         }
 
 

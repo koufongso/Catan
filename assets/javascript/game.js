@@ -21,5 +21,5 @@ function startGame(nPlayer) {
     myControl.initial(players.currentPlayer, players.currentPlayer.myPre(), players.currentPlayer);
 }
 
-startGame(2);
+startGame(1);
 

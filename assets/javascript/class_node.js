@@ -10,10 +10,6 @@ class node {
         this.adjNode = getAdjecentNode(id);
     }
 
-    buildRoad(player) {
-        this.connection.push(player.id);
-    }
-
     build(player) {
         // check if this node is occupied
         if (this.owner == "") {
@@ -31,7 +27,7 @@ class node {
                 return true;
             } else {
                 // not enoguth material
-                console.log("Not enough material!");
+                alert("Not enough material!");
                 return false;
             }
         } else {
@@ -44,7 +40,7 @@ class node {
     upgrade(player) {
         // check if the node/house owner is the current player
         // check if the house reach the max lv cap
-        if (this.owner == player.id && this.house <= this.houseCap) {
+        if (this.owner == player.id && this.canUpgrade()) {
             // check if the player has enough resource to upgrade
             if (cost(player, { grain: 2, stone: 3 })) {
                 this.house++;
@@ -59,7 +55,10 @@ class node {
             console.log("It is not your house!");
             return false;
         }
-        
+    }
+
+    canUpgrade(){
+        return this.house<this.houseCap;
     }
 }
 

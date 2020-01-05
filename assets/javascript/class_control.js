@@ -8,8 +8,8 @@ class control {
         for (var i = 0; i < this.players.nPlayer; i++) {
             this.info.append(`
                 <div class="player-div" id="player-${i}">
-                    <p>Player ${i}</p>
-                    <div class="r">
+                    <p style="color:${players.list[i].color}">Player ${i}</p>
+                    <div>
                         <div class="r-wood">
                             <img class="icon" src="assets/images/icons_resource/wood.png">
                             <span class="val-wood">?</span>
@@ -82,12 +82,13 @@ class control {
                 /*build road button*/
             }
             // turn on other button after rolling
+            _this.btnOn();
 
 
         } else {
             // 7, robber
             // free previous forbidden tile
-            console.log("rob!")
+            // console.log("rob!")
             $('.tile').addClass("tile-hover");
             $('.desert').removeClass("tile-hover");
             $(`#t${this.board.tileLisener[7][0].id}`).removeClass("tile-hover");
@@ -115,7 +116,7 @@ class control {
                     }
                 }
 
-                console.log(adjPlayer);
+                // console.log(adjPlayer);
                 // choose one player
                 if (adjPlayer.length != 0) {
                     console.log("hi")
@@ -138,22 +139,11 @@ class control {
 
                 $('.tile').off("click");
                 $('.tile').removeClass("tile-hover");
+
+                _this.btnOn();
             });
         }
 
-
-        $('.btn-road').on("click", () => { this.buildRoad() });
-        /*build house button*/
-        $('.btn-build').on("click", () => { this.build() });
-        /* upgrade house button*/
-        $('.btn-upgrade').on("click", () => { this.upgrade() });
-        /*trade button*/
-        $('.btn-trade').on("click", () => { this.trade() })
-        /*cancel button*/
-        $('.btn-cancel').on("click", () => { this.cancel() });
-        /* next button*/
-        $('.btn-next').on("click", () => { this.next(); });
-        // console.log(`activate btn`);
     }
 
 
@@ -163,7 +153,6 @@ class control {
         console.log("buildRoad");
         this.cancel();
         $('.btn-road').addClass('btn-on');
-        $('.node').off("click");
         // must start with a node that connected by road : loop over all the road node
         for (var i = 0; i < this.players.currentPlayer.roadNode.length; i++) {
             var myRoadNode = this.players.currentPlayer.roadNode[i];
@@ -213,7 +202,7 @@ class control {
                     // console.log(_this);
                     _this.players.currentPlayer.addRoad(_this.board.nodeList[id]);
                 } else {
-                    console.log("not enought matrial")
+                    alert("not enought matrial")
                 }
 
                 // process complete                      
@@ -235,17 +224,22 @@ class control {
         var _this = this;
         console.log("buildhouse");
         this.cancel();
-        // find potentail spot for house building
-        // spot must be road node
         $('.btn-build').addClass('btn-on');
+        // find potentail spot for house building
+        // get all road node: spot must be road node
         var spot = this.players.currentPlayer.roadNode;
         for (var i = 0; i < spot.length; i++) {
-            // spot cannot be house node
-            if (spot[i].owner === "") {
-                // it adj node cannot have house
-                var adj = getAdjecentNode(spot[i].id);
+            // get all "node that has 0 house": spot cannot be house node
+            if (spot[i].house == 0) {
+                // it's adj node cannot have house either
+                var adj = getAdjecentNode(spot[i].id); // adjacent node id array
                 var pass = true;
+                // check the adjacent node
                 for (var j = 0; j < adj.length; j++) {
+                    if (_this.board.nodeList[adj[j]] == undefined) {
+                        continue;
+                    }
+
                     if (_this.board.nodeList[adj[j]].house != 0) {
                         pass = false;
                         break
@@ -300,7 +294,9 @@ class control {
         // show the current player's house node
         var house = _this.players.currentPlayer.houseNode;
         for (var i = 0; i < house.length; i++) {
-            $(`#${house[i].id}`).addClass("house node-hover");
+            if (house[i].canUpgrade()) {
+                $(`#${house[i].id}`).addClass("house node-hover");
+            }
         }
 
         $('.house .shadow').css({ "visibility": "visible", "opacity": "0.8" });
@@ -334,9 +330,12 @@ class control {
     /* use 4 same resource to get 1 specific resource*/
     trade() {
         var _this = this;
+        this.cancel();
+        $('.btn').off("click");
         var option = $('<div>');
         var get = $('<div>');
-        console.log("trade!")
+        console.log("trade!");
+        $('.btn-trade').addClass("btn-on");
         // show the trade panel in the center of the screen
         var myResource = this.players.currentPlayer.myResource();
         var keys = Object.keys(myResource);
@@ -398,12 +397,15 @@ class control {
                 cost(_this.players.currentPlayer, { [give]: 4 });
                 _this.players.currentPlayer.getResource({ [get]: 1 });
             }
-
+            $('.btn-trade').removeClass("btn-on");
             $('.trade_panel').remove();
+            _this.btnOn();
         });
 
         $('.btn-trade-cancel').on("click", function () {
+            $('.btn-trade').removeClass("btn-on");
             $('.trade_panel').remove();
+            _this.btnOn();
         });
     }
 
@@ -426,14 +428,18 @@ class control {
     cancel() {
         // console.log("cancel!")
         $('.btn').removeClass('btn-on');
+
         $('.node').off("click");
         $('.node-hover').off("click");
         $('.node-hover').removeClass("node-hover");
+        $('.node').css("visibility", "hidden");
+
         $('.spot').off("click");
         $('.spot').removeClass("spot");
+
         $('.house').off("click");
+        $('.house .shadow').css({ "visibility": "hidden" });
         $('.house').removeClass("house");
-        $('.node').css("visibility", "hidden");
     }
 
     initial(startPlayer, endPlayer, currentPlayer) {
@@ -500,38 +506,29 @@ class control {
                 $(`#${thisAdj[j]}`).css("visibility", "hidden");
             }
 
-            console.log(`dir:${dir}`);
-            console.log(`current.id:${current.id}`);
-            console.log(`start.id:${startPlayer.id}`);
-            console.log(`end.id:${endPlayer.id}`);
-
-
             if (dir == 1 && current.id < endPlayer.id) {
-                console.log("going forward")
+                // console.log("going forward")
                 _this.RoundTrip(house, startPlayer, endPlayer, 1, current.myNext());
             }
 
             if (dir == 1 && current.id == endPlayer.id) {
-                console.log("reach the end, go back")
+                // console.log("reach the end, go back")
                 _this.RoundTrip(house, startPlayer, endPlayer, -1, current);
             }
 
             if (dir == -1 && current.id > startPlayer.id) {
-                console.log("going backward")
+                // console.log("going backward")
                 _this.RoundTrip(house, startPlayer, endPlayer, -1, current.myPre());
             }
 
             if (dir == -1 && current.id == startPlayer.id) {
-                console.log("done");
+                // console.log("done");
                 $('.node').off("click");
                 $('.node').css("visibility", "hidden");
                 $('.btn-roll').on("click", () => { _this.roll() });
             }
 
         });
-
-
-
     }
 
 
@@ -553,6 +550,19 @@ class control {
     /*----------------------------------------------Helper function------------------------------------------*/
 
 
+    btnOn() {
+        $('.btn-road').on("click", () => { this.buildRoad() });
+        /*build house button*/
+        $('.btn-build').on("click", () => { this.build() });
+        /* upgrade house button*/
+        $('.btn-upgrade').on("click", () => { this.upgrade() });
+        /*trade button*/
+        $('.btn-trade').on("click", () => { this.trade() })
+        /*cancel button*/
+        $('.btn-cancel').on("click", () => { this.cancel() });
+        /* next button*/
+        $('.btn-next').on("click", () => { this.next(); });
+    }
 
     /* helper function, draw a line between (x1,x2) and (x2,y2) and update the svg
     */

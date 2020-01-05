@@ -1,9 +1,9 @@
-var playerColor = ["red", "green", "blue", "yellow"];
+
 class player {
-    constructor(id, resource) {
+    constructor(id, resource,color) {
         this.id = id;
         this.name = "Player " + id;
-        this.color = playerColor[id];
+        this.color = color;
         this.resource = resource;
         this.houseNode = [];
         this.roadNode = [];     // nodes owned by this player that is a "road node"
