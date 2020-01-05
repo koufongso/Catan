@@ -394,8 +394,11 @@ class control {
         $('.btn-trade-confirm').on("click", function () {
             var give = $('.give').attr("name");
             var get = $('.get').attr("name");
-            cost(_this.players.currentPlayer, { [give]: 4 });
-            _this.players.currentPlayer.getResource({ [get]: 1 });
+            if (give != undefined && get != undefined) {
+                cost(_this.players.currentPlayer, { [give]: 4 });
+                _this.players.currentPlayer.getResource({ [get]: 1 });
+            }
+
             $('.trade_panel').remove();
         });
 
@@ -487,7 +490,7 @@ class control {
                 "opacity": 1
             });
             $(`#${thisID} .shadow`).css("visibility", "hidden");
-            
+
             house.push(thisID);
 
 
@@ -521,7 +524,7 @@ class control {
             if (dir == -1 && current.id == startPlayer.id) {
                 console.log("done");
                 $('.node').off("click");
-                $('.node').css("visibility","hidden");
+                $('.node').css("visibility", "hidden");
                 $('.btn-roll').on("click", () => { _this.roll() });
             }
 
