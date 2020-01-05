@@ -61,12 +61,12 @@ class control {
                 ${this.panel.html()}
             </div>
         `);
-
         for (var i = 0; i < this.players.nPlayer; i++) {
             this.players.list[i].updateResource();
         }
         $(`#player-${this.players.currentPlayer.id}`).css("font-weight", "bold");
     }
+
 
     /* roll 2 dice, display and return the result
     */
@@ -343,6 +343,7 @@ class control {
                 <div style="display:inline-block; margin-right:30px">${option.html()}</div>
                 <div style="display:inline-block">${get.html()}</div>
             </div>
+            <button class="btn btn-trade-cancel"> Cancel </button>
             <button class="btn btn-trade-confirm"> Confirm </button>
         `);
 
@@ -366,7 +367,11 @@ class control {
             cost(_this.players.currentPlayer, { [give]: 4 });
             _this.players.currentPlayer.getResource({ [get]: 1 });
             $('.trade_panel').remove();
-        })
+        });
+
+        $('.btn-trade-cancel').on("click", function () {
+            $('.trade_panel').remove();
+        });
     }
 
 
