@@ -26,13 +26,13 @@ class board {
 
         // center tile
         this.createTile(cx, cy, tid++, coord, undefined, undefined);
-        // create node
         for (var j = 0; j < 6; j++) {
             var xn = cx + tileSize * Math.cos(local_theta);
             var yn = cy - tileSize * Math.sin(local_theta);
             this.createNode(xn, yn, nid++, this.getAdjacent(coord, -1, j));
             local_theta += Math.PI / 3;
         }
+
         // loop over each level/layer
         for (var lv = 1; lv <= boardSize; lv++) {
             coord = [lv, 0, 0];
@@ -52,11 +52,9 @@ class board {
                 for (var j = 0; j < 3; j++) {
                     var xn = x + tileSize * Math.cos(local_theta);
                     var yn = y - tileSize * Math.sin(local_theta);
-                    this.createNode(xn, yn, nid++, this.getAdjacent(coord, c, j));
+                    if(lv!=boardSize){this.createNode(xn, yn, nid++, this.getAdjacent(coord, c, j));}
                     local_theta += Math.PI / 3;
                 }
-
-
 
                 local_start += Math.PI / 3;
                 // define the travel direction
@@ -76,7 +74,7 @@ class board {
                     for (var j = 1; j <= 2; j++) {
                         var xn_temp = x_temp + tileSize * Math.cos(local_edge_theta);
                         var yn_temp = y_temp - tileSize * Math.sin(local_edge_theta);
-                        this.createNode(xn_temp, yn_temp, nid++, this.getAdjacent(coord, c, j));
+                        if(lv!=boardSize){this.createNode(xn_temp, yn_temp, nid++, this.getAdjacent(coord, c, j));}
                         local_edge_theta += Math.PI / 3;
                     }
 
@@ -232,18 +230,19 @@ class board {
         assign val to each tile and resource to each tile
     */
     resourceDistribute() {
-        console.log("distribute")
+        // console.log("distribute")
         // assgin 0 ~ boardSize-1 tile val
         // for each layer id = [3lv(lv-1)+1......3lv(lv-1)+6lv]
         for (var i = 0; i <= 3 * (this.boardSize - 1) * (this.boardSize); i++) {
             this.tileList[i].val = this.diceVal.splice(Math.floor(Math.random() * this.diceVal.length), 1); // randomly take 1 val from the diceval list
+            this.tileLisener[this.tileList[i].val].push(this.tileList[i]);
         }
 
 
         for (var i = 0; i < this.tileList.length; i++) {
             if (this.tileList[i].val != undefined) {
                 if (this.tileList[i].val == 7) {
-                    console.log(this.tileList[i].val);
+                    // console.log(this.tileList[i].val);
                     this.tileList[i].resource = "desert";
 
                 } else {

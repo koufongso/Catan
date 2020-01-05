@@ -178,7 +178,7 @@ img , .icon{
   opacity: 0.9;
 }
 
-text-hover:hover{
+.text-hover:hover{
   cursor:pointer;
   font-weight: bold;
 }

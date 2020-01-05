@@ -15,35 +15,6 @@ class node {
     }
 
 
-    /* add this node to the belonging tiles, and build a house*/
-    build(player) {
-        // check if this node is occupied
-        if (this.owner == "") {
-            // check if the player has enough resource to build
-            if (cost(player, { wood: 1, wool: 1, brick: 1, grain: 1 })) {
-                this.owner = player.id;
-                this.house++;
-                // register this node to all the adjacent tile to obtain resource
-                for (var i = 0; i < this.tile.length; i++) {
-                    // console.log(this.tile[i]);
-                    var tileID = coord2ID(this.tile[i]);
-                    tileList[tileID].addNode(this);
-                   //  console.log("add this node to tile "+tileID);
-                }
-                player.house[0]++;
-                player.addHouse(this); // add this node 
-                // build finish
-                player.addRoad(this);
-                console.log("build!")
-            } else {
-                // not enoguth material
-                console.log("Not enough material!");
-            }
-        } else {
-            console.log(`it's occupied by ${this.owner} and cannot build a new house here`);
-        }
-    }
-
     /* upgrade the house*/
     upgrade(player) {
         // check if the node/house owner is the current player

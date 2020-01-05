@@ -1,5 +1,6 @@
 class control {
-    constructor(players) {
+    constructor(board, players) {
+        this.board = board;
         this.players = players;
         this.info = $('<div>');
         // create player and add them into the list
@@ -84,10 +85,10 @@ class control {
 
         if (d1 + d2 !== 7) {
             // get resource
-            var tiles = tileLisener[d1 + d2]; // looking for coresponding tile
+            var tiles = this.board.tileLisener[d1 + d2]; // looking for coresponding tile
             for (var i = 0; i < tiles.length; i++) {
                 // go to tile list
-                tileList[tiles[i]].sendResource();
+                tiles[i].sendResource();
                 /*build road button*/
                 $('.btn-road').on("click", () => { this.buildRoad() });
                 /*build house button*/
@@ -106,22 +107,22 @@ class control {
             console.log("rob!")
             $('.tile').addClass("tile-hover");
             $('.desert').removeClass("tile-hover");
-            $(`#t${tileLisener[7]}`).removeClass("tile-hover");
+            $(`#t${this.board.tileLisener[7][0].id}`).removeClass("tile-hover");
 
 
             $('.tile-hover').on("click", function () {
-                tileList[tileLisener[7]].free();
-                var pre = $(`#t${tileLisener[7]}`).attr("class").split(" ")
-                $(`#t${tileLisener[7]}`)[0].style.fill = `url(#pattern-${pre[1]})`;
-                tileLisener[7].pop(); // pop the forbiddens
+                _this.board.tileLisener[7][0].free();
+                var pre = $(`#t${_this.board.tileLisener[7][0].id}`).attr("class").split(" ")
+                $(`#t${_this.board.tileLisener[7][0].id}`)[0].style.fill = `url(#pattern-${pre[1]})`;
+                _this.board.tileLisener[7].pop(); // pop the forbiddens
 
                 // console.log($(this));
                 $(this)[0].style.fill = "black";
                 var tid = parseInt($(this).attr("id").slice(1));
-                tileLisener[7].push(tid);
+                _this.board.tileLisener[7].push(tid);
                 // console.log(tid);
-                tileList[tid].forbid();
-                var adjNode = tileList[tid].myNode(); // all builded node on this tile
+                _this.board.tileList[tid].forbid();
+                var adjNode = _this.board.tileList[tid].getNode(); // get all builded node on this tile
                 var adjPlayer = []
                 for (var i = 0; i < adjNode.length; i++) {
                     if ((!adjPlayer.includes(adjNode[i].owner))
@@ -203,7 +204,7 @@ class control {
             $('.node-hover').off("click");
             $('.node-hover').removeClass("node-hover");
 
-            var startNode = nodeList[parseInt($(this).attr("id"))];
+            var startNode = _this.board.nodeList[parseInt($(this).attr("id"))];
             // loop over this startNode adj node
             for (var j = 0; j < startNode.adjNode.length; j++) {
                 $(`#${startNode.adjNode[j]}`).css("visibility", "visible");
@@ -220,15 +221,15 @@ class control {
                 // console.log(`${x1},${y1}`);
                 // console.log(`${x2},${y2}`);
                 if (cost(_this.players.currentPlayer, { wood: 1, brick: 1 })) {
-                    draw(x1, y1, x2, y2); // draw the "road" (x1,y1)->(x2,y2)
+                    _this.draw(x1, y1, x2, y2); // draw the "road" (x1,y1)->(x2,y2)
                     // deduct the resource from the player)
                     // remove these nodes from their adj list
-                    nodeList[id].adjNode.splice(nodeList[id].adjNode.indexOf(startNode.id), 1);
+                    _this.board.nodeList[id].adjNode.splice(_this.board.nodeList[id].adjNode.indexOf(startNode.id), 1);
                     startNode.adjNode.splice(startNode.adjNode.indexOf(id), 1);
 
                     // add this node to the player road node list
                     // console.log(_this);
-                    _this.players.currentPlayer.addRoad(nodeList[id]);
+                    _this.players.currentPlayer.addRoad(_this.board.nodeList[id]);
                 } else {
                     console.log("not enought matrial")
                 }
@@ -264,7 +265,7 @@ class control {
                 var adj = getAdjecentNode(spot[i].id);
                 var pass = true;
                 for (var j = 0; j < adj.length; j++) {
-                    if (nodeList[adj[j]].house != 0) {
+                    if (_this.board.nodeList[adj[j]].house != 0) {
                         pass = false;
                         break
                     }
@@ -277,7 +278,7 @@ class control {
 
         $('.spot').css("visibility", "visible");
         $('.spot').on("click", function () {
-            nodeList[parseInt($(this).attr("id"))].build(_this.players.currentPlayer);
+            _this.actionBuild(_this.players.currentPlayer, _this.board.nodeList[parseInt($(this).attr("id"))]);
             // change this node class and style
             $(`#${this.id}`).removeClass("node");
             $(`#${this.id}`).css({
@@ -415,7 +416,7 @@ class control {
         $('.node').on("click", function () {
             var thisID = parseInt($(this).attr("id"));
             // console.log(_this.players.currentPlayer);
-            nodeList[thisID].build(_this.players.currentPlayer);
+            _this.actionBuild(_this.players.currentPlayer,_this.board.nodeList[thisID]);
             // change this node class and style
             $(`#${thisID}`).off("click");
             $(`#${thisID}`).removeClass("node");
@@ -457,31 +458,65 @@ class control {
 
     }
 
+    /* helper function, draw a line between (x1,x2) and (x2,y2) and update the svg
+    */
+    draw(x1, y1, x2, y2) {
+        // get the vector (x1,y1)->(x2,y2)
+        var ux = x2 - x1;
+        var uy = y2 - y1;
+
+        // get the unit vector
+        ux /= this.board.tileSize;
+        uy /= this.board.tileSize;
+
+        // scale factor
+        var a = 10;
+
+        // adjust the end points of this line
+        // do not want it cover the node svg element (for node click event)
+        $("#board").append(`<line x1=${x1 + a * ux} y1=${y1 + a * uy} x2=${x2 - a * ux} y2=${y2 - a * uy} stroke-width="10" stroke=${this.players.currentPlayer.color}/>`);
+        // refresh the svg
+        $('#board').html($('#board').html() + "");
+    }
+
+
+
+    actionBuild(player,node) {
+        // check if this node is occupied
+        if (node.owner == "") {
+            // check if the player has enough resource to build
+            if (cost(player, { wood: 1, wool: 1, brick: 1, grain: 1 })) {
+                node.owner = player.id;
+                node.house++;
+                // register this node to all the adjacent tile to obtain resource
+                for (var i = 0; i < node.tile.length; i++) {
+                    // console.log(this.tile[i]);
+                    var tileID = coord2ID(node.tile[i]);
+                    this.board.tileList[tileID].addNode(node);
+                    //  console.log("add this node to tile "+tileID);
+                }
+                player.house[0]++;
+                player.addHouse(node); // add this node 
+                // build finish
+                player.addRoad(node);
+                console.log("build!");
+                return true;
+            } else {
+                // not enoguth material
+                console.log("Not enough material!");
+            }
+        } else {
+            console.log(`it's occupied by ${node.owner} and cannot build a new house here`);
+            return false;
+        }
+    }
+
 }
 
 
 
 
-/* helper function, draw a line between (x1,x2) and (x2,y2) and update the svg
-*/
-function draw(x1, y1, x2, y2) {
-    // get the vector (x1,y1)->(x2,y2)
-    var ux = x2 - x1;
-    var uy = y2 - y1;
 
-    // get the unit vector
-    ux /= myBoard.tileSize;
-    uy /= myBoard.tileSize;
-
-    // scale factor
-    var a = 10;
-
-    // adjust the end points of this line
-    // do not want it cover the node svg element (for node click event)
-    $("#board").append(`<line x1=${x1 + a * ux} y1=${y1 + a * uy} x2=${x2 - a * ux} y2=${y2 - a * uy} stroke-width="10" stroke=${this.players.currentPlayer.color}/>`);
-    // refresh the svg
-    $('#board').html($('#board').html() + "");
-}
 
 
 
