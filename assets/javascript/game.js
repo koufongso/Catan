@@ -1,3 +1,4 @@
+
 var availableResource = ["wood", "wood", "wood", "wood",
     "brick", "brick", "brick",
     "stone", "stone", "stone",
@@ -21,5 +22,23 @@ function startGame(nPlayer) {
     myControl.initial(players.currentPlayer, players.currentPlayer.myPre(), players.currentPlayer);
 }
 
-startGame(1);
 
+function newGame() {
+    // var n = parseInt(prompt("How many players ?"));
+    // if(n!=undefined){
+    //     if(n>=2 && n<=4){
+    //         startGame(n);
+    //     }else{
+    //         alert("By default only 2~4 players allowed.");
+    //         newGame();
+    //     }
+    // }else{
+    //     alert("please enter a number");
+    //     newGame()
+    // }
+
+    startGame(2);
+}
+
+
+newGame();

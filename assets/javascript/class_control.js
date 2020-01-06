@@ -168,8 +168,9 @@ class control {
         $(".node-hover").on("click", function () {
             // console.log(_this);
             // get the click point's location (starting node)
-            var x1 = parseInt($(this).find(".node-circle").attr("cx"));
-            var y1 = parseInt($(this).find(".node-circle").attr("cy"));
+            var n = _this.board.nodeList[parseInt($(this).attr("id"))];
+            var x1 = n.location[0];
+            var y1 = n.location[1];
             // console.log(`${x1},${y1}`);
 
             // remove all other nodes' hover event lisener and class
@@ -187,9 +188,9 @@ class control {
             // assign all them the function for selection
             $(".node-hover").on("click", function () {
                 // get the click point's location (end node)
-                var id = parseInt($(this).attr("id"));
-                var x2 = parseInt($(this).find(".node-circle").attr("cx"));
-                var y2 = parseInt($(this).find(".node-circle").attr("cy"));
+                var n = _this.board.nodeList[parseInt($(this).attr("id"))];
+                var x1 = n.location[0];
+                var y1 = n.location[1];
                 // console.log(`${x1},${y1}`);
                 // console.log(`${x2},${y2}`);
                 if (cost(_this.players.currentPlayer, { wood: 1, brick: 1 })) {

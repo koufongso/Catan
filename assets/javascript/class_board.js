@@ -52,7 +52,7 @@ class board {
                 for (var j = 0; j < 3; j++) {
                     var xn = x + tileSize * Math.cos(local_theta);
                     var yn = y - tileSize * Math.sin(local_theta);
-                    if(lv!=boardSize){this.createNode(xn, yn, nid++, this.getAdjacent(coord, c, j));}
+                    if (lv != boardSize) { this.createNode(xn, yn, nid++, this.getAdjacent(coord, c, j)); }
                     local_theta += Math.PI / 3;
                 }
 
@@ -74,7 +74,7 @@ class board {
                     for (var j = 1; j <= 2; j++) {
                         var xn_temp = x_temp + tileSize * Math.cos(local_edge_theta);
                         var yn_temp = y_temp - tileSize * Math.sin(local_edge_theta);
-                        if(lv!=boardSize){this.createNode(xn_temp, yn_temp, nid++, this.getAdjacent(coord, c, j));}
+                        if (lv != boardSize) { this.createNode(xn_temp, yn_temp, nid++, this.getAdjacent(coord, c, j)); }
                         local_edge_theta += Math.PI / 3;
                     }
 
@@ -185,6 +185,8 @@ class board {
     /* draw tile on the svg div*/
     drawTile() {
         console.log("draw tile");
+
+        // draw normal resource tile
         for (var i = 0; i < this.tileList.length; i++) {
             var x = this.tileList[i].location[0];
             var y = this.tileList[i].location[1];
@@ -192,7 +194,7 @@ class board {
             // console.log(`${this.tileList[i].resource}`);
 
             if (this.tileList[i].val == undefined || this.tileList[i].resource == "desert") {
-                 this.boardTile.append(`
+                this.boardTile.append(`
                     <g class="tile ${this.tileList[i].resource}" id = t${this.tileList[i].id}>
                         <use xlink: href="#hexagon" transform="translate(${x}, ${y})" />
                     </g>
@@ -207,6 +209,10 @@ class board {
                 `);
             }
         }
+
+        // draw port tile
+        var portTile = [20, 22, 24, 26, 28, 30, 32, 34, 36]; // manullly defien the port tile id 
+
     }
 
     /* draw node on the svg div*/
@@ -233,7 +239,10 @@ class board {
         // console.log("distribute")
         // assgin 0 ~ boardSize-1 tile val
         // for each layer id = [3lv(lv-1)+1......3lv(lv-1)+6lv]
-        for (var i = 0; i <= 3 * (this.boardSize - 1) * (this.boardSize); i++) {
+        this.tileList[0].val = this.diceVal.splice(this.diceVal.indexOf(7), 1);
+        this.tileLisener[7].push(this.tileList[0]);
+
+        for (var i = 1; i <= 3 * (this.boardSize - 1) * (this.boardSize); i++) {
             this.tileList[i].val = this.diceVal.splice(Math.floor(Math.random() * this.diceVal.length), 1); // randomly take 1 val from the diceval list
             this.tileLisener[this.tileList[i].val].push(this.tileList[i]);
         }
@@ -255,6 +264,26 @@ class board {
                 // console.log(this.tileList[i].resource);
             }
         }
+
+
+        // manually assign port to node
+        // starting at node 24 ~ 53
+        // manually define all the port node pair (rule?)
+        var portTile = [20, 22, 24, 26, 28, 30, 32, 34, 36]; // manullly defien the port tile id 
+        var portNode = [[24, 25], [27, 28], [31, 32], [34, 35], [37, 38], [41, 42], [44, 45], [47, 48], [51, 52]];
+        var port = ["any", "any", "wool", "any", "stone", "brick", "grain", "any", "wood"];
+
+        // defined rule: randomly distribute the port
+        for (var i = 0; i < portNode.length; i++) {
+            var temp = port.splice(Math.floor(Math.random() * port.length), 1)
+            this.nodeList[portNode[i][0]].port = temp;
+            this.nodeList[portNode[i][1]].port = temp;
+        }
+
+
+
+
+
     }
 
 

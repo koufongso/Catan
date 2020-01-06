@@ -7,6 +7,7 @@ class tile {
         this.resource = resource;
         this.nodeLisener = [];              // store house node
         this.forbidden = false;
+        this.portNode=[];
     }
     /* add node to this tile for getting this tile's resource*/
     addNode(node) {

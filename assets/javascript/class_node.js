@@ -8,6 +8,7 @@ class node {
         this.houseCap = 2;
         this.connection = [];
         this.adjNode = getAdjecentNode(id);
+        this.port="";
     }
 
     build(player) {
