@@ -188,21 +188,20 @@ class control {
             // assign all them the function for selection
             $(".node-hover").on("click", function () {
                 // get the click point's location (end node)
-                var n = _this.board.nodeList[parseInt($(this).attr("id"))];
-                var x1 = n.location[0];
-                var y1 = n.location[1];
-                // console.log(`${x1},${y1}`);
-                // console.log(`${x2},${y2}`);
+                var nid = parseInt($(this).attr("id"));
+                
+                var n = _this.board.nodeList[nid];
+                var x2 = n.location[0];
+                var y2 = n.location[1];
                 if (cost(_this.players.currentPlayer, { wood: 1, brick: 1 })) {
                     _this.draw(x1, y1, x2, y2); // draw the "road" (x1,y1)->(x2,y2)
                     // deduct the resource from the player)
                     // remove these nodes from their adj list
-                    _this.board.nodeList[id].adjNode.splice(_this.board.nodeList[id].adjNode.indexOf(startNode.id), 1);
-                    startNode.adjNode.splice(startNode.adjNode.indexOf(id), 1);
+                    _this.board.nodeList[nid].adjNode.splice(_this.board.nodeList[nid].adjNode.indexOf(startNode.id), 1);
+                    startNode.adjNode.splice(startNode.adjNode.indexOf(nid), 1);
 
                     // add this node to the player road node list
-                    // console.log(_this);
-                    _this.players.currentPlayer.addRoad(_this.board.nodeList[id]);
+                    _this.players.currentPlayer.addRoad(_this.board.nodeList[nid]);
                 } else {
                     alert("not enought matrial")
                 }
