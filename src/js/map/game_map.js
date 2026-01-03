@@ -67,7 +67,7 @@ export class GameMap {
         }
     }
 
-    convertMapToJson(path) {
+    convertMapToJson() {
         // only need to save the overridden tiles, roads, and settlements
         let data = {
             tiles: {
