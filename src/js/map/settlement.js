@@ -5,6 +5,8 @@ export class Settlement {
         this.vertex = new HexVertex(q, r, s);
         this.owner = owner;
         this.level = 0; //0 for empty, 1 for settlement, 2 for city
+        this.tradeResource = null; // null or resource type string
+        this.tradeRatio = null; // null or integer
     }
 
     upgrade() {
