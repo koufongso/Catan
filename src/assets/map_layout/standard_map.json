@@ -6,28 +6,12 @@
             "s": [-2,2]
         },
         "defaults": {
-            "type":"desert",
-            "numberToken":0
+            "resource":"desert",
+            "tokenNumber":0
         },
         "overrides":[
-            {"coord":[0,0,0],"type":"desert","numberToken":0},
-            {"coord":[1,0,-1],"type":"desert","numberToken":0},
-            {"coord":[1,-1,0],"type":"desert","numberToken":0},
-            {"coord":[0,-1,1],"type":"desert","numberToken":0},
-            {"coord":[-1,0,1],"type":"desert","numberToken":0},
-            {"coord":[-1,1,0],"type":"desert","numberToken":0},
-            {"coord":[0,1,-1],"type":"desert","numberToken":0},
-            {"coord":[2,0,-2],"type":"desert","numberToken":0},
-            {"coord":[2,-1,-1],"type":"desert","numberToken":0},
-            {"coord":[2,-2,0],"type":"desert","numberToken":0},
-            {"coord":[1,-2,1],"type":"desert","numberToken":0},
-            {"coord":[0,-2,2],"type":"desert","numberToken":0},
-            {"coord":[-1,-1,2],"type":"desert","numberToken":0},
-            {"coord":[-2,0,2],"type":"desert","numberToken":0},
-            {"coord":[-2,1,1],"type":"desert","numberToken":0},
-            {"coord":[-2,2,0],"type":"desert","numberToken":0},
-            {"coord":[-1,2,-1],"type":"desert","numberToken":0},
-            {"coord":[0,2,-2],"type":"desert","numberToken":0}
+            {"coord":[0,0,0],"resource":"rock","tokenNumber":1},
+            {"coord":[1,0,-1],"resource":"sheep","tokenNumber":2}
         ]
     },
     "roads": {

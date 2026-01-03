@@ -3,8 +3,8 @@ import { ResourceType } from "./resource_type.js";
 
 export class Tile {
     constructor(q, r, s, resource, tokenNumber) {
-        // type check
-        if (!Object.values(ResourceType).includes(resource)) {
+        // type check       
+        if (!ResourceType.isValid(resource)) {
             throw new Error(`Invalid tile type: ${resource}`);
         }
 

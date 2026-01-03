@@ -21,18 +21,59 @@ export class GameMap {
             const response = await fetch(path); // Path to your file
             const data = await response.json();
             console.log(data);
+
+            // parse tiles
+            // first check if range is defined, and generate tiles with default
+            if (data.tiles.range.q!==undefined && data.tiles.range.r!==undefined && data.tiles.range.s!==undefined) {
+                let qRange = data.tiles.range.q;
+                let rRange = data.tiles.range.r;
+                let sRange = data.tiles.range.s;
+                let default_resource = ResourceType.from(data.tiles.defaults.resource);
+                let default_tokenNumber = data.tiles.defaults.tokenNumber;
+
+                // check validity of default resource and tokenNumber
+                if (typeof default_tokenNumber !== 'number') {
+                    throw new Error(`Invalid default token number: ${default_tokenNumber}`);
+                }
+                
+                for (let q = qRange[0]; q <= qRange[1]; q++) {
+                    for (let r = rRange[0]; r <= rRange[1]; r++) {
+                        for (let s = sRange[0]; s <= sRange[1]; s++) {
+                            if (q + r + s === 0) { // valid hex coordinate
+                                this.updateTileByCoord([q, r, s], default_resource, default_tokenNumber);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // then override with specific tiles
+            for (let tileData of data.tiles.overrides) {
+                let coord = tileData.coord;
+                let resource = ResourceType.from(tileData.resource);
+                let tokenNumber = tileData.tokenNumber;
+                this.updateTileByCoord(coord, resource, tokenNumber);
+            }
+
+            // debug print all tiles
+            console.log("Loaded Tiles:");
+            for (let [id, tile] of this.tiles) {
+                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.tokenNumber}`);
+            }
+            
+
         } catch (error) {
             console.error('Error loading JSON:', error);
         }
     }
-    
+
     // edit the tile at coord, if type or numberToken is null, keep the original value
     // coord: [q,r,s]
     // type: 
-    updateTileByCoord(coord, type = null, numberToken = null) {
+    updateTileByCoord(coord, resource = null, numberToken = null) {
         // validate type
-        if (type !== null && !Object.values(ResourceType).includes(type)) {
-            throw new Error(`Invalid tile type: ${type}`);
+        if (resource !== null && !ResourceType.isValid(resource)) {
+            throw new Error(`Invalid tile type: ${resource}`);
         }
 
         if (typeof numberToken !== 'number' && numberToken !== null) {
@@ -45,8 +86,8 @@ export class GameMap {
         if (this.tiles.has(id)) {
             // edit existing tile
             let tile = this.tiles.get(id);
-            if (type !== null) {
-                tile.type = type;
+            if (resource !== null) {
+                tile.resource = resource;
             }
             if (numberToken !== null) {
                 tile.tokenNumber = numberToken;
@@ -56,7 +97,7 @@ export class GameMap {
         else {
             // add new tile
             let coords = id.split(",").map(Number);
-            let tile = new Tile(coords[0], coords[1], coords[2], type, numberToken);
+            let tile = new Tile(coords[0], coords[1], coords[2], resource, numberToken);
             this.tiles.set(id, tile);
         }
     }
