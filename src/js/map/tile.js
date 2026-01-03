@@ -1,23 +1,14 @@
 import { Hex } from "./hex_grid_system.js/hex";
-
-export const TileType = Object.freeze({
-    WOOD: 'WOOD',
-    ROCK: 'ROCK',
-    BRICK: 'BRICK',
-    SHEEP: 'SHEEP',
-    WHEAT: 'WHEAT',
-    DESERT: 'DESERT'
-});
-
+import { ResourceType } from "./resource_type.js";
 
 export class Tile {
-    constructor(q, r, s, type, tokenNumber) {
+    constructor(q, r, s, resource, tokenNumber) {
         // type check
-        if (!Object.values(TileType).includes(type)) {
-            throw new Error(`Invalid tile type: ${type}`);
+        if (!Object.values(ResourceType).includes(resource)) {
+            throw new Error(`Invalid tile type: ${resource}`);
         }
 
-        this.type = type; // e.g., "wood", "hill", etc.
+        this.resource = resource; // e.g., "wood", "hill", etc.
         this.hex = new Hex(q, r, s); // Hexagon instance representing the tile's position
         this.tokenNumber = tokenNumber; // Number token on the tile (if applicable)
     }
