@@ -1,0 +1,41 @@
+{
+    "tiles": {
+        "range":{
+            "q": [-2,2],
+            "r": [-2,2],
+            "s": [-2,2]
+        },
+        "defaults": {
+            "type":"desert",
+            "numberToken":0
+        },
+        "overrides":[
+            {"coord":[0,0,0],"type":"desert","numberToken":0},
+            {"coord":[1,0,-1],"type":"desert","numberToken":0},
+            {"coord":[1,-1,0],"type":"desert","numberToken":0},
+            {"coord":[0,-1,1],"type":"desert","numberToken":0},
+            {"coord":[-1,0,1],"type":"desert","numberToken":0},
+            {"coord":[-1,1,0],"type":"desert","numberToken":0},
+            {"coord":[0,1,-1],"type":"desert","numberToken":0},
+            {"coord":[2,0,-2],"type":"desert","numberToken":0},
+            {"coord":[2,-1,-1],"type":"desert","numberToken":0},
+            {"coord":[2,-2,0],"type":"desert","numberToken":0},
+            {"coord":[1,-2,1],"type":"desert","numberToken":0},
+            {"coord":[0,-2,2],"type":"desert","numberToken":0},
+            {"coord":[-1,-1,2],"type":"desert","numberToken":0},
+            {"coord":[-2,0,2],"type":"desert","numberToken":0},
+            {"coord":[-2,1,1],"type":"desert","numberToken":0},
+            {"coord":[-2,2,0],"type":"desert","numberToken":0},
+            {"coord":[-1,2,-1],"type":"desert","numberToken":0},
+            {"coord":[0,2,-2],"type":"desert","numberToken":0}
+        ]
+    },
+    "roads": {
+        "defaults": {"owner": null },
+        "overrides": []
+        },
+    "settlements": {
+        "defaults": {"owner": null },
+        "overrides": []
+    }
+}
