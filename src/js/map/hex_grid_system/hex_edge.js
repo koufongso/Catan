@@ -1,5 +1,3 @@
-import { HexVertex } from "./hex_vetex.js";
-
 // an edge is defined by two (hex) vertices
 export class HexEdge {
     constructor(vertex1, vertex2) {

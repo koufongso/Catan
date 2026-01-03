@@ -1,4 +1,4 @@
-import { HexVertex } from "../hex_grid_system.js/hex_vetex.js";
+import { HexVertex } from "./hex_grid_system/hex_vetex.js";
 
 export class Settlement {
     constructor(q, r, s, owner = null) {

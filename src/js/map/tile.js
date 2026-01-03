@@ -1,4 +1,4 @@
-import { Hex } from "./hex_grid_system.js/hex";
+import { Hex } from "./hex_grid_system/hex.js";
 import { ResourceType } from "./resource_type.js";
 
 export class Tile {
