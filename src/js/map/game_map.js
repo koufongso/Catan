@@ -15,7 +15,7 @@ export class GameMap {
     }
 
     // load the map from json file to initializes the interactable elements
-    async loadMapLayout(path) {
+    async loadMapFromJson(path) {
         // load the json file
         try {
             const response = await fetch(path); // Path to your file
