@@ -67,6 +67,43 @@ export class GameMap {
         }
     }
 
+    convertMapToJson(path) {
+        // only need to save the overridden tiles, roads, and settlements
+        let data = {
+            tiles: {
+                overrides: []
+            },
+            roads: {
+                overrides: []
+            },
+            settlements: {
+                overrides: []
+            }
+        };
+
+        // save tiles
+        for (let [id, tile] of this.tiles) {
+            data.tiles.overrides.push({"coord": tile.hex.coord, "resource": tile.resource, "tokenNumber": tile.tokenNumber});
+        }
+        // save roads
+        for (let [id, road] of this.roads) {
+            data.roads.overrides.push({"coord": road.coord, "owner": road.owner});
+        }
+        // save settlements
+        for (let [id, settlement] of this.settlements) {
+            data.settlements.overrides.push({"coord": settlement.vertex.coord, "owner": settlement.owner, "level": settlement.level});
+        }
+
+        let json_str =  JSON.stringify(data, null, 2); // pretty print with 2 spaces indentation
+    
+        console.log("Map saved to JSON:");
+        console.log(json_str);
+
+        // download the json file
+        return json_str;
+    
+    }
+
     // edit the tile at coord, if type or numberToken is null, keep the original value
     // coord: [q,r,s]
     // type: 
@@ -162,4 +199,5 @@ export class GameMap {
 }
 
 let map = new GameMap();
-map.loadMapLayout('src/assets/map_layout/standard_map.json');
+await map.loadMapFromJson('src/assets/map_layout/standard_map.json');
+map.convertMapToJson();
