@@ -194,10 +194,139 @@ export class GameMap {
         this.settlements.delete(id);
     }
 
+    // assign resources to tiles randomly to current tiles on the map
+    // resourceDistribution: the number of each resource type to be assigned
+    // e.g., { ResourceType.WOOD: 4, ResourceType.BRICK: 3, ResourceType.SHEEP: 4, ResourceType.WHEAT: 4, ResourceType.ORE: 3, ResourceType.DESERT: 1 }
+    // we will randomly pick resource to each tile in order until all tiles are assigned.
+    assignResourceRandom(seed, resourceDistribution) {
+        // check if total number of resources match the number of tiles
+        let totalResources = Object.values(resourceDistribution).reduce((a, b) => a + b, 0);
+        if (totalResources !== this.tiles.size) {
+            throw new Error(`Total number of resources (${totalResources}) does not match number of tiles (${this.tiles.size})`);
+        }
 
+        // create a list of resources based on the distribution
+        let resources = [];
+        for (let [resource, count] of Object.entries(resourceDistribution)) {
+            for (let i = 0; i < count; i++) {
+                resources.push(resource);
+            }
+        }
+
+        // shuffle the resources list using Fisher-Yates algorithm with seed
+        this._seededShuffle(resources, seed);
+
+        // assign resources to tiles
+        let index = 0;
+        for (let [id, tile] of this.tiles) {
+            tile.resource = resources[index];
+            index++;
+        }
+    }
+
+    assignTokenNumberRandom(seed, tokenNumbers) {
+        // check if total number of token numbers match the number of tiles
+        if (tokenNumbers.length !== this.tiles.size) {
+            throw new Error(`Total number of token numbers (${tokenNumbers.length}) does not match number of tiles (${this.tiles.size})`);
+        }
+        this._seededShuffle(tokenNumbers, seed);
+        // assign token numbers to tiles
+        let index = 0;
+        for (let [id, tile] of this.tiles) {
+            tile.tokenNumber = tokenNumbers[index];
+            index++;
+        }
+    }
+
+    _seededShuffle(array, seed) {
+        let rand = this._mulberry32(seed);
+        let currentIndex = array.length, randomIndex;
+
+        while (currentIndex != 0) {
+            randomIndex = Math.floor(rand() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [
+                array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    _mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    swapTile(idA, idB, swapResources = true, swapTokens = true) {
+        const tileA = this.tiles.get(idA);
+        const tileB = this.tiles.get(idB);
+
+        if (!tileA || !tileB) {
+            console.warn(`Cannot swap: one or both tiles do not exist (${idA}, ${idB})`);
+            return;
+        }
+
+        // Swap resources
+        if (swapResources) {
+            const tempResource = tileA.resource;
+            tileA.resource = tileB.resource;
+            tileB.resource = tempResource;
+        }
+
+        // Swap tokens (if you are using them)
+        if (swapTokens) {
+            const tempToken = tileA.tokenNumber;
+            tileA.tokenNumber = tileB.tokenNumber;
+            tileB.tokenNumber = tempToken;
+        }
+    }
+
+    // return a list of tile ids that have the given resource type
+    searchTileByResource(resourceType) {
+        let results = [];
+        for (let [id, tile] of this.tiles) {
+            if (tile.resource === resourceType) {
+                results.push(id);
+            }
+        }
+        return results;
+    }
+
+    // return a list of tile ids that have the given token number
+    searchTileByTokenNumber(tokenNumber) {
+        let results = [];
+        for (let [id, tile] of this.tiles) {
+            if (tile.tokenNumber === tokenNumber) {
+                results.push(id);
+            }
+        }
+        return results;
+    }
 
 }
 
 let map = new GameMap();
 await map.loadMapFromJson('src/assets/map_layout/standard_map.json');
+map.assignResourceRandom(42, {
+    [ResourceType.WOOD]: 4,
+    [ResourceType.BRICK]: 3,
+    [ResourceType.SHEEP]: 4,
+    [ResourceType.WHEAT]: 4,
+    [ResourceType.ROCK]: 3,
+    [ResourceType.DESERT]: 1
+});
+map.assignTokenNumberRandom(42, [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12]);
+
+// swap desert tile to the center
+let desertTiles = map.searchTileByResource(ResourceType.DESERT);
+map.swapTile(desertTiles[0], "0,0,0", true, true); 
+
+// swap token 7 to the center tile
+let token7Tiles = map.searchTileByTokenNumber(7);
+map.swapTile(token7Tiles[0], "0,0,0", false, true);
+
+// the center tile should now be desert with token 7
 map.convertMapToJson();
