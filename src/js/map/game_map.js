@@ -29,18 +29,18 @@ export class GameMap {
                 let rRange = data.tiles.range.r;
                 let sRange = data.tiles.range.s;
                 let default_resource = ResourceType.from(data.tiles.defaults.resource);
-                let default_tokenNumber = data.tiles.defaults.tokenNumber;
+                let default_numberToken = data.tiles.defaults.numberToken;
 
-                // check validity of default resource and tokenNumber
-                if (typeof default_tokenNumber !== 'number') {
-                    throw new Error(`Invalid default token number: ${default_tokenNumber}`);
+                // check validity of default resource and numberToken
+                if (typeof default_numberToken !== 'number') {
+                    throw new Error(`Invalid default token number: ${default_numberToken}`);
                 }
                 
                 for (let q = qRange[0]; q <= qRange[1]; q++) {
                     for (let r = rRange[0]; r <= rRange[1]; r++) {
                         for (let s = sRange[0]; s <= sRange[1]; s++) {
                             if (q + r + s === 0) { // valid hex coordinate
-                                this.updateTileByCoord([q, r, s], default_resource, default_tokenNumber);
+                                this.updateTileByCoord([q, r, s], default_resource, default_numberToken);
                             }
                         }
                     }
@@ -51,14 +51,14 @@ export class GameMap {
             for (let tileData of data.tiles.overrides) {
                 let coord = tileData.coord;
                 let resource = ResourceType.from(tileData.resource);
-                let tokenNumber = tileData.tokenNumber;
-                this.updateTileByCoord(coord, resource, tokenNumber);
+                let numberToken = tileData.numberToken;
+                this.updateTileByCoord(coord, resource, numberToken);
             }
 
             // debug print all tiles
             console.log("Loaded Tiles:");
             for (let [id, tile] of this.tiles) {
-                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.tokenNumber}`);
+                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
             }
             
 
@@ -83,7 +83,7 @@ export class GameMap {
 
         // save tiles
         for (let [id, tile] of this.tiles) {
-            data.tiles.overrides.push({"coord": tile.hex.coord, "resource": tile.resource, "tokenNumber": tile.tokenNumber});
+            data.tiles.overrides.push({"coord": tile.hex.coord, "resource": tile.resource, "numberToken": tile.numberToken});
         }
         // save roads
         for (let [id, road] of this.roads) {
@@ -127,7 +127,7 @@ export class GameMap {
                 tile.resource = resource;
             }
             if (numberToken !== null) {
-                tile.tokenNumber = numberToken;
+                tile.numberToken = numberToken;
             }
             this.tiles.set(id, tile);
         }
@@ -224,16 +224,16 @@ export class GameMap {
         }
     }
 
-    assignTokenNumberRandom(seed, tokenNumbers) {
+    assignNumberTokenRandom(seed, numberTokens) {
         // check if total number of token numbers match the number of tiles
-        if (tokenNumbers.length !== this.tiles.size) {
-            throw new Error(`Total number of token numbers (${tokenNumbers.length}) does not match number of tiles (${this.tiles.size})`);
+        if (numberTokens.length !== this.tiles.size) {
+            throw new Error(`Total number of token numbers (${numberTokens.length}) does not match number of tiles (${this.tiles.size})`);
         }
-        this._seededShuffle(tokenNumbers, seed);
+        this._seededShuffle(numberTokens, seed);
         // assign token numbers to tiles
         let index = 0;
         for (let [id, tile] of this.tiles) {
-            tile.tokenNumber = tokenNumbers[index];
+            tile.numberToken = numberTokens[index];
             index++;
         }
     }
@@ -278,9 +278,9 @@ export class GameMap {
 
         // Swap tokens (if you are using them)
         if (swapTokens) {
-            const tempToken = tileA.tokenNumber;
-            tileA.tokenNumber = tileB.tokenNumber;
-            tileB.tokenNumber = tempToken;
+            const tempToken = tileA.numberToken;
+            tileA.numberToken = tileB.numberToken;
+            tileB.numberToken = tempToken;
         }
     }
 
@@ -296,10 +296,10 @@ export class GameMap {
     }
 
     // return a list of tile ids that have the given token number
-    searchTileByTokenNumber(tokenNumber) {
+    searchTileBynumberToken(numberToken) {
         let results = [];
         for (let [id, tile] of this.tiles) {
-            if (tile.tokenNumber === tokenNumber) {
+            if (tile.numberToken === numberToken) {
                 results.push(id);
             }
         }
@@ -318,14 +318,14 @@ map.assignResourceRandom(42, {
     [ResourceType.ROCK]: 3,
     [ResourceType.DESERT]: 1
 });
-map.assignTokenNumberRandom(42, [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12]);
+map.assignNumberTokenRandom(42, [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12]);
 
 // swap desert tile to the center
 let desertTiles = map.searchTileByResource(ResourceType.DESERT);
 map.swapTile(desertTiles[0], "0,0,0", true, true); 
 
 // swap token 7 to the center tile
-let token7Tiles = map.searchTileByTokenNumber(7);
+let token7Tiles = map.searchTileBynumberToken(7);
 map.swapTile(token7Tiles[0], "0,0,0", false, true);
 
 // the center tile should now be desert with token 7
