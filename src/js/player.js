@@ -3,13 +3,13 @@ import { ResourceType } from './map/resource_type.js';
 export class Player {
     constructor(name) {
         this.name = name;
-        this.resources = {
-            [ResourceType.WOOD]: 0,
-            [ResourceType.BRICK]: 0,
-            [ResourceType.SHEEP]: 0,
-            [ResourceType.WHEAT]: 0,
-            [ResourceType.ROCK]: 0
-        };
+        this.resources = new Map();
+        this.resources.set(ResourceType.WOOD, 0);
+        this.resources.set(ResourceType.BRICK, 0);
+        this.resources.set(ResourceType.SHEEP, 0);
+        this.resources.set(ResourceType.WHEAT, 0);
+        this.resources.set(ResourceType.ROCK, 0);
+
         this.roads = new Map(); // list of road objects owned by the player
         this.settlements = new Map(); // list of settlement objects owned by the player
         this.publicSpeicalScore = {"ArmyCrop":0, "longestRoad":0,"Knight":0}; // additional score from special cards
@@ -20,8 +20,8 @@ export class Player {
     // type: resource type (from ResourceType)
     // amount can be positive (gain) or negative (spend)
     updateResource(type, amount) {
-        if (this.resources.hasOwnProperty(type)) {
-            this.resources[type] += amount;
+        if (this.resources.has(type)) {
+            this.resources.set(type, this.resources.get(type) + amount);
         }
     }
 
