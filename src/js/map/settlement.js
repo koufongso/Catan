@@ -17,6 +17,15 @@ export class Settlement {
         }
     }
 
+    getScoreValue() {
+        if (this.level === 1) {
+            return 1; // settlement
+        } else if (this.level === 2) {
+            return 2; // city
+        }
+        return 0; // empty or invalid level
+    }
+
     getAdjacentSettlementCoord() {
         return this.vertex.getAdjacentVertexCoord();
     }
