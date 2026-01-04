@@ -20,7 +20,7 @@ export class GameMap {
         try {
             const response = await fetch(path); // Path to your file
             const data = await response.json();
-            console.log(data);
+            //console.log(data);
 
             // parse tiles
             // first check if range is defined, and generate tiles with default
@@ -56,10 +56,10 @@ export class GameMap {
             }
 
             // debug print all tiles
-            console.log("Loaded Tiles:");
-            for (let [id, tile] of this.tiles) {
-                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
-            }
+            // console.log("Loaded Tiles:");
+            // for (let [id, tile] of this.tiles) {
+            //     console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
+            // }
             
 
         } catch (error) {
@@ -96,8 +96,8 @@ export class GameMap {
 
         let json_str =  JSON.stringify(data, null, 2); // pretty print with 2 spaces indentation
     
-        console.log("Map saved to JSON:");
-        console.log(json_str);
+        // console.log("Map saved to JSON:");
+        // console.log(json_str);
 
         // download the json file
         return json_str;
@@ -296,7 +296,7 @@ export class GameMap {
     }
 
     // return a list of tile ids that have the given token number
-    searchTileBynumberToken(numberToken) {
+    searchTileByNumberToken(numberToken) {
         let results = [];
         for (let [id, tile] of this.tiles) {
             if (tile.numberToken === numberToken) {
@@ -307,26 +307,3 @@ export class GameMap {
     }
 
 }
-
-let map = new GameMap();
-await map.loadMapFromJson('src/assets/map_layout/standard_map.json');
-map.assignResourceRandom(42, {
-    [ResourceType.WOOD]: 4,
-    [ResourceType.BRICK]: 3,
-    [ResourceType.SHEEP]: 4,
-    [ResourceType.WHEAT]: 4,
-    [ResourceType.ROCK]: 3,
-    [ResourceType.DESERT]: 1
-});
-map.assignNumberTokenRandom(42, [2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12]);
-
-// swap desert tile to the center
-let desertTiles = map.searchTileByResource(ResourceType.DESERT);
-map.swapTile(desertTiles[0], "0,0,0", true, true); 
-
-// swap token 7 to the center tile
-let token7Tiles = map.searchTileBynumberToken(7);
-map.swapTile(token7Tiles[0], "0,0,0", false, true);
-
-// the center tile should now be desert with token 7
-map.convertMapToJson();
