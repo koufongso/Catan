@@ -134,7 +134,7 @@ export class GameMap {
         else {
             // add new tile
             let coords = id.split(",").map(Number);
-            let tile = new Tile(coords[0], coords[1], coords[2], resource, numberToken);
+            let tile = new Tile(coords, resource, numberToken);
             this.tiles.set(id, tile);
         }
     }
@@ -170,7 +170,7 @@ export class GameMap {
     // coord: hex_vertex [q,r,s]
     // owner: player id
     // level: 0 for empty, 1 for settlement, 2 for city
-    updateSettlementByCoord(coord, owner = null, level = null) {
+    updateSettlementByCoord(coord, owner = null, level = null, tradeResource = null, tradeRatio = null) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
         if (this.settlements.has(id)) {
             // edit existing settlement
@@ -181,10 +181,16 @@ export class GameMap {
             if (level !== null) {
                 settlement.level = level;
             }
+            if (tradeResource !== null) {
+                settlement.tradeResource = tradeResource;
+            }
+            if (tradeRatio !== null) {
+                settlement.tradeRatio = tradeRatio;
+            }
             this.settlements.set(id, settlement);
-        } else {
+        } else {    
             // add new settlement
-            let settlement = new Settlement(coord[0], coord[1], coord[2], owner, level);
+            let settlement = new Settlement(coord, owner, level, tradeResource, tradeRatio);
             this.settlements.set(id, settlement);
         }
     }
@@ -301,6 +307,18 @@ export class GameMap {
         for (let [id, tile] of this.tiles) {
             if (tile.numberToken === numberToken) {
                 results.push(id);
+            }
+        }
+        return results;
+    }
+
+    // get all settlement spot defined by current tiles on the map
+    getAllSettlementCoords() {
+        let results = new Map();
+        for (let [id, tile] of this.tiles) {
+            let vertexCoords = tile.hex.getVertexCoord();
+            for (let vCoord of vertexCoords) {
+                results.set(`${vCoord[0]},${vCoord[1]},${vCoord[2]}`, vCoord);
             }
         }
         return results;
