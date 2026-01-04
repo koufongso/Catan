@@ -1,0 +1,50 @@
+#game-container { position: relative; width: 100vw; height: 100vh; background: #87ceeb; }
+
+/* The Hexagons */
+.hex-tile {
+    stroke: #555;
+    stroke-width: 2px;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+.hex-tile:hover { filter: brightness(1.2); }
+
+/* Resource Colors */
+.wood { fill: #234719; }
+.wheat { fill: #F5BB3E; }
+.brick  { fill: #d25a39; }
+.rock  { fill: #967D7E; }
+.desert { fill: #D0AD69; }
+.sheep { fill: #6FAF47; }
+
+
+/* number tokens */
+.number-token-circle {
+    fill: #f4e2c0;
+    stroke: #444;
+    stroke-width: 2px;
+}
+.number-token-circle.high-probability {
+    stroke: #c00;
+    stroke-width: 2px;
+}
+.number-token {
+    font-size: 20px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    font-family: serif;
+    fill: #111;
+    font-weight: 700;
+    cursor: default;
+    pointer-events: none;
+}
+.number-token.high-probability { fill: #c00; }
+
+/* Interactive Elements */
+.vertex-slot {
+    fill: transparent;
+    cursor: pointer;
+}
+.vertex-slot:hover { fill: rgba(255, 255, 255, 0.5); }
+
+.built-settlement { stroke: white; stroke-width: 2px; }

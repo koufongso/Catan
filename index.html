@@ -3,8 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>Catan</title>
+    <link rel="stylesheet" href="src/css/style.css">
 </head>
 <body>
-    <script type="module" src="src/js/playground.js"></script>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div id="resource-bar">
+                <span>🌾 <b id="wheat-count">0</b></span>
+                <span>🌲 <b id="wood-count">0</b></span>
+                <span>🧱 <b id="brick-count">0</b></span>
+            </div>
+            <div id="status-message">Waiting for Roll...</div>
+            <button id="dice-btn">Roll Dice</button>
+        </div>
+
+        <svg id="map-svg" viewBox="-400 -300 800 600">
+            <g id="tile-layer"></g>
+            <g id="edge-layer"></g>
+            <g id="vertex-layer"></g>
+        </svg>
+    </div>
+    <script type="module" src="src/js/game_engine.js"></script>
 </body>
 </html>
