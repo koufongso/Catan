@@ -35,12 +35,17 @@ export class GameController {
             }
         });
 
+        // robber state
+        this.robberTileId = `0,0,0`; // starting position at center
+
         this.currentState = GameState.SETUP;
     }
 
     attachRenderer(renderer){
         this.renderer = renderer;
     }
+
+    
 
     // main game loop methods would go here
     async inputEvent(event){
@@ -83,6 +88,9 @@ export class GameController {
         if (event.type !== 'START_GAME'){
             return;
         }
+
+        // debug: print event
+        console.log("Game Setup Event:", event);
 
         // set up players
         this.humanPlayers = event.humanPlayers;

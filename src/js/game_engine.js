@@ -16,12 +16,7 @@ export class GameEngine{
         console.log("Starting Game Engine...");
 
         // manual trigger to start the game for testing
-        await this.gameController.inputEvent({
-            type: 'START_GAME',
-            humanPlayers: 1,
-            aiPlayers: 1,
-            seed: 12345
-        });
+        this.renderer.showConfig();
 
         // further game loop logic would go here
         console.log("Game Engine is running.");

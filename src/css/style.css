@@ -1,5 +1,18 @@
 #game-container { position: relative; width: 100vw; height: 100vh; background: #87ceeb; }
 
+/* modal positioning */
+.modal-container {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* allow clicks through when not blocking */
+}
+.modal-container .modal {
+    pointer-events: auto;
+}
+
 /* The Hexagons */
 .hex-tile {
     stroke: #555;
@@ -39,6 +52,49 @@
     pointer-events: none;
 }
 .number-token.high-probability { fill: #c00; }
+
+/* modal + settings */
+.modal {
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 240px;
+}
+.modal label {
+    font-weight: 600;
+    font-size: 14px;
+}
+.modal input[type="range"],
+.modal input[type="number"] {
+    width: 100%;
+}
+.modal .hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #555;
+}
+
+.stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.stepper button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #ccc;
+    background: #f7f7f7;
+    cursor: pointer;
+}
+.stepper span {
+    min-width: 20px;
+    text-align: center;
+    font-weight: 700;
+}
 
 /* Interactive Elements */
 .vertex-slot {

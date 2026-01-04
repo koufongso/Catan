@@ -24,6 +24,16 @@ export class Renderer {
     }
 
     renderInitialMap(gameMap) {
+        // get the template for game container
+        const temp = document.getElementById('game-template');
+        const clone = temp.content.cloneNode(true); // Copy the template
+        let layers = {
+            tiles: clone.getElementById('tile-layer'),
+            vertices: clone.getElementById('vertex-layer'),
+            edges: clone.getElementById('edge-layer')
+        };
+        
+
         // draw all tiles
         gameMap.tiles.forEach(tile => {
             // draw pologon for each tile
@@ -31,9 +41,9 @@ export class Renderer {
                 tile.hex.coord, // [q,r,s]
                 tile.resource,
                 tile.hex.id,
-                50, // size
+                70, // size
             );
-            this.layers.tiles.appendChild(hexPoly);
+            layers.tiles.appendChild(hexPoly);
 
             // draw number token
             if (tile.numberToken !== null) {
@@ -64,10 +74,15 @@ export class Renderer {
                     text.setAttribute("class", "number-token high-probability");
                 }
 
-                this.layers.tiles.appendChild(circle);
-                this.layers.tiles.appendChild(text);
+                layers.tiles.appendChild(circle);
+                layers.tiles.appendChild(text);
             }
         });
+
+        // clear existing content and add the clone to main wrapper
+        let wrapper = document.getElementById('main-wrapper');
+        wrapper.innerHTML = '';
+        wrapper.appendChild(clone);
     }
 
     coordToPixel(coord, size=50) {
@@ -95,5 +110,30 @@ export class Renderer {
         poly.dataset.id = id;
        
         return poly;
+    }
+
+    // show game configuration UI
+    showConfig() {
+        const temp = document.getElementById('config-template');
+        const clone = temp.content.cloneNode(true); // Copy the template
+        
+        // Add logic to the new buttons before adding to DOM
+        if (!this.controller){
+            console.error("Renderer: Controller not attached. Cannot proceed with configuration.");
+            return;
+        }
+
+        clone.getElementById('start-game').onclick = () => {
+            this.controller.inputEvent({type: 'START_GAME', 
+                mapSize: parseInt(document.getElementById('map-size').value),
+                aiPlayers: parseInt(document.getElementById('ai-players').value),
+                humanPlayers: parseInt(document.getElementById('human-players').value),
+                seed: Date.now()});
+        }
+        
+        // clear existing content and add the clone to main wrapper
+        let wrapper = document.getElementById('main-wrapper');
+        wrapper.innerHTML = '';
+        wrapper.appendChild(clone);
     }
 }

@@ -1,28 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Catan</title>
     <link rel="stylesheet" href="src/css/style.css">
 </head>
-<body>
-    <div id="game-container">
-        <div id="ui-layer">
-            <div id="resource-bar">
-                <span>🌾 <b id="wheat-count">0</b></span>
-                <span>🌲 <b id="wood-count">0</b></span>
-                <span>🧱 <b id="brick-count">0</b></span>
-            </div>
-            <div id="status-message">Waiting for Roll...</div>
-            <button id="dice-btn">Roll Dice</button>
-        </div>
 
-        <svg id="map-svg" viewBox="-400 -300 800 600">
-            <g id="tile-layer"></g>
-            <g id="edge-layer"></g>
-            <g id="vertex-layer"></g>
-        </svg>
+<body>
+
+    <template id="config-template">
+        <div class="modal-container">
+            <div class="modal">
+                <h2 style="text-align: center">Game Settings</h2>
+                <label for="map-size">Board radius (hex rings)</label>
+                <input type="range" id="map-size" min="2" max="5" value="3"
+                    oninput="this.nextElementSibling.value = this.value">
+                <output id="map-size-value">3</output>
+
+                <label for="human-players">Human players</label>
+                <input type="range" id="human-players" min="1" max="4" value="1"
+                    oninput="this.nextElementSibling.value = this.value">
+                <output id="human-players-value">1</output>
+
+                <label for="ai-players">AI players</label>
+                <input type="range" id="ai-players" min="0" max="3" value="1"
+                    oninput="this.nextElementSibling.value = this.value">
+                <output id="ai-players-value">1</output>
+
+                <button id="start-game">Start Game</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="game-template">
+        <div id="game-container">
+            <div id="ui-layer">
+                <div id="resource-bar">
+                    <span>🌾 <b id="wheat-count">0</b></span>
+                    <span>🌲 <b id="wood-count">0</b></span>
+                    <span>🧱 <b id="brick-count">0</b></span>
+                </div>
+                <button id="dice-btn">Roll Dice</button>
+            </div>
+
+            <svg id="map-svg" viewBox="-400 -300 800 600">
+                <g id="tile-layer"></g>
+                <g id="edge-layer"></g>
+                <g id="vertex-layer"></g>
+            </svg>
+        </div>
+    </template>
+
+    <div id="main-wrapper">
+        <!-- The game will be rendered here -->
     </div>
+
     <script type="module" src="src/js/game_engine.js"></script>
 </body>
+
 </html>
