@@ -33,6 +33,7 @@ export class Renderer {
             edges: clone.getElementById('edge-layer')
         };
         
+        const size = 60; // hex size
 
         // draw all tiles
         gameMap.tiles.forEach(tile => {
@@ -41,13 +42,13 @@ export class Renderer {
                 tile.hex.coord, // [q,r,s]
                 tile.resource,
                 tile.hex.id,
-                70, // size
+                size, // size
             );
             layers.tiles.appendChild(hexPoly);
 
             // draw number token
             if (tile.numberToken !== null) {
-                const [x, y] = this.coordToPixel(tile.hex.coord, 50);
+                const [x, y] = this.coordToPixel(tile.hex.coord, size);
 
                 if (tile.numberToken ===7){
                     return; // no number token for 7
@@ -56,7 +57,7 @@ export class Renderer {
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", x);
                 circle.setAttribute("cy", y);
-                circle.setAttribute("r", 18);
+                circle.setAttribute("r", size*0.3);
                 const circleClass = (tile.numberToken === 6 || tile.numberToken === 8)
                     ? "number-token-circle high-probability"
                     : "number-token-circle";
