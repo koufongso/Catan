@@ -12,11 +12,6 @@ const SQRT3_HALF = SQRT3 / 2;
 export class Renderer {
     constructor(svgId) {
         this.svg = document.getElementById(svgId);
-        this.layers = {
-            tiles: document.getElementById('tile-layer'),
-            vertices: document.getElementById('vertex-layer'),
-            edges: document.getElementById('edge-layer')
-        };
         this.controller = null;   
     }
 
@@ -87,17 +82,32 @@ export class Renderer {
             if (settlement.tradeList.length !== 0) {
                 // has a trading post, draw it (at the outter edge of the hex)
                 const [x, y] = this.vertexCoordToPixel(settlement.vertex, size);
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
 
                 // draw in follwoing the direction outward from center of hex
                 const origin = this.hexCoordToPixel([0,0,0], size);
-                const dir_x = x - origin[0];
-                const dir_y = y - origin[1];
-                circle.setAttribute("cx", x);
-                circle.setAttribute("cy", y);
-                circle.setAttribute("r", 10);
-                circle.setAttribute("class", "trading-post");
-                layers.vertices.appendChild(circle);
+                const dir_x = (x - origin[0]);
+                const dir_y = (y - origin[1]);
+                const length = Math.sqrt(dir_x*dir_x + dir_y*dir_y);
+                const norm_dir_x = dir_x / length;
+                const norm_dir_y = dir_y / length;
+                rect.setAttribute("x", x -10 + norm_dir_x * 10); // add -10 offset to center the rect
+                rect.setAttribute("y", y + norm_dir_y * 10);
+                rect.setAttribute("width", 20);
+                rect.setAttribute("height", 20);
+                rect.setAttribute("class", "trading-post");
+                layers.vertices.appendChild(rect);
+
+                // add ratio text
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x + norm_dir_x * 10);
+                text.setAttribute("y", y + 30 + norm_dir_y * 10);
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("class", "trading-post-ratio");
+                for (let [resource, ratio] of Object.entries(settlement.tradeList)) {
+                    text.textContent = `${resource}: ${ratio}:1`;
+                    layers.vertices.appendChild(text);
+                }
             }
         });
 
