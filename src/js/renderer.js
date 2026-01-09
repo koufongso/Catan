@@ -253,4 +253,24 @@ export class Renderer {
             debugDashboard.lastChild.remove(); 
         }
     }
+
+    renderDebugHUDLog(message) {
+        const debugDashboard = document.getElementById('debug-dashboard');
+        // add new HUD content
+        const newLog = document.createElement('div');
+        newLog.innerHTML = (`
+            <div>
+                <p>Timestamp: ${new Date().toLocaleTimeString()}</p>
+                <p>${message}</p>
+            </div>
+            <br>
+        `);
+        debugDashboard.prepend(newLog);
+
+        // limit the number of logs to 10
+        if (debugDashboard.children.length > 10) {
+        // Removing the oldest (last) child is very fast
+            debugDashboard.lastChild.remove(); 
+        }
+    }
 }

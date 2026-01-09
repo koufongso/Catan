@@ -58,6 +58,14 @@ export class GameController {
         }
     }
 
+    renderDebugHUDLog(message){
+        if (this.renderer){
+            this.renderer.renderDebugHUDLog(message);
+        }else{
+            console.warn("Renderer not attached. Cannot render debug HUD log.");
+        }
+    }
+
     // main game loop methods would go here
     async inputEvent(event){
         console.log(`State: ${this.gameContext.currentState} | Event: ${event.type}`);
