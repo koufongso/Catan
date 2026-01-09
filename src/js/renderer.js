@@ -7,6 +7,7 @@ import { GameController } from "./game_controller.js";
 const RAD30 = Math.PI / 6; // 30 degrees in radians
 const RAD60  = Math.PI / 3; // 60 degrees in radians
 const SQRT3 = Math.sqrt(3);
+const SQRT3_HALF = SQRT3 / 2;
 // take care of all UI rendering and user interactions
 export class Renderer {
     constructor(svgId) {
@@ -48,7 +49,7 @@ export class Renderer {
 
             // draw number token
             if (tile.numberToken !== null) {
-                const [x, y] = this.coordToPixel(tile.hex.coord, size);
+                const [x, y] = this.hexCoordToPixel(tile.hex.coord, size);
 
                 if (tile.numberToken ===7){
                     return; // no number token for 7
@@ -80,15 +81,55 @@ export class Renderer {
             }
         });
 
+        // draw all settlements (trading posts)
+        console.log("Rendering Settlements with Trading Posts:");
+        gameMap.settlements.forEach(settlement => {
+            if (settlement.tradeList.length !== 0) {
+                // has a trading post, draw it (at the outter edge of the hex)
+                const [x, y] = this.vertexCoordToPixel(settlement.vertex, size);
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+
+                // draw in follwoing the direction outward from center of hex
+                const origin = this.hexCoordToPixel([0,0,0], size);
+                const dir_x = x - origin[0];
+                const dir_y = y - origin[1];
+                circle.setAttribute("cx", x);
+                circle.setAttribute("cy", y);
+                circle.setAttribute("r", 10);
+                circle.setAttribute("class", "trading-post");
+                layers.vertices.appendChild(circle);
+            }
+        });
+
         // clear existing content and add the clone to main wrapper
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
         wrapper.appendChild(clone);
     }
 
-    coordToPixel(coord, size=50) {
-        const x = (SQRT3 * size * (coord[0] + coord[2]/2));
-        const y = (1.5 * size * coord[2]);
+    vertexCoordToPixel(vertex, size=50) {
+        // Important: the vertex coordinate is not the same as hex center coordinate
+        // 1. get one of the adjacent hex coord
+        let hex_coord = vertex.getAdjacentHexCoord()[0];
+        
+        let hex_idx = vertex.getHexIndex(hex_coord);// get the index of the hex around the vertex
+        // skip sanity check here, hex_idx should be valid
+        // 2. calculate pixel position based on hex center and hex index (0:12 o'clock,go clockwise)
+        const [x0, y0] = this.hexCoordToPixel(hex_coord, size);
+        const angle = RAD60 * hex_idx + RAD30; // 30 degree offset
+        const x = size * Math.cos(angle) + x0;
+        const y = -size * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
+        console.log(`Vertex ${vertex.id} adjacent hex coord: ${hex_coord}, hex index: ${hex_idx}, hex pixel: (${x0},${y0}) , vertex pixel: (${x},${y})`);
+
+        return [x, y];
+    }
+
+
+    hexCoordToPixel(coord, size=50) {
+        // convert axial (q,r,s) to pixel (x,y)
+        // reference: https://www.redblobgames.com/grids/hexagons/
+        const x = size * (SQRT3 * coord[0]  +  SQRT3_HALF * coord[1]);
+        const y = size * (1.5 * coord[1]);
         return [x, y];
     }
 
@@ -97,11 +138,11 @@ export class Renderer {
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
         const points = [];
-        const [x0, y0] = this.coordToPixel(coord, size);
+        const [x0, y0] = this.hexCoordToPixel(coord, size);
         for (let i = 0; i < 6; i++) {
             const angle = RAD60 * i + RAD30; // 30 degree offset
             const x = size * Math.cos(angle) + x0;
-            const y = size * Math.sin(angle) + y0;
+            const y = - size * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
             points.push(`${x},${y}`);
         }   
         poly.setAttribute("points", points.join(" "));

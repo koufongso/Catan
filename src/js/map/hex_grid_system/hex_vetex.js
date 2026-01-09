@@ -3,6 +3,10 @@ export class HexVertex {
         // a unique hex axial coordinates (q,r,s),
         // defined by its three adjacent (q,r,s) values 
         // we also used it as the vertex id
+        // check if this is a valid vertex
+        if (Math.abs(q+r+s)!=1){
+            throw new Error(`Invalid Hex Vertex Coordinate: (${q},${r},${s}). The sum of coordinates must be 1 or -1.`);
+        }
         this.coord = [q, r, s];
         this.id = `${q},${r},${s}`;
     }
@@ -50,6 +54,57 @@ export class HexVertex {
         return results;
     }
 
+    getAdjacentHexCoord() {
+        // get the three hexes that share this vertex
+        let results = [];
+        let offsets = [[1, 0, 0], [-1, 0, 0], [0, 1, 0],[0, -1, 0], [0, 0, 1], [0, 0, -1]];
+        for (let offset of offsets) {
+            let candidate_coord = [this.coord[0] + offset[0], this.coord[1] + offset[1], this.coord[2] + offset[2]];
+            if ((candidate_coord[0] + candidate_coord[1] + candidate_coord[2]) == 0) {
+                // valid hex coord should sum to 1 (q+r+s=1)
+                let newCoord = [this.coord[0] + offset[0], this.coord[1] + offset[1], this.coord[2] + offset[2]];
+                results.push(newCoord);
+            }
+        }
+        return results;
+    }
+
+    // get the position in the hex (0,1,2,3,4,5)
+    //       1
+    //    2 / \ 0
+    //    |     |
+    //    3 \ / 2 
+    //       4 
+    getHexIndex(hexCoord) {
+        // 0: [1,0,0]
+        // 1: [0,-1,0]
+        // 2: [0,0,1]
+        // 3: [-1,0,0]
+        // 4: [0,1,0]
+        // 5: [0,0,-1]
+        // this make compute the angle easier:
+        // angle = rad(60deg) * index + rad(30deg)
+        let diff = [this.coord[0] - hexCoord[0], this.coord[1] - hexCoord[1], this.coord[2] - hexCoord[2]];
+        if (diff[0] == 1 && diff[1] == 0 && diff[2] == 0) {
+            return 0;
+        }
+        else if (diff[0] == 0 && diff[1] == -1 && diff[2] == 0) {
+            return 1;
+        }
+        else if (diff[0] == 0 && diff[1] == 0 && diff[2] == 1) {
+            return 2;
+        }
+        else if (diff[0] == -1 && diff[1] == 0 && diff[2] == 0) {
+            return 3;
+        }
+        else if (diff[0] == 0 && diff[1] == 1 && diff[2] == 0) {
+            return 4;
+        }
+        else if (diff[0] == 0 && diff[1] == 0 && diff[2] == 1) {
+            return 5;
+        }
+        return null; // not adjacent to the given hex
+    }
     // helper function: add two hex coordinates
     add(other) {
         let result = [0, 0, 0]

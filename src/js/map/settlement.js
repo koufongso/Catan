@@ -1,12 +1,11 @@
 import { HexVertex } from "./hex_grid_system/hex_vetex.js";
 
 export class Settlement {
-    constructor(coord, owner = null, level = 0, tradeResource = null, tradeRatio = null) {
+    constructor(coord, owner = null, level = 0, tradeList = null) {
         this.vertex = new HexVertex(coord[0], coord[1], coord[2]);
         this.owner = owner;
         this.level = level; //0 for empty, 1 for settlement, 2 for city
-        this.tradeResource = tradeResource; // null or resource type string
-        this.tradeRatio = tradeRatio; // null or integer
+        this.tradeList = tradeList; // null or resource type string
     }
 
     upgrade() {

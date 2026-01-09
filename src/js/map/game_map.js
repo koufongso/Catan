@@ -55,11 +55,22 @@ export class GameMap {
                 this.updateTileByCoord(coord, resource, numberToken);
             }
 
+            // parse tradingposts
+            for (let tpData of data.tradingposts.overrides) {
+                let coord = tpData.coord;
+                let tradeList = tpData.tradeList;
+                this.updateSettlementByCoord(coord, null, 0, tradeList);
+            }
+
             // debug print all tiles
-            // console.log("Loaded Tiles:");
-            // for (let [id, tile] of this.tiles) {
-            //     console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
-            // }
+            console.log("Loaded Tiles:");
+            for (let [id, tile] of this.tiles) {
+                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
+            }
+
+            for (let [id, settlement] of this.settlements) {
+                console.log(`Settlement ID: ${id}, Owner: ${settlement.owner}, Level: ${settlement.level}, TradeList: ${JSON.stringify(settlement.tradeList)}`);
+            }
             
 
         } catch (error) {
@@ -170,7 +181,7 @@ export class GameMap {
     // coord: hex_vertex [q,r,s]
     // owner: player id
     // level: 0 for empty, 1 for settlement, 2 for city
-    updateSettlementByCoord(coord, owner = null, level = null, tradeResource = null, tradeRatio = null) {
+    updateSettlementByCoord(coord, owner = null, level = null, tradeList = null) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
         if (this.settlements.has(id)) {
             // edit existing settlement
@@ -181,16 +192,13 @@ export class GameMap {
             if (level !== null) {
                 settlement.level = level;
             }
-            if (tradeResource !== null) {
-                settlement.tradeResource = tradeResource;
-            }
-            if (tradeRatio !== null) {
-                settlement.tradeRatio = tradeRatio;
+            if (tradeList !== null) {
+                settlement.tradeList = tradeList;
             }
             this.settlements.set(id, settlement);
         } else {    
             // add new settlement
-            let settlement = new Settlement(coord, owner, level, tradeResource, tradeRatio);
+            let settlement = new Settlement(coord, owner, level, tradeList);
             this.settlements.set(id, settlement);
         }
     }
