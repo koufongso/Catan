@@ -139,6 +139,16 @@ export class Renderer {
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
         wrapper.appendChild(clone);
+
+        // add event listener for dice button
+        const diceBtn = document.getElementById('dice-btn');
+        diceBtn.onclick = () => {
+            if (this.controller){
+                this.controller.inputEvent({type: 'ROLL_DICE'});
+            }else{
+                console.error("Renderer: Controller not attached. Cannot handle dice roll.");
+            }
+        }
     }
 
     vertexCoordToPixel(vertex, size=50) {

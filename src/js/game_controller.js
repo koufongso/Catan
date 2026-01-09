@@ -1,6 +1,8 @@
 import { GameMap } from './map/game_map.js';
 import { ResourceType } from './map/resource_type.js';
 import { Player } from './player.js';
+import {Dice} from './dice.js';
+import { SeededRandom } from './seeded_random.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -23,6 +25,8 @@ export class GameController {
         this.aiPlayers = 0;
         this.turnNumber = 0;
         this.seed = 0;
+        this.rng = new SeededRandom(this.seed);
+        this.dice = new Dice(this.rng);
 
         this.renderer = null;
 
@@ -122,7 +126,15 @@ export class GameController {
         this.currentState = GameState.ROLL;
     }
 
+    async handleStateRoll(event){
+        if (event.type !== 'ROLL_DICE'){
+            return;
+        }
 
+        // roll dice and update game state
+        const rollResult = this.dice.roll(2);
+        console.log("Dice rolled:", rollResult);
+    }
 
 
 

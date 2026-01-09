@@ -15,7 +15,7 @@ export class Dice {
         }
         this.currentRoll = newValues;
         this.sum = newSum;
-        return this.sum;
+        return this.getCurrent();
     }
 
     getCurrent() {
