@@ -35,9 +35,6 @@ export class GameController {
             }
         });
 
-        // robber state
-        this.robberTileId = `0,0,0`; // starting position at center
-
         this.currentState = GameState.SETUP;
     }
 

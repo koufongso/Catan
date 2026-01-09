@@ -76,6 +76,22 @@ export class Renderer {
             }
         });
 
+        // draw the robber
+        {
+            const robberTile = gameMap.tiles.get(gameMap.robberTileId);
+            if (robberTile) {
+                const [x, y] = this.hexCoordToPixel(robberTile.hex.coord, size);
+                const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                robberImg.setAttribute("href", "./src/assets/images/robber.png");
+                robberImg.setAttribute("x", x );
+                robberImg.setAttribute("y", y+2.5); // slight offset for vertical centering
+                robberImg.setAttribute("text-anchor", "middle");
+                robberImg.setAttribute("class", "robber");
+                robberImg.textContent = "R"; // skull emoji as placeholder
+                layers.tiles.appendChild(robberImg);
+            }
+        }
+
         // draw all trading posts
         console.log("Rendering Trading Posts:");
         gameMap.tradingPosts.forEach(tp => {

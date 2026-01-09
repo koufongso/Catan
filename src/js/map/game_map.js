@@ -14,6 +14,7 @@ export class GameMap {
         this.roads = new Map(); // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
         this.settlements = new Map(); // register all (interactable) settlements/vertices, others will be conceptual "empty" settlements
         this.tradingPosts = new Map(); // register all trading posts on the map
+        this.robberTileId = '0,0,0'; // the tile id where the robber is currently located
     }
 
     // load the map from json file to initializes the interactable elements
