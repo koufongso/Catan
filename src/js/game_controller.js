@@ -18,15 +18,21 @@ export class GameController {
     constructor() {
         // game setup
         this.gameMap = new GameMap();
-        this.players = []; // circular array of Player instances
-        this.currentPlayerIndex = 0; // track whose turn it is
-        this.totalPlayers = 0;
-        this.humanPlayers = 0;
-        this.aiPlayers = 0;
-        this.turnNumber = 0;
         this.seed = 0;
         this.rng = new SeededRandom(this.seed);
-        this.dice = new Dice(this.rng);
+
+        this.gameContext = {
+            players: [], // circular array of Player instances
+            currentPlayerIndex: 0, // track whose turn it is
+            totalPlayers: 0,
+            humanPlayers: 0,
+            aiPlayers: 0,
+            turnNumber: 0,
+            seed: this.seed,
+            rng: this.rng,
+            dice: new Dice(this.rng),
+            currentState: GameState.SETUP,
+        }
 
         this.renderer = null;
 
@@ -38,21 +44,25 @@ export class GameController {
                 this.bankResources.set(type, 19); // standard Catan bank count
             }
         });
-
-        this.currentState = GameState.SETUP;
     }
 
     attachRenderer(renderer){
         this.renderer = renderer;
     }
 
-    
+    updateDebugHUD(){
+        if (this.renderer){
+            this.renderer.renderDebugHUD(this.gameContext);
+        }else{
+            console.warn("Renderer not attached. Cannot update debug HUD.");
+        }
+    }
 
     // main game loop methods would go here
     async inputEvent(event){
-        console.log(`State: ${this.currentState} | Event: ${event.type}`);
+        console.log(`State: ${this.gameContext.currentState} | Event: ${event.type}`);
         
-        switch(this.currentState){
+        switch(this.gameContext.currentState){
             case GameState.SETUP:
                 // handle setup events
                 await this.handleStateSetup(event);
@@ -74,7 +84,7 @@ export class GameController {
                 await this.handleStateEnd(event);
                 break;
             default:
-                throw new Error(`Unknown game state: ${this.currentState}`);
+                throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
     }
 
@@ -94,26 +104,30 @@ export class GameController {
         console.log("Game Setup Event:", event);
 
         // set up players
-        this.humanPlayers = event.humanPlayers;
-        this.aiPlayers = event.aiPlayers;
-        this.totalPlayers = this.humanPlayers + this.aiPlayers;
-        this.seed = event.seed || Date.now();
+        let gameContext = this.gameContext;
+        gameContext.humanPlayers = event.humanPlayers;
+        gameContext.aiPlayers = event.aiPlayers;
+        gameContext.totalPlayers = gameContext.humanPlayers + gameContext.aiPlayers;
+        gameContext.seed = event.seed || Date.now();
 
         // create player instances
-        for (let i = 0; i < this.humanPlayers; i++) {
-            this.players.push(new Player(i, `Human_${i+1}`, `Color_${i+1}`));
+        for (let i = 0; i < gameContext.humanPlayers; i++) {
+            gameContext.players.push(new Player(i, `Human_${i+1}`, `Color_${i+1}`));
         }
-        for (let j = 0; j < this.aiPlayers; j++) {
-            this.players.push(new Player(this.humanPlayers + j, `AI_${j+1}`, `Color_${this.humanPlayers + j +1}`));
+        for (let j = 0; j < gameContext.aiPlayers; j++) {
+            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j+1}`, `Color_${gameContext.humanPlayers + j +1}`));
         }
         // generate map
-        await this.generateDefaultMap(this.seed);
+        await this.generateDefaultMap(this.gameContext.seed);
         // transition to INIT state
-        this.currentState = GameState.INIT;
+        this.gameContext.currentState = GameState.INIT;
 
         // TODO: render the initial map
         if (this.renderer){
+            // render intial map
             this.renderer.renderInitialMap(this.gameMap, this.inputEvent);
+            // render player info in debug sidebar
+            this.updateDebugHUD();
         }else{
             console.warn("Renderer not attached. Cannot render game map.");
         }
@@ -123,7 +137,8 @@ export class GameController {
     async handleStateInit(event){
         // handle init state events here
         // for now, just transition to ROLL state
-        this.currentState = GameState.ROLL;
+        this.gameContext.currentState = GameState.ROLL;
+        this.updateDebugHUD();
     }
 
     async handleStateRoll(event){
@@ -132,8 +147,9 @@ export class GameController {
         }
 
         // roll dice and update game state
-        const rollResult = this.dice.roll(2);
+        const rollResult = this.gameContext.dice.roll(2);
         console.log("Dice rolled:", rollResult);
+        this.updateDebugHUD();
     }
 
 

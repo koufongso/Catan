@@ -93,7 +93,7 @@ export class Renderer {
         }
 
         // draw all trading posts
-        console.log("Rendering Trading Posts:");
+        //console.log("Rendering Trading Posts:");
         gameMap.tradingPosts.forEach(tp => {
             // hex center the trading post is located at
             const [x0, y0] = this.hexCoordToPixel(tp.coord, size);
@@ -103,7 +103,7 @@ export class Renderer {
                 const angle = RAD60 * index + RAD30; // 30 degree offset
                 const x = size * Math.cos(angle) + x0;
                 const y = -size * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
-                console.log(`  Trading Post at hex ${tp.coord}, vertex index: ${index}, pixel: (${x},${y})`);
+                //console.log(`  Trading Post at hex ${tp.coord}, vertex index: ${index}, pixel: (${x},${y})`);
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 
                 // better visual effect by shortening the line a bit
@@ -163,7 +163,7 @@ export class Renderer {
         const angle = RAD60 * hex_idx + RAD30; // 30 degree offset
         const x = size * Math.cos(angle) + x0;
         const y = -size * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
-        console.log(`Vertex ${vertex.id} adjacent hex coord: ${hex_coord}, hex index: ${hex_idx}, hex pixel: (${x0},${y0}) , vertex pixel: (${x},${y})`);
+        //console.log(`Vertex ${vertex.id} adjacent hex coord: ${hex_coord}, hex index: ${hex_idx}, hex pixel: (${x0},${y0}) , vertex pixel: (${x},${y})`);
 
         return [x, y];
     }
@@ -221,5 +221,36 @@ export class Renderer {
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
         wrapper.appendChild(clone);
+    }
+
+    renderDebugHUD(gameContext) {
+        const debugDashboard = document.getElementById('debug-dashboard');
+        // add new HUD content
+        const newLog = document.createElement('div');
+        newLog.innerHTML = (`
+            <div>
+                <p>Timestamp: ${new Date().toLocaleTimeString()}</p>
+                <p>Total Players: ${gameContext.totalPlayers}</p>
+                <p>Human Players: ${gameContext.humanPlayers}</p>
+                <p>AI Players: ${gameContext.aiPlayers}</p>
+                <p>Seed: ${gameContext.seed}</p>
+                <p>Current Turn: ${gameContext.turnNumber}</p>
+                <p>Current State: ${gameContext.currentState}</p>
+                <p>Players Status:</p>
+                <ul>
+                    ${gameContext.players.map(player => `<li>Player ${player.id}: ${player.name} (${player.type}) - Resources: ${JSON.stringify(player.resources)}</li>`).join('')}
+                </ul>
+                <p>Current Player: Player index ${gameContext.currentPlayerIndex} - ${gameContext.players[gameContext.currentPlayerIndex].name}</p>
+                <p>Dice Last Roll: ${gameContext.dice.lastRoll}</p>
+            </div>
+            <br>
+        `);
+        debugDashboard.prepend(newLog);
+
+        // limit the number of logs to 10
+        if (debugDashboard.children.length > 10) {
+        // Removing the oldest (last) child is very fast
+            debugDashboard.lastChild.remove(); 
+        }
     }
 }

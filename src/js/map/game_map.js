@@ -67,17 +67,17 @@ export class GameMap {
             }
 
             // debug print all tiles
-            console.log("Loaded Tiles:");
-            for (let [id, tile] of this.tiles) {
-                console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
-            }
+            // console.log("Loaded Tiles:");
+            // for (let [id, tile] of this.tiles) {
+            //     console.log(`Tile ID: ${id}, Type: ${tile.resource}, Token Number: ${tile.numberToken}`);
+            // }
 
-            for (let [id, settlement] of this.settlements) {
-                console.log(`Settlement ID: ${id}, Owner: ${settlement.owner}, Level: ${settlement.level}, TradeList: ${JSON.stringify(settlement.tradeList)}`);
-            }
-            for (let [id, tradingPost] of this.tradingPosts) {
-                console.log(`Trading Post ID: ${id}, IndexList: ${tradingPost.indexList}, TradeList: ${JSON.stringify(tradingPost.tradeList)}`);
-            }
+            // for (let [id, settlement] of this.settlements) {
+            //     console.log(`Settlement ID: ${id}, Owner: ${settlement.owner}, Level: ${settlement.level}, TradeList: ${JSON.stringify(settlement.tradeList)}`);
+            // }
+            // for (let [id, tradingPost] of this.tradingPosts) {
+            //     console.log(`Trading Post ID: ${id}, IndexList: ${tradingPost.indexList}, TradeList: ${JSON.stringify(tradingPost.tradeList)}`);
+            // }
 
         } catch (error) {
             console.error('Error loading JSON:', error);
