@@ -24,9 +24,8 @@
     },
     "tradingposts": {
         "overrides": [
-            {"coord":[-2,3,0],"tradeList":{"brick":2}},
-            {"coord":[-2,2,-1],"tradeList":{"wood":2}},
-            {"coord":[-1,3,-1],"tradeList":{"any":2}}
+            {"coord":[-3,3,0],"indexList":[0,1],"tradeList":{"brick":2}},
+            {"coord":[-1,3,-2],"indexList":[1,2],"tradeList":{"any":2}}
         ]
     }
 }

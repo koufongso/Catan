@@ -76,39 +76,47 @@ export class Renderer {
             }
         });
 
-        // draw all settlements (trading posts)
-        console.log("Rendering Settlements with Trading Posts:");
-        gameMap.settlements.forEach(settlement => {
-            if (settlement.tradeList.length !== 0) {
-                // has a trading post, draw it (at the outter edge of the hex)
-                const [x, y] = this.vertexCoordToPixel(settlement.vertex, size);
-                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        // draw all trading posts
+        console.log("Rendering Trading Posts:");
+        gameMap.tradingPosts.forEach(tp => {
+            // hex center the trading post is located at
+            const [x0, y0] = this.hexCoordToPixel(tp.coord, size);
 
-                // draw in follwoing the direction outward from center of hex
-                const origin = this.hexCoordToPixel([0,0,0], size);
-                const dir_x = (x - origin[0]);
-                const dir_y = (y - origin[1]);
-                const length = Math.sqrt(dir_x*dir_x + dir_y*dir_y);
-                const norm_dir_x = dir_x / length;
-                const norm_dir_y = dir_y / length;
-                rect.setAttribute("x", x -10 + norm_dir_x * 10); // add -10 offset to center the rect
-                rect.setAttribute("y", y + norm_dir_y * 10);
-                rect.setAttribute("width", 20);
-                rect.setAttribute("height", 20);
-                rect.setAttribute("class", "trading-post");
-                layers.vertices.appendChild(rect);
+            // draw line from hex center to each vertex index
+            for (let index of tp.indexList) {
+                const angle = RAD60 * index + RAD30; // 30 degree offset
+                const x = size * Math.cos(angle) + x0;
+                const y = -size * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
+                console.log(`  Trading Post at hex ${tp.coord}, vertex index: ${index}, pixel: (${x},${y})`);
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                
+                // better visual effect by shortening the line a bit
+                const dir = [x-x0, y-y0];
+                const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
+                const shorten_ratio = 0.5;
+                const x0_short = x0 + dir[0]*(shorten_ratio*size/len);
+                const y0_short = y0 + dir[1]*(shorten_ratio*size/len);
 
-                // add ratio text
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", x + norm_dir_x * 10);
-                text.setAttribute("y", y + 30 + norm_dir_y * 10);
-                text.setAttribute("text-anchor", "middle");
-                text.setAttribute("class", "trading-post-ratio");
-                for (let [resource, ratio] of Object.entries(settlement.tradeList)) {
-                    text.textContent = `${resource}: ${ratio}:1`;
-                    layers.vertices.appendChild(text);
-                }
+                line.setAttribute("x1", x0_short);
+                line.setAttribute("y1", y0_short);
+                line.setAttribute("x2", x);
+                line.setAttribute("y2", y);
+                line.setAttribute("class", "trading-post-line");
+                layers.tiles.appendChild(line);
             }
+            
+            // add trade ratio
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("text-anchor", "middle");
+            text.setAttribute("class", "trading-post-label");
+            let trade_str = "";
+            text.setAttribute("x", x0);
+            text.setAttribute("y", y0);
+            for (let resource in tp.tradeList) {
+                trade_str += `${resource.charAt(0).toUpperCase() + resource.slice(1)}:${tp.tradeList[resource]} `;
+            }
+            text.textContent = trade_str;
+            layers.tiles.appendChild(text); 
         });
 
         // clear existing content and add the clone to main wrapper

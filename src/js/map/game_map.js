@@ -2,6 +2,7 @@ import { Tile } from "./tile.js";
 import { Road } from "./road.js";
 import { Settlement } from "./settlement.js";
 import { ResourceType } from "./resource_type.js";
+import { TradingPost } from "./trading_post.js";
 
 
 export class GameMap {
@@ -12,6 +13,7 @@ export class GameMap {
         this.tiles = new Map(); // regiester all (interactable) tiles/hex, others will be conceptual "empty" tiles
         this.roads = new Map(); // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
         this.settlements = new Map(); // register all (interactable) settlements/vertices, others will be conceptual "empty" settlements
+        this.tradingPosts = new Map(); // register all trading posts on the map
     }
 
     // load the map from json file to initializes the interactable elements
@@ -58,8 +60,9 @@ export class GameMap {
             // parse tradingposts
             for (let tpData of data.tradingposts.overrides) {
                 let coord = tpData.coord;
+                let indexList = tpData.indexList;
                 let tradeList = tpData.tradeList;
-                this.updateSettlementByCoord(coord, null, 0, tradeList);
+                this.updateTradingPostByCoord(coord, indexList, tradeList);
             }
 
             // debug print all tiles
@@ -71,7 +74,9 @@ export class GameMap {
             for (let [id, settlement] of this.settlements) {
                 console.log(`Settlement ID: ${id}, Owner: ${settlement.owner}, Level: ${settlement.level}, TradeList: ${JSON.stringify(settlement.tradeList)}`);
             }
-            
+            for (let [id, tradingPost] of this.tradingPosts) {
+                console.log(`Trading Post ID: ${id}, IndexList: ${tradingPost.indexList}, TradeList: ${JSON.stringify(tradingPost.tradeList)}`);
+            }
 
         } catch (error) {
             console.error('Error loading JSON:', error);
@@ -89,6 +94,9 @@ export class GameMap {
             },
             settlements: {
                 overrides: []
+            },
+            tradingposts: {
+                overrides: []
             }
         };
 
@@ -103,6 +111,10 @@ export class GameMap {
         // save settlements
         for (let [id, settlement] of this.settlements) {
             data.settlements.overrides.push({"coord": settlement.vertex.coord, "owner": settlement.owner, "level": settlement.level});
+        }
+        // save trading posts
+        for (let [id, tradingPost] of this.tradingPosts) {
+            data.tradingposts.overrides.push({"coord": tradingPost.coord, "indexList": tradingPost.indexList, "tradeList": tradingPost.tradeList});
         }
 
         let json_str =  JSON.stringify(data, null, 2); // pretty print with 2 spaces indentation
@@ -181,7 +193,7 @@ export class GameMap {
     // coord: hex_vertex [q,r,s]
     // owner: player id
     // level: 0 for empty, 1 for settlement, 2 for city
-    updateSettlementByCoord(coord, owner = null, level = null, tradeList = null) {
+    updateSettlementByCoord(coord, owner = null, level = null) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
         if (this.settlements.has(id)) {
             // edit existing settlement
@@ -192,13 +204,10 @@ export class GameMap {
             if (level !== null) {
                 settlement.level = level;
             }
-            if (tradeList !== null) {
-                settlement.tradeList = tradeList;
-            }
             this.settlements.set(id, settlement);
         } else {    
             // add new settlement
-            let settlement = new Settlement(coord, owner, level, tradeList);
+            let settlement = new Settlement(coord, owner, level);
             this.settlements.set(id, settlement);
         }
     }
@@ -206,6 +215,21 @@ export class GameMap {
     removeSettlementByCoord(coord) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
         this.settlements.delete(id);
+    }
+
+    updateTradingPostByCoord(coord, indexList, tradeList = {}) {
+        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        if (this.tradingPosts.has(id)) {
+            // edit existing trading post
+            let tradingPost = this.tradingPosts.get(id);
+            tradingPost.indexList = indexList;
+            tradingPost.tradeList = tradeList;
+            this.tradingPosts.set(id, tradingPost);
+        }else{
+            // add new trading post
+            let tradingPost = new TradingPost(coord, indexList, tradeList);
+            this.tradingPosts.set(id, tradingPost);
+        }
     }
 
     // assign resources to tiles randomly to current tiles on the map
