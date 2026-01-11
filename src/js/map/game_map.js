@@ -165,6 +165,10 @@ export class GameMap {
 
     removeTileByCoord(coord) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        this.removeTileById(id);
+    }
+
+    removeTileById(id) {
         this.tiles.delete(id);
     }
 
@@ -173,6 +177,10 @@ export class GameMap {
     // owner: player id
     updateRoadByCoord(coord, owner) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        this.updateRoadById(id, owner);
+    }
+
+    updateRoadById(id, owner) {
         if (this.roads.has(id)) {
             // edit existing road
             let road = this.roads.get(id);
@@ -181,13 +189,18 @@ export class GameMap {
         }
         else {
             // add new road
-            let road = new Road(coord[0], coord[1], coord[2], owner);
+            let coord = id.split(",").map(Number);
+            let road = new Road(coord, owner);
             this.roads.set(id, road);
         }
     }
 
     removeRoadByCoord(coord) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        this.removeRoadById(id);
+    }
+
+    removeRoadById(id) {
         this.roads.delete(id);
     }
 
@@ -196,6 +209,10 @@ export class GameMap {
     // level: 0 for empty, 1 for settlement, 2 for city
     updateSettlementByCoord(coord, owner = null, level = null) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        this.updateSettlementById(id, owner, level);
+    }
+
+    updateSettlementById(id, owner = null, level = null) {
         if (this.settlements.has(id)) {
             // edit existing settlement
             let settlement = this.settlements.get(id);
@@ -208,13 +225,23 @@ export class GameMap {
             this.settlements.set(id, settlement);
         } else {    
             // add new settlement
+            let coord = this.idToCoord(id);
             let settlement = new Settlement(coord, owner, level);
             this.settlements.set(id, settlement);
         }
     }
 
+    idToCoord(id) {
+        let parts = id.split(",").map(Number);
+        return parts;
+    }
+
     removeSettlementByCoord(coord) {
         let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        this.removeSettlementById(id);
+    }
+
+    removeSettlementById(id) {
         this.settlements.delete(id);
     }
 

@@ -1,13 +1,17 @@
 export class HexVertex {
-    constructor(q = 0, r = 0, s = 0) {
+    constructor(coord) {
         // a unique hex axial coordinates (q,r,s),
         // defined by its three adjacent (q,r,s) values 
         // we also used it as the vertex id
         // check if this is a valid vertex
+        const q = coord[0];
+        const r = coord[1];
+        const s = coord[2];
+        
         if (Math.abs(q+r+s)!=1){
             throw new Error(`Invalid Hex Vertex Coordinate: (${q},${r},${s}). The sum of coordinates must be 1 or -1.`);
         }
-        this.coord = [q, r, s];
+        this.coord = coord;
         this.id = `${q},${r},${s}`;
     }
 
@@ -34,11 +38,11 @@ export class HexVertex {
         // first try with [-1,0,-1] offset
         let newCoord = [this.coord[0] - 1, this.coord[1] - 1, this.coord[2]];
         let val = [this.coord[0] + newCoord[0], this.coord[1] + newCoord[1], this.coord[2] + newCoord[2]];
-        let val1 = val[0] % 2;
-        let val2 = val[1] % 2;
-        let val3 = val[2] % 2;
+        let val1 = Math.abs(val[0]) % 2; // even: 0, odd: 1
+        let val2 = Math.abs(val[1]) % 2;
+        let val3 = Math.abs(val[2]) % 2;
 
-        if (!((val1 == 0 && val2 == 1 && val3 == 1) ||
+        if (((val1 == 0 && val2 == 1 && val3 == 1) ||
             (val1 == 1 && val2 == 0 && val3 == 1) ||
             (val1 == 1 && val2 == 1 && val3 == 0))) {// this mean offset1 is valid
             offsets = [[-1, 0, -1], [0, -1, -1], [-1, -1, 0]];

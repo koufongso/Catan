@@ -1,10 +1,11 @@
 import { ResourceType } from './map/resource_type.js';
 
 export class Player {
-    constructor(id, name, color) {
+    constructor(id, name, color, type) {
         this.id = id;
         this.name = name;
         this.color = color;
+        this.type = type;
 
         // resource inventory
         this.resources = new Map();

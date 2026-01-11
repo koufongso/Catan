@@ -7,20 +7,30 @@ import { SeededRandom } from './seeded_random.js';
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
     INIT: 'INIT',
-    INIT_SETTLEMENT_PLACEMENT1: 'INIT_SETTLEMENT_PLACEMENT1', // place first settlement and road
-    INIT_SETTLEMENT_PLACEMENT2: 'INIT_SETTLEMENT_PLACEMENT2', // place second settlement and road
+    PLACE_SETTLEMENT1: 'PLACE_SETTLEMENT1', // place first settlement and road
+    PLACE_ROAD1: 'PLACE_ROAD1',
+    PLACE_SETTLEMENT2: 'PLACE_SETTLEMENT2', // place second settlement and road
+    PLACE_ROAD2: 'PLACE_ROAD2',
     ROLL: 'ROLL', // roll dice phase
-    MAIN: 'MAIN', // main game loop
+    MAIN: 'MAIN', // main game loop: build, trade, end turn
     END: 'END' // game has ended
 });
 
 export class GameController {
     constructor() {
+        this.renderer = null;
+
         // game setup
         this.gameMap = new GameMap();
         this.seed = 0;
         this.rng = new SeededRandom(this.seed);
+        this.gameContext = {};
+        this.bankResources = new Map();
+        this.resetGame();        
+    }
 
+        resetGame(){
+        // reset game context
         this.gameContext = {
             players: [], // circular array of Player instances
             currentPlayerIndex: 0, // track whose turn it is
@@ -34,11 +44,7 @@ export class GameController {
             currentState: GameState.SETUP,
         }
 
-        this.renderer = null;
-
-
-        // bank resources could be added here
-        this.bankResources = new Map();
+        this.bankResources.clear();
         Object.values(ResourceType).forEach(type => {
             if (type !== ResourceType.DESERT) {
                 this.bankResources.set(type, 19); // standard Catan bank count
@@ -79,6 +85,22 @@ export class GameController {
                 // handle init events
                 await this.handleStateInit(event);
                 break;
+            case GameState.PLACE_SETTLEMENT1:
+                // handle first settlement placement events
+                await this.handleStatePlaceSettlement1(event);
+                break;
+            case GameState.PLACE_ROAD1:
+                // handle first road placement events
+                await this.handleStatePlaceRoad1(event);
+                break;
+            case GameState.PLACE_SETTLEMENT2:
+                // handle second settlement placement events
+                await this.handleStatePlaceSettlement2(event);
+                break;
+            case GameState.PLACE_ROAD2:
+                // handle second road placement events
+                await this.handleStatePlaceRoad2(event);
+                break;
             case GameState.ROLL:
                 // handle roll events
                 await this.handleStateRoll(event); 
@@ -118,35 +140,82 @@ export class GameController {
         gameContext.totalPlayers = gameContext.humanPlayers + gameContext.aiPlayers;
         gameContext.seed = event.seed || Date.now();
 
+        const colors = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple'];
+        const names = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
+
         // create player instances
         for (let i = 0; i < gameContext.humanPlayers; i++) {
-            gameContext.players.push(new Player(i, `Human_${i+1}`, `Color_${i+1}`));
+            gameContext.players.push(new Player(i, names[i], colors[i],'HUMAN'));
         }
         for (let j = 0; j < gameContext.aiPlayers; j++) {
-            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j+1}`, `Color_${gameContext.humanPlayers + j +1}`));
+            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j+1}`, colors[gameContext.humanPlayers + j],'AI'));
         }
         // generate map
         await this.generateDefaultMap(this.gameContext.seed);
-        // transition to INIT state
-        this.gameContext.currentState = GameState.INIT;
+        
+        this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
-        // TODO: render the initial map
+        // render the initial map and prompt to place first settlement
         if (this.renderer){
             // render intial map
-            this.renderer.renderInitialMap(this.gameMap, this.inputEvent);
-            // render player info in debug sidebar
-            this.updateDebugHUD();
+            this.renderer.renderInitialMap(this.gameMap);
+
+            // "activate" vertex elements for settlement placement
+            this.renderer.activateSettlementPlacementMode(this.gameMap);
+
         }else{
             console.warn("Renderer not attached. Cannot render game map.");
         }
+
+        // update debug HUD
+        this.updateDebugHUD();
+        this.renderDebugHUDLog("Game started. Please place your first settlement.");
     }
 
+    async handleStatePlaceSettlement1(event){
+        if (event.type !== 'PLACE_SETTLEMENT'){
+            return;
+        }
 
-    async handleStateInit(event){
-        // handle init state events here
-        // for now, just transition to ROLL state
-        this.gameContext.currentState = GameState.ROLL;
+        // place settlement logic here
+        // deactivate settlement placement mode
+        this.renderer.deactivateSettlementPlacementMode();
+
+        // add settlement to map
+        const currentPlayer = this.getCurrentPlayer();
+        this.gameMap.updateSettlementById(event.vertexId, currentPlayer.id, 1);
+        currentPlayer.addSettlement(event.vertexId);
+
+        // render updated settlement on map
+        this.renderer.renderSettlement(event.vertexId, currentPlayer.color, 1);
+
+        // TODO: activate road placement mode for first road
+        this.gameContext.currentState = GameState.PLACE_ROAD1;
+        this.renderer.activateRoadPlacementMode(this.gameMap, event.vertexId); 
         this.updateDebugHUD();
+        this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
+    }
+
+    async handleStatePlaceRoad1(event){
+        if (event.type !== 'PLACE_ROAD'){
+            return;
+        }
+        // place road logic here
+        // deactivate road placement mode
+        this.renderer.deactivateRoadPlacementMode();
+        
+        // add road to map
+        const currentPlayer = this.getCurrentPlayer();
+        this.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
+        currentPlayer.addRoad(event.edgeId);
+        
+        // render updated road on map
+        this.renderer.renderRoad(event.edgeId, currentPlayer.color);
+        this.nextPlayer(); // move to next player for second settlement
+        this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
+        
+        this.updateDebugHUD();
+        this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Please place your second settlement.`);
     }
 
     async handleStateRoll(event){
@@ -198,15 +267,15 @@ export class GameController {
     }
 
     getCurrentPlayer() {
-        return this.players[this.currentPlayerIndex];
+        return this.gameContext.players[this.gameContext.currentPlayerIndex];
     }
 
     nextPlayer() {
-        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+        this.gameContext.currentPlayerIndex = (this.gameContext.currentPlayerIndex + 1) % this.gameContext.players.length;
     }
 
     nextTurn() {
-        this.turnNumber++;
+        this.gameContext.turnNumber++;
     }
 
 

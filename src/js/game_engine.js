@@ -8,7 +8,7 @@ export class GameEngine{
         this.gameController = new GameController();
         this.renderer = new Renderer('map-svg');
         this.gameController.attachRenderer(this.renderer);
-        this.renderer.attachCOntroller(this.gameController);
+        this.renderer.attachController(this.gameController);
     }
 
     async run(){

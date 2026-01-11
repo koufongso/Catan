@@ -9,7 +9,7 @@ export class Tile {
         }
 
         this.resource = resource; // e.g., "wood", "hill", etc.
-        this.hex = new Hex(coord[0], coord[1], coord[2]); // Hexagon instance representing the tile's position
+        this.hex = new Hex(coord); // Hexagon instance representing the tile's position
         this.numberToken = numberToken; // Number token on the tile (if applicable)
     }
 }

@@ -1,8 +1,8 @@
-import { HexVertex } from "./hex_grid_system/hex_vetex.js";
+import { HexVertex } from "./hex_grid_system/hex_vertex.js";
 
 export class Settlement {
     constructor(coord, owner = null, level = 0) {
-        this.vertex = new HexVertex(coord[0], coord[1], coord[2]);
+        this.vertex = new HexVertex(coord);
         this.owner = owner;
         this.level = level; //0 for empty, 1 for settlement, 2 for city
     }

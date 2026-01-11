@@ -1,7 +1,10 @@
 export class Hex {
-    constructor(q = 0, r = 0, s = 0) {
+    constructor(coord) {
         // unique hex axial coordinates (q,r,s)
         // we also use it as the hex id
+        const q = coord[0];
+        const r = coord[1];
+        const s = coord[2];
         if (q + r + s !== 0) {
             throw new Error("Invalid hex coordinates: q + r + s must equal 0");
         }
