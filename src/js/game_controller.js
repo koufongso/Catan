@@ -21,7 +21,6 @@ export class GameController {
         this.renderer = null;
 
         // game setup
-        this.gameMap = new GameMap();
         this.seed = 0;
         this.rng = new SeededRandom(this.seed);
         this.gameContext = {};
@@ -32,6 +31,7 @@ export class GameController {
         resetGame(){
         // reset game context
         this.gameContext = {
+            gameMap: new GameMap(),
             players: [], // circular array of Player instances
             currentPlayerIndex: 0, // track whose turn it is
             totalPlayers: 0,
@@ -158,10 +158,10 @@ export class GameController {
         // render the initial map and prompt to place first settlement
         if (this.renderer){
             // render intial map
-            this.renderer.renderInitialMap(this.gameMap);
+            this.renderer.renderInitialMap(this.gameContext.gameMap);
 
             // "activate" vertex elements for settlement placement
-            this.renderer.activateSettlementPlacementMode(this.gameMap);
+            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
 
         }else{
             console.warn("Renderer not attached. Cannot render game map.");
@@ -183,7 +183,7 @@ export class GameController {
 
         // add settlement to map
         const currentPlayer = this.getCurrentPlayer();
-        this.gameMap.updateSettlementById(event.vertexId, currentPlayer.id, 1);
+        this.gameContext.gameMap.updateSettlementById(event.vertexId, currentPlayer.id, 1);
         currentPlayer.addSettlement(event.vertexId);
 
         // render updated settlement on map
@@ -191,7 +191,7 @@ export class GameController {
 
         // TODO: activate road placement mode for first road
         this.gameContext.currentState = GameState.PLACE_ROAD1;
-        this.renderer.activateRoadPlacementMode(this.gameMap, event.vertexId); 
+        this.renderer.activateRoadPlacementMode(this.gameContext.gameMap, event.vertexId); 
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
     }
@@ -206,7 +206,7 @@ export class GameController {
         
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
-        this.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
+        this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
         currentPlayer.addRoad(event.edgeId);
         
         // render updated road on map
@@ -234,20 +234,20 @@ export class GameController {
 
     async generateDefaultMap(seed = Date.now()){
         // load standard map layout
-        await this.gameMap.loadMapFromJson('./src/assets/map_layout/standard_map.json');
+        await this.gameContext.gameMap.loadMapFromJson('./src/assets/map_layout/standard_map.json');
         // assign default resources and number tokens
-        this.gameMap.assignResourceRandom(seed, {'WOOD':4, 'BRICK':3, 'SHEEP':4, 'WHEAT':4, 'ROCK':3, 'DESERT':1});
-        this.gameMap.assignNumberTokenRandom(seed, [2,3,3,4,4,5,5,6,6,7,8,8,9,9,10,10,11,11,12]);
+        this.gameContext.gameMap.assignResourceRandom(seed, {'WOOD':4, 'BRICK':3, 'SHEEP':4, 'WHEAT':4, 'ROCK':3, 'DESERT':1});
+        this.gameContext.gameMap.assignNumberTokenRandom(seed, [2,3,3,4,4,5,5,6,6,7,8,8,9,9,10,10,11,11,12]);
         // serach desert tile and swap with center tile
-        let desert_id = this.gameMap.searchTileByResource(ResourceType.DESERT)
-        this.gameMap.swapTile(desert_id[0], `0,0,0`, true, false);
+        let desert_id = this.gameContext.gameMap.searchTileByResource(ResourceType.DESERT)
+        this.gameContext.gameMap.swapTile(desert_id[0], `0,0,0`, true, false);
         // serach number token 7 and swap with desert tile
-        let token7_id = this.gameMap.searchTileByNumberToken(7)
-        this.gameMap.swapTile(token7_id[0], `0,0,0`, false, true);
+        let token7_id = this.gameContext.gameMap.searchTileByNumberToken(7)
+        this.gameContext.gameMap.swapTile(token7_id[0], `0,0,0`, false, true);
 
         // debug: print map info
         console.log("Generated Default Map:");
-        console.log(this.gameMap);
+        console.log(this.gameContext.gameMap);
     }
 
     isBankResourceAvailable(cost) {
