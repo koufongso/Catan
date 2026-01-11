@@ -462,7 +462,7 @@ export class Renderer {
         roadLine.setAttribute("y1", y0_short);
         roadLine.setAttribute("x2", x1_short);
         roadLine.setAttribute("y2", y1_short);
-        roadLine.setAttribute("class", "edge-road-available hitbox");
+        roadLine.setAttribute("class", "road");
         roadLine.setAttribute("data-id", edgeId);
         roadLine.style.strokeWidth = "8px";
         roadLine.style.stroke=`${color}`;
