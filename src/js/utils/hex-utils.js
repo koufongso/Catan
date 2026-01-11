@@ -17,7 +17,7 @@ export const HexUtils = Object.freeze({
 
 
     /* --------------------- coord/id ----------------------------- */
-    CoordToId(coord) {
+    coordToId(coord) {
         return `${coord[0]},${coord[1]},${coord[2]}`;
     },
 
@@ -77,7 +77,7 @@ export const HexUtils = Object.freeze({
         let hCoord = this.getAdjHexesFromHVertex(vCoord)[0];
 
         // 2. get the index of this vertex relative to this hex
-        let hex_idx = this.getHexIndex(hCoord, vCoord);
+        let hex_idx = this.getIndexOfVertex(hCoord, vCoord);
 
         // 3. calculate pixel position based on hex center and hex index (0: 30deg, 1: 90deg, 2:150deg, 3:210deg, 4:270deg, 5:330deg)
         const [x0, y0] = this.hexToPixel(hCoord, tileSize);
@@ -95,7 +95,7 @@ export const HexUtils = Object.freeze({
     /* --------------------- hex ----------------------------- */
     getAdjHexes(hCoord) {
         // input valid check
-        if (!isValidHex(hCoord)) {
+        if (!this.isValidHex(hCoord)) {
             throw new Error("Invalid hex coordinate");
         }
 
@@ -107,7 +107,7 @@ export const HexUtils = Object.freeze({
 
         let results = [];
         for (let offset of offsetsList) {
-            let newCoord = add(hCoord, offset);
+            let newCoord = this.add(hCoord, offset);
             results.push(newCoord);
         }
         return results;
@@ -120,7 +120,7 @@ export const HexUtils = Object.freeze({
      */
     getVertexFromHex(hCoord) {
         // input valid check
-        if (!isValidHex(hCoord)) {
+        if (!this.isValidHex(hCoord)) {
             throw new Error("Invalid hex coordinate");
         }
         const q = hCoord[0];
@@ -139,15 +139,15 @@ export const HexUtils = Object.freeze({
      */
     getAdjHexesFromHVertex(vCoord) {
         // input valid check
-        if (!isValidVertex(vCoord)) {
+        if (!this.isValidVertex(vCoord)) {
             throw new Error("Invalid hex vertex coordinate");
         }
 
         let results = [];
         let offsets = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
         for (let offset of offsets) {
-            let hCoord = add(vCoord, offset);
-            if (isValidHex(hCoord)) {
+            let hCoord = this.add(vCoord, offset);
+            if (this.isValidHex(hCoord)) {
                 results.push(hCoord);
             }
         }
@@ -162,7 +162,7 @@ export const HexUtils = Object.freeze({
      */
     isHexVertexAdjacent(vCoord1, vCoord2) {
         // input valid check
-        if (!isValidVertex(vCoord1) || !isValidVertex(vCoord2)) {
+        if (!this.isValidVertex(vCoord1) || !this.isValidVertex(vCoord2)) {
             throw new Error("Invalid hex vertex coordinate");
         }
 
@@ -189,7 +189,7 @@ export const HexUtils = Object.freeze({
      */
     getAdjVerticesFromVertex(vCoord) {
         // input valid check
-        if (!isValidVertex(vCoord)) {
+        if (!this.isValidVertex(vCoord)) {
             throw new Error("Invalid hex vertex coordinate");
         }
 
@@ -202,7 +202,7 @@ export const HexUtils = Object.freeze({
         let vCandidateCoord = [vCoord[0] - 1, vCoord[1] - 1, vCoord[2]];
 
         // check if this is valid vertex
-        if (isValidVertex(vCandidateCoord)) {
+        if (this.isValidVertex(vCandidateCoord)) {
             // this mean offset1 is valid
             offsets = [[-1, -1, 0], [-1, 0, -1], [0, -1, -1]];
         } else {
@@ -213,7 +213,7 @@ export const HexUtils = Object.freeze({
         for (let offset of offsets) {
             let newCoord = [vCoord[0] + offset[0], vCoord[1] + offset[1], vCoord[2] + offset[2]];
             // sanity check
-            if (!isValidVertex(newCoord)) {
+            if (!this.isValidVertex(newCoord)) {
                 throw new Error("Logic error: generated invalid hex vertex coordinate");
             }
             results.push(newCoord);
@@ -230,11 +230,11 @@ export const HexUtils = Object.freeze({
      */
     getIndexOfVertex(hCoord, vCoord) {
         // input valid check
-        if (!isValidHex(hCoord)) {
+        if (!this.isValidHex(hCoord)) {
             throw new Error("Invalid hex coordinate");
         }
 
-        if (!isValidVertex(vCoord)) {
+        if (!this.isValidVertex(vCoord)) {
             throw new Error("Invalid hex vertex coordinate");
         }
         // 0: [1,0,0]
@@ -275,13 +275,13 @@ export const HexUtils = Object.freeze({
      * @param {Array} vCoord2 vertex 2
      * @returns {Array} edge coordinate
      */
-    getEdgeFromVertex(vCoord1, vCoord2) {
-        if (!isValidVertex(vCoord1) || !isValidVertex(vCoord2)) {
+    getEdgeFromVertices(vCoord1, vCoord2) {
+        if (!this.isValidVertex(vCoord1) || !this.isValidVertex(vCoord2)) {
             throw new Error("Invalid hex vertex coordinate");
         }
 
-        const eCoord = add(vCoord1, vCoord2);
-        if (!isValidEdge(eCoord)) {
+        const eCoord = this.add(vCoord1, vCoord2);
+        if (!this.isValidEdge(eCoord)) {
             throw new Error("The two given vertex coordinates do not form a valid hex edge");
         }
         return eCoord;
@@ -294,7 +294,7 @@ export const HexUtils = Object.freeze({
      */
     getVerticesFromEdge(eCoord) {
         // input valid check
-        if (!isValidEdge(eCoord)) {
+        if (!this.isValidEdge(eCoord)) {
             throw new Error("Invalid hex edge coordinate");
         }
 

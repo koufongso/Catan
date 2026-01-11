@@ -3,6 +3,7 @@ import { Road } from "./Road.js";
 import { Settlement } from "./Settlement.js";
 import { ResourceType } from "./ResourceType.js";
 import { TradingPost } from "./TradingPost.js";
+import { HexUtils } from "../utils/hex-utils.js";
 
 
 export class GameMap {
@@ -164,7 +165,7 @@ export class GameMap {
     }
 
     removeTileByCoord(coord) {
-        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        let id = HexUtils.coordToId(coord);
         this.removeTileById(id);
     }
 
@@ -176,7 +177,7 @@ export class GameMap {
     // coord: hex_edge [q,r,s]
     // owner: player id
     updateRoadByCoord(coord, owner) {
-        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        let id = HexUtils.coordToId(coord);
         this.updateRoadById(id, owner);
     }
 
@@ -189,14 +190,14 @@ export class GameMap {
         }
         else {
             // add new road
-            let coord = id.split(",").map(Number);
+            let coord = HexUtils.idToCoord(id);
             let road = new Road(coord, owner);
             this.roads.set(id, road);
         }
     }
 
     removeRoadByCoord(coord) {
-        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        let id = HexUtils.coordToId(coord);
         this.removeRoadById(id);
     }
 
@@ -208,7 +209,7 @@ export class GameMap {
     // owner: player id
     // level: 0 for empty, 1 for settlement, 2 for city
     updateSettlementByCoord(coord, owner = null, level = null) {
-        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        let id = HexUtils.coordToId(coord);
         this.updateSettlementById(id, owner, level);
     }
 
@@ -225,19 +226,14 @@ export class GameMap {
             this.settlements.set(id, settlement);
         } else {    
             // add new settlement
-            let coord = this.idToCoord(id);
+            let coord = HexUtils.idToCoord(id);
             let settlement = new Settlement(coord, owner, level);
             this.settlements.set(id, settlement);
         }
     }
 
-    idToCoord(id) {
-        let parts = id.split(",").map(Number);
-        return parts;
-    }
-
     removeSettlementByCoord(coord) {
-        let id = `${coord[0]},${coord[1]},${coord[2]}`;
+        let id = HexUtils.coordToId(coord);
         this.removeSettlementById(id);
     }
 
@@ -389,10 +385,10 @@ export class GameMap {
         // get the vertex object
         if (this.settlements.has(vertexId)) {
             let settlement = this.settlements.get(vertexId);
-            let adjacentHexCoords = settlement.vertex.getAdjacentHexCoord(); // get the three hexes that share this vertex
+            let adjacentHexCoords = HexUtils.getAdjHexesFromHVertex(settlement.coord); // get the three hexes that share this vertex
             // iterate through the hex coords and get their resources
             for (let hexCoord of adjacentHexCoords) {
-                let hexId = `${hexCoord[0]},${hexCoord[1]},${hexCoord[2]}`;
+                let hexId = HexUtils.coordToId(hexCoord);
                 if (this.tiles.has(hexId)) {
                     let tile = this.tiles.get(hexId);
                     resources.push(tile.resource);

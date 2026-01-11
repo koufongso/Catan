@@ -1,12 +1,18 @@
-import { HexEdge } from "./hex-grid-system/HexEdge.js";
+import { HexUtils } from "../utils/hex-utils.js";
 
 export class Road {
     constructor(coord, owner) {
-        this.edge = new HexEdge(coord);
-        this.owner = owner;
-    }
+        // check if coord is valid
+        if (!HexUtils.isValidEdge(coord)) {
+            throw new Error("Invalid hex edge coordinate");
+        }
 
-    hasOwner() {
-        return this.owner !== null;
+        if (owner === undefined || owner === null) {
+            throw new Error("Road must have an owner");
+        }
+
+        this.coord = coord;
+        this.id = HexUtils.coordToId(coord);
+        this.owner = owner;
     }
 }

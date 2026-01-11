@@ -2,8 +2,8 @@ import { GameMap } from "./map/GameMap.js";
 import { Tile } from "./map/Tile.js";
 import { ResourceType } from "./map/ResourceType.js";
 import { GameController } from "./GameController.js";
-import { HexVertex } from "./map/hex-grid-system/HexVertex.js";
-import { HexEdge } from "./map/hex-grid-system/HexEdge.js";
+import { HexUtils } from "./utils/hex-utils.js";
+
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -37,16 +37,16 @@ export class Renderer {
         gameMap.tiles.forEach(tile => {
             // draw pologon for each tile
             const hexPoly = this.createPolygon(
-                tile.hex.coord, // [q,r,s]
+                tile.coord, // [q,r,s]
                 tile.resource,
-                tile.hex.id,
+                tile.id,
                 this.tileSize, // this.tileSize
             );
             layers.tiles.appendChild(hexPoly);
 
             // draw number token
             if (tile.numberToken !== null) {
-                const [x, y] = this.hexCoordToPixel(tile.hex.coord, this.tileSize);
+                const [x, y] = HexUtils.hexToPixel(tile.coord, this.tileSize);
 
                 if (tile.numberToken ===7){
                     return; // no number token for 7
@@ -82,7 +82,7 @@ export class Renderer {
         {
             const robberTile = gameMap.tiles.get(gameMap.robberTileId);
             if (robberTile) {
-                const [x, y] = this.hexCoordToPixel(robberTile.hex.coord, this.tileSize);
+                const [x, y] = HexUtils.hexToPixel(robberTile.coord, this.tileSize);
                 const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 robberImg.setAttribute("href", "./src/assets/images/robber.png");
                 robberImg.setAttribute("x", x );
@@ -98,7 +98,7 @@ export class Renderer {
         //console.log("Rendering Trading Posts:");
         gameMap.tradingPosts.forEach(tp => {
             // hex center the trading post is located at
-            const [x0, y0] = this.hexCoordToPixel(tp.coord, this.tileSize);
+            const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.tileSize);
 
             // draw line from hex center to each vertex index
             for (let index of tp.indexList) {
@@ -143,38 +143,13 @@ export class Renderer {
         wrapper.appendChild(clone);
     }
 
-    vertexCoordToPixel(vertex, tileSize=this.tileSize) {
-        // Important: the vertex coordinate is not the same as hex center coordinate
-        // 1. get one of the adjacent hex coord
-        let hex_coord = vertex.getAdjacentHexCoord()[0];
-        
-        let hex_idx = vertex.getHexIndex(hex_coord);// get the index of the hex around the vertex
-        // skip sanity check here, hex_idx should be valid
-        // 2. calculate pixel position based on hex center and hex index (0:12 o'clock,go clockwise)
-        const [x0, y0] = this.hexCoordToPixel(hex_coord, tileSize);
-        const angle = RAD60 * hex_idx + RAD30; // 30 degree offset
-        const x = tileSize * Math.cos(angle) + x0;
-        const y = -tileSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
-        //console.log(`Vertex ${vertex.id} adjacent hex coord: ${hex_coord}, hex index: ${hex_idx}, hex pixel: (${x0},${y0}) , vertex pixel: (${x},${y})`);
-
-        return [x, y];
-    }
-
-
-    hexCoordToPixel(coord, tileSize=this.tileSize) {
-        // convert axial (q,r,s) to pixel (x,y)
-        // reference: https://www.redblobgames.com/grids/hexagons/
-        const x = tileSize * (SQRT3 * coord[0]  +  SQRT3_HALF * coord[1]);
-        const y = tileSize * (1.5 * coord[1]); 
-        return [x, y];
-    }
 
     createPolygon(coord, resource, id, tileSize=this.tileSize) {
         let SVG_NS = "http://www.w3.org/2000/svg";
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
         const points = [];
-        const [x0, y0] = this.hexCoordToPixel(coord, tileSize);
+        const [x0, y0] = HexUtils.hexToPixel(coord, tileSize);
         for (let i = 0; i < 6; i++) {
             const angle = RAD60 * i + RAD30; // 30 degree offset
             const x = tileSize * Math.cos(angle) + x0;
@@ -292,16 +267,16 @@ export class Renderer {
 
         gameMap.tiles.forEach(tile => {
             // create vertex elements tha is not yet created and not yet occupied (contained in gameMap.settlements)
-            const vertexCoords = tile.hex.getVertexCoord(); // get all 6 vertex coords around the hex
-            vertexCoords.forEach((vCoord, index) => {
-                const vertexId = `${vCoord[0]},${vCoord[1]},${vCoord[2]}`;
+            const vCoordList = HexUtils.getVertexFromHex(tile.coord); // get all 6 vertex coords around the hex
+            vCoordList.forEach((vCoord, index) => {
+                const vertexId = HexUtils.coordToId(vCoord);
                 if (gameMap.settlements.has(vertexId) || document.querySelector(`circle[data-id='${vertexId}']`)){
                     return; // skip occupied vertices or already created ones
                 }
 
                 // create a circle element for the vertex
                 const vertexCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                const [x, y] = this.vertexCoordToPixel(new HexVertex(vCoord), this.tileSize);
+                const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
                 vertexCircle.setAttribute("cx", x);
                 vertexCircle.setAttribute("cy", y);
                 vertexCircle.setAttribute("r", 10);
@@ -351,7 +326,7 @@ export class Renderer {
         // create a circle element for the settlement
         const settlementCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         const vCoord = vertexId.split(",").map(Number);
-        const [x, y] = this.vertexCoordToPixel(new HexVertex(vCoord), this.tileSize);
+        const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
         settlementCircle.setAttribute("cx", x);
         settlementCircle.setAttribute("cy", y);
         settlementCircle.setAttribute("r", level === 1 ? 12 : 18);
@@ -371,27 +346,25 @@ export class Renderer {
 
         // for performance, first check if vertexId is provided,
         // if so, only highlight edges connected to that vertex 
-        const vCoord = vertexId.split(",").map(Number);
-        const vertex0 = new HexVertex(vCoord);
-        const [x0, y0] = this.vertexCoordToPixel(vertex0, this.tileSize);
-        vertex0.getAdjacentVertexCoord().forEach(vCoord1 => {
-            const vertex1 = new HexVertex(vCoord1);
-            console.log("vertex0:", vertex0);
-            console.log("adjacent vertex coord:", vertex1);
+        const vCoord0 = HexUtils.idToCoord(vertexId);
+        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.tileSize);
+        HexUtils.getAdjVerticesFromVertex(vCoord0).forEach(vCoord1 => {
+            console.log("vertex0:", vCoord0);
+            console.log("adjacent vertex coord:", vCoord1);
             
-            const edge = HexEdge.fromVertices(vertex0, vertex1);
+            const edge = HexUtils.getEdgeFromVertices(vCoord0, vCoord1);
             console.log("Adjacent edge:", edge);
             // check if the edge is already occupied
-            const edgeId = edge.id;
+            const edgeId = HexUtils.coordToId(edge);
             if (gameMap.roads.has(edgeId)){
                 return; // skip occupied edges
             }
              
             // draw a line for each adjacent edge
             const edgeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            const [x1, y1] = this.vertexCoordToPixel(vertex1, this.tileSize);
-            console.log("vertex0:", vertex0.coord, x0, y0);
-            console.log("vertex1:", vertex1.coord, x1, y1);
+            const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.tileSize);
+            console.log("vertex0:", vCoord0, x0, y0);
+            console.log("vertex1:", vCoord1, x1, y1);
             const dir = [x1 - x0, y1 - y0];
             const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
             const shorten_ratio = 0.2;
@@ -399,10 +372,10 @@ export class Renderer {
             const y0_short = y0 + dir[1]*(shorten_ratio*this.tileSize/len);
             const x1_short = x1 - dir[0]*(shorten_ratio*this.tileSize/len);
             const y1_short = y1 - dir[1]*(shorten_ratio*this.tileSize/len);
-            edgeLine.setAttribute("x1", x0);
-            edgeLine.setAttribute("y1", y0);
-            edgeLine.setAttribute("x2", x1);
-            edgeLine.setAttribute("y2", y1);
+            edgeLine.setAttribute("x1", x0_short);
+            edgeLine.setAttribute("y1", y0_short);
+            edgeLine.setAttribute("x2", x1_short);
+            edgeLine.setAttribute("y2", y1_short);
             edgeLine.setAttribute("class", "edge-road-available hitbox");
             edgeLine.setAttribute("data-id", edgeId);
             edgeLine.style.strokeWidth = "8px";
@@ -449,15 +422,15 @@ export class Renderer {
         }
 
         // get the two vertex coordinates from edgeId
-        const edgeCoord = edgeId.split(",").map(Number);
-        const [vertex0, vertex1] = HexEdge.getVertexCoordsFromEdgeCoord(edgeCoord);
+        const eCoord = HexUtils.idToCoord(edgeId);
+        const [vCoord0, vCoord1] = HexUtils.getVerticesFromEdge(eCoord);
 
         // create a line element for the road
         const roadLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        const [x0, y0] = this.vertexCoordToPixel(new HexVertex(vertex0), this.tileSize);
-        const [x1, y1] = this.vertexCoordToPixel(new HexVertex(vertex1), this.tileSize);
-        console.log("vertex0:", vertex0.coord, x0, y0);
-        console.log("vertex1:", vertex1.coord, x1, y1);
+        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.tileSize);
+        const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.tileSize);
+        console.log("vertex0:", vCoord0, x0, y0);
+        console.log("vertex1:", vCoord1, x1, y1);
         const dir = [x1 - x0, y1 - y0];
         const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
         const shorten_ratio = 0.2;
