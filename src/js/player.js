@@ -11,7 +11,7 @@ export class Player {
         this.resources = new Map();
         // initialize all resource counts to zero
         Object.values(ResourceType).forEach(type => {
-            if (type !== ResourceType.DESERT) {
+            if (typeof type === 'string' && type !== ResourceType.DESERT) {
                 this.resources.set(type, 0);
             }
         });
@@ -40,13 +40,16 @@ export class Player {
     }
 
 
-    // update resource count
-    updateResource(type, amount) {
+    // add resource count (can be negative, which means removing resources)
+    addResource(type, amount) {
+        console.log(`Player ${this.name} (${this.id}) resource change: ${type} ${amount}`);
+        console.log("Before:", this.resources);
         if (this.resources.has(type)) {
             const current = this.resources.get(type);
             // Prevents resources from dropping below zero
             this.resources.set(type, current + amount);
         }
+        console.log("After:", this.resources);
     }
 
 

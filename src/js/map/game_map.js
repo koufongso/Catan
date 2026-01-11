@@ -384,4 +384,21 @@ export class GameMap {
         return results;
     }
 
+    getResourcesAdjacentToSettlement(vertexId) {
+        let resources = [];
+        // get the vertex object
+        if (this.settlements.has(vertexId)) {
+            let settlement = this.settlements.get(vertexId);
+            let adjacentHexCoords = settlement.vertex.getAdjacentHexCoord(); // get the three hexes that share this vertex
+            // iterate through the hex coords and get their resources
+            for (let hexCoord of adjacentHexCoords) {
+                let hexId = `${hexCoord[0]},${hexCoord[1]},${hexCoord[2]}`;
+                if (this.tiles.has(hexId)) {
+                    let tile = this.tiles.get(hexId);
+                    resources.push(tile.resource);
+                }
+            }
+        }
+        return resources;
+    }
 }

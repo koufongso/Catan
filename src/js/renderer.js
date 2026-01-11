@@ -237,9 +237,16 @@ export class Renderer {
                 </ul>
                 <p>Current Robber: ${gameContext.gameMap.robberTileId}</p>
                 <p>Players Status:</p>
-                <ul>
-                    ${gameContext.players.map(player => `<li>Player ${player.id}: ${player.name} (${player.type}) - Resources: ${JSON.stringify(player.resources)}</li>`).join('')}
-                </ul>
+                    <ul>
+                    ${gameContext.players.map(player => `
+                        <li>
+                        <strong>Player ${player.id}:</strong>
+                        ${Array.from(player.resources).map(([type, amount]) => 
+                            `<span> ${type}: ${amount} </span>`
+                        ).join(' | ')}
+                        </li>
+                    `).join('')}
+                    </ul>
                 <p>Current Player: Player index ${gameContext.currentPlayerIndex} - ${gameContext.players[gameContext.currentPlayerIndex].name}</p>
                 <p>Dice Last Roll: ${gameContext.dice.lastRoll}</p>
             </div>

@@ -42,6 +42,7 @@ export class GameController {
             rng: this.rng,
             dice: new Dice(this.rng),
             currentState: GameState.SETUP,
+            lastSettlementPlaced: null // track last settlement (id) placed for resource distribution
         }
 
         this.bankResources.clear();
@@ -185,6 +186,7 @@ export class GameController {
         const currentPlayer = this.getCurrentPlayer();
         this.gameContext.gameMap.updateSettlementById(event.vertexId, currentPlayer.id, 1);
         currentPlayer.addSettlement(event.vertexId);
+        this.gameContext.lastSettlementPlaced = event.vertexId;
 
         // render updated settlement on map
         this.renderer.renderSettlement(event.vertexId, currentPlayer.color, 1);
@@ -220,15 +222,75 @@ export class GameController {
             // else move to next player and PLACE_SETTLEMENT1 state
             this.nextPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
-
-            // activate settlement placement mode for next player
-            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
-
-            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
         }
-        
-        this.updateDebugHUD();
 
+        this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+        this.updateDebugHUD();
+        this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
+    }
+
+    handleStatePlaceSettlement2(event){ 
+        if (event.type !== 'PLACE_SETTLEMENT'){
+            return;
+        }
+
+        this.renderer.deactivateSettlementPlacementMode();
+
+        // add settlement to map
+        const vertexId = event.vertexId;
+        const currentPlayer = this.getCurrentPlayer();
+        this.gameContext.gameMap.updateSettlementById(vertexId, currentPlayer.id, 1);
+        currentPlayer.addSettlement(vertexId);
+        this.gameContext.lastSettlementPlaced = vertexId;
+
+        // render updated settlement on map
+        this.renderer.renderSettlement(vertexId, currentPlayer.color, 1);
+
+        // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
+        this.gameContext.currentState = GameState.PLACE_ROAD2;
+        this.renderer.activateRoadPlacementMode(this.gameContext.gameMap, vertexId); 
+        this.updateDebugHUD();
+        this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
+    }
+
+    handleStatePlaceRoad2(event){
+        if (event.type !== 'PLACE_ROAD'){
+            return;
+        }
+        // place road logic here
+        // deactivate road placement mode
+        this.renderer.deactivateRoadPlacementMode();
+        
+        // add road to map and register its ownership
+        const currentPlayer = this.getCurrentPlayer();
+        this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
+        currentPlayer.addRoad(event.edgeId);
+        
+        // render updated road on map
+        this.renderer.renderRoad(event.edgeId, currentPlayer.color);
+
+        // add adjacnet resources to player for second settlement
+        const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
+        console.log("Distributing initial resources for second settlement:", adjacentResources);
+        adjacentResources.forEach(resourceType => {
+            currentPlayer.addResource(resourceType, 1);
+            this.updateBankResource(resourceType, -1);
+        });
+
+        // check if current player is the first player
+        if (this.gameContext.currentPlayerIndex === 0) {
+            // if fisrt player, game setup is complete, move to ROLL state
+            this.gameContext.currentState = GameState.ROLL;
+            this.updateDebugHUD();
+            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Setup complete.`);
+        } else {
+            // else move to previous player and PLACE_SETTLEMENT2 state
+            this.prevPlayer();
+            this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
+            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+            this.updateDebugHUD();
+            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 2.`);
+        }
     }
 
     async handleStateRoll(event){
@@ -285,6 +347,10 @@ export class GameController {
 
     nextPlayer() {
         this.gameContext.currentPlayerIndex = (this.gameContext.currentPlayerIndex + 1) % this.gameContext.players.length;
+    }
+
+    prevPlayer() {
+        this.gameContext.currentPlayerIndex = (this.gameContext.currentPlayerIndex - 1 + this.gameContext.players.length) % this.gameContext.players.length;
     }
 
     nextTurn() {
