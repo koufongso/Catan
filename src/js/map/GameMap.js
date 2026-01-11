@@ -1,8 +1,8 @@
-import { Tile } from "./tile.js";
-import { Road } from "./road.js";
-import { Settlement } from "./settlement.js";
-import { ResourceType } from "./resource_type.js";
-import { TradingPost } from "./trading_post.js";
+import { Tile } from "./Tile.js";
+import { Road } from "./Road.js";
+import { Settlement } from "./Settlement.js";
+import { ResourceType } from "./ResourceType.js";
+import { TradingPost } from "./TradingPost.js";
 
 
 export class GameMap {

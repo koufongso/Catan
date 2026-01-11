@@ -1,4 +1,4 @@
-import { Hex } from "./hex_grid_system/hex.js";
+import { Hex } from "./hex-grid-system/Hex.js";
 
 export class TradingPost{
     constructor(coord, indexList, tradeList = {}) {

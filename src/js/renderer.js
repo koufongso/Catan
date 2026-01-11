@@ -1,9 +1,9 @@
-import { GameMap } from "./map/game_map.js";
-import { Tile } from "./map/tile.js";
-import { ResourceType } from "./map/resource_type.js";
-import { GameController } from "./game_controller.js";
-import { HexVertex } from "./map/hex_grid_system/hex_vertex.js";
-import { HexEdge } from "./map/hex_grid_system/hex_edge.js";
+import { GameMap } from "./map/GameMap.js";
+import { Tile } from "./map/Tile.js";
+import { ResourceType } from "./map/ResourceType.js";
+import { GameController } from "./GameController.js";
+import { HexVertex } from "./map/hex-grid-system/HexVertex.js";
+import { HexEdge } from "./map/hex-grid-system/HexEdge.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians

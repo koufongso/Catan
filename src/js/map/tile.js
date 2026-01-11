@@ -1,5 +1,5 @@
-import { Hex } from "./hex_grid_system/hex.js";
-import { ResourceType } from "./resource_type.js";
+import { Hex } from "./hex-grid-system/Hex.js";
+import { ResourceType } from "./ResourceType.js";
 
 export class Tile {
     constructor(coord, resource, numberToken) {

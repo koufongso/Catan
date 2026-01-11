@@ -1,4 +1,4 @@
-import { HexEdge } from "./hex_grid_system/hex_edge.js";
+import { HexEdge } from "./hex-grid-system/HexEdge.js";
 
 export class Road {
     constructor(coord, owner) {

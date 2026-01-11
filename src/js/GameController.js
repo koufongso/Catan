@@ -1,8 +1,8 @@
-import { GameMap } from './map/game_map.js';
-import { ResourceType } from './map/resource_type.js';
-import { Player } from './player.js';
-import {Dice} from './dice.js';
-import { SeededRandom } from './seeded_random.js';
+import { GameMap } from './map/GameMap.js';
+import { ResourceType } from './map/ResourceType.js';
+import { Player } from './Player.js';
+import {Dice} from './Dice.js';
+import { SeededRandom } from './SeededRandom.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
