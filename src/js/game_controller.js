@@ -211,11 +211,24 @@ export class GameController {
         
         // render updated road on map
         this.renderer.renderRoad(event.edgeId, currentPlayer.color);
-        this.nextPlayer(); // move to next player for second settlement
-        this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
+
+        // check if current player is last player
+        if (this.gameContext.currentPlayerIndex === this.gameContext.totalPlayers - 1) {
+            // if last player, move to PLACE_SETTLEMENT2 state, same player places second settlement (by rule)
+            this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
+        } else {
+            // else move to next player and PLACE_SETTLEMENT1 state
+            this.nextPlayer();
+            this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
+
+            // activate settlement placement mode for next player
+            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+
+            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
+        }
         
         this.updateDebugHUD();
-        this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Please place your second settlement.`);
+
     }
 
     async handleStateRoll(event){
