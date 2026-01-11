@@ -228,6 +228,14 @@ export class Renderer {
                 <p>Seed: ${gameContext.seed}</p>
                 <p>Current Turn: ${gameContext.turnNumber}</p>
                 <p>Current State: ${gameContext.currentState}</p>
+                <p>Settlements</p>
+                <ul>
+                    ${Array.from(gameContext.gameMap.settlements.entries()).map(([coord, settlement]) => `<li>Coord ${coord}: Owner ${settlement.owner}</li>`).join('')}
+                </ul>
+                <p>Roads</p><ul>
+                    ${Array.from(gameContext.gameMap.roads.entries()).map(([coord, road]) => `<li>Coord ${coord}: Owner ${road.owner}</li>`).join('')}
+                </ul>
+                <p>Current Robber: ${gameContext.gameMap.robberTileId}</p>
                 <p>Players Status:</p>
                 <ul>
                     ${gameContext.players.map(player => `<li>Player ${player.id}: ${player.name} (${player.type}) - Resources: ${JSON.stringify(player.resources)}</li>`).join('')}
