@@ -4,15 +4,20 @@ export class HexVertex {
         // defined by its three adjacent (q,r,s) values 
         // we also used it as the vertex id
         // check if this is a valid vertex
-        const q = coord[0];
-        const r = coord[1];
-        const s = coord[2];
-        
-        if (Math.abs(q+r+s)!=1){
+
+        if (!HexVertex.isHexVertexCoordValid(coord)) {
             throw new Error(`Invalid Hex Vertex Coordinate: (${q},${r},${s}). The sum of coordinates must be 1 or -1.`);
         }
         this.coord = coord;
-        this.id = `${q},${r},${s}`;
+        this.id = `${coord[0]},${coord[1]},${coord[2]}`;
+    }
+
+    static isHexVertexCoordValid(coord) {
+        // check if the vertex coordinate is valid
+        let q = coord[0];
+        let r = coord[1];
+        let s = coord[2];
+        return (Math.abs(q + r + s) == 1);
     }
 
     // check if two hexes are adjacent
@@ -37,17 +42,14 @@ export class HexVertex {
         let offsets = [];
         // first try with [-1,0,-1] offset
         let newCoord = [this.coord[0] - 1, this.coord[1] - 1, this.coord[2]];
-        let val = [this.coord[0] + newCoord[0], this.coord[1] + newCoord[1], this.coord[2] + newCoord[2]];
-        let val1 = Math.abs(val[0]) % 2; // even: 0, odd: 1
-        let val2 = Math.abs(val[1]) % 2;
-        let val3 = Math.abs(val[2]) % 2;
-
-        if (((val1 == 0 && val2 == 1 && val3 == 1) ||
-            (val1 == 1 && val2 == 0 && val3 == 1) ||
-            (val1 == 1 && val2 == 1 && val3 == 0))) {// this mean offset1 is valid
-            offsets = [[-1, 0, -1], [0, -1, -1], [-1, -1, 0]];
+        
+        // check if this is valid vertex
+        if (HexVertex.isHexVertexCoordValid(newCoord)) {
+            // this mean offset1 is valid
+            offsets = [[-1, -1, 0], [-1, 0, -1], [0, -1, -1]];
         }
-        else {// this mean offset2 is valid
+        else {
+            // this mean offset2 is valid
             offsets = [[1, 0, 1], [0, 1, 1], [1, 1, 0]];
         }
 
