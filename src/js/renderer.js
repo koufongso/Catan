@@ -7,25 +7,25 @@ import { HexUtils } from "./utils/hex-utils.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
-const RAD60  = Math.PI / 3; // 60 degrees in radians
+const RAD60 = Math.PI / 3; // 60 degrees in radians
 const SQRT3 = Math.sqrt(3);
 const SQRT3_HALF = SQRT3 / 2;
 // take care of all UI rendering and user interactions
 export class Renderer {
     constructor(svgId) {
         this.svg = document.getElementById(svgId);
-        this.controller = null;   
+        this.controller = null;
         this.tileSize = 50; // default hex this.tileSize
     }
 
-    attachController(controller){
+    attachController(controller) {
         this.controller = controller;
     }
 
 
     drawTile(layer, tile) {
         const hexPoly = this.createPolygon(
-            tile.coord, 
+            tile.coord,
             tile.resource,
             tile.id,
             this.tileSize
@@ -76,7 +76,7 @@ export class Renderer {
             const y = -this.tileSize * Math.sin(angle) + y0;
 
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            
+
             // Shorten line for better aesthetics
             const shortenRatio = 0.5;
             const xStart = x0 + (x - x0) * shortenRatio;
@@ -96,7 +96,7 @@ export class Renderer {
         label.setAttribute("y", y0);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("class", "trading-post-label");
-        
+
         label.textContent = Object.entries(tp.tradeList)
             .map(([res, val]) => `${res[0].toUpperCase()}:${val}`)
             .join(" ");
@@ -104,10 +104,10 @@ export class Renderer {
         layer.appendChild(label);
     }
 
-    drawRobber(layer, robberTile) {
-        if (!robberTile) return;
+    drawRobber(layer, robberTileCoord) {
+        if (!robberTileCoord) return;
 
-        const [x, y] = HexUtils.hexToPixel(robberTile.coord, this.tileSize);
+        const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.tileSize);
         const size = this.tileSize * 0.8; // Adjust size as needed
 
         // Create a group to center the image/text easily
@@ -117,7 +117,7 @@ export class Renderer {
         // Use <image> for the .png file
         const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "image");
         robberImg.setAttributeNS("http://www.w3.org/1999/xlink", "href", "./src/assets/images/robber.png");
-        
+
         // Center the image over the hex (SVG images draw from top-left)
         robberImg.setAttribute("x", x - size / 2);
         robberImg.setAttribute("y", y - size / 2);
@@ -128,10 +128,10 @@ export class Renderer {
         // Optional: Keep the "R" text as a fallback or label
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", x);
-        text.setAttribute("y", y + 5); 
+        text.setAttribute("y", y + 5);
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("class", "robber-label");
-        text.textContent = "R"; 
+        text.textContent = "R";
 
         group.appendChild(robberImg);
         group.appendChild(text);
@@ -142,8 +142,8 @@ export class Renderer {
         const temp = document.getElementById('game-template');
         if (!temp) throw new Error("Game template not found in DOM");
 
-        const clone = temp.content.cloneNode(true); 
-        
+        const clone = temp.content.cloneNode(true);
+
         // Group the layers into a clean object
         const layers = {
             tiles: clone.getElementById('tile-layer'),
@@ -160,25 +160,25 @@ export class Renderer {
         wrapper.appendChild(clone); // add the new one
     }
 
-    renderInitialMap(gameMap) {
+    renderInitialMap(tiles, tradingPosts, robberTileCoord) {
         const { clone, layers } = this.setupTemplate();
 
-        gameMap.tiles.forEach(tile => {
+        tiles.forEach(tile => {
             this.drawTile(layers.tiles, tile);
             this.drawToken(layers.tiles, tile);
         });
 
-        gameMap.tradingPosts.forEach(tp => {
+        tradingPosts.forEach(tp => {
             this.drawTradingPost(layers.tiles, tp);
         });
 
-        this.drawRobber(layers.tiles, gameMap.tiles.get(gameMap.robberTileId));
+        this.drawRobber(layers.tiles, robberTileCoord);
         this.updateDOM(clone);
     }
 
 
 
-    createPolygon(coord, resource, id, tileSize=this.tileSize) {
+    createPolygon(coord, resource, id, tileSize = this.tileSize) {
         let SVG_NS = "http://www.w3.org/2000/svg";
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
@@ -189,13 +189,13 @@ export class Renderer {
             const x = tileSize * Math.cos(angle) + x0;
             const y = - tileSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
             points.push(`${x},${y}`);
-        }   
+        }
         poly.setAttribute("points", points.join(" "));
-        
+
         // set class based on resource type for styling
         poly.setAttribute("class", `hex-tile ${resource.toLowerCase()}`);
         poly.dataset.id = id;
-       
+
         return poly;
     }
 
@@ -203,21 +203,23 @@ export class Renderer {
     showConfig() {
         const temp = document.getElementById('config-template');
         const clone = temp.content.cloneNode(true); // Copy the template
-        
+
         // Add logic to the new buttons before adding to DOM
-        if (!this.controller){
+        if (!this.controller) {
             console.error("Renderer: Controller not attached. Cannot proceed with configuration.");
             return;
         }
 
         clone.getElementById('start-game').onclick = () => {
-            this.controller.inputEvent({type: 'START_GAME', 
+            this.controller.inputEvent({
+                type: 'START_GAME',
                 mapSize: parseInt(document.getElementById('map-size').value),
                 aiPlayers: parseInt(document.getElementById('ai-players').value),
                 humanPlayers: parseInt(document.getElementById('human-players').value),
-                seed: Date.now()});
+                seed: Date.now()
+            });
         }
-        
+
         // clear existing content and add the clone to main wrapper
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
@@ -244,15 +246,15 @@ export class Renderer {
                 <p>Roads</p><ul>
                     ${Array.from(gameContext.gameMap.roads.entries()).map(([coord, road]) => `<li>Coord ${coord}: Owner ${road.owner}</li>`).join('')}
                 </ul>
-                <p>Current Robber: ${gameContext.gameMap.robberTileId}</p>
+                <p>Current Robber: ${gameContext.gameMap.robberTileCoord}</p>
                 <p>Players Status:</p>
                     <ul>
                     ${gameContext.players.map(player => `
                         <li>
                         <strong>Player ${player.id}:</strong>
-                        ${Array.from(player.resources).map(([type, amount]) => 
-                            `<span> ${type}: ${amount} </span>`
-                        ).join(' | ')}
+                        ${Array.from(player.resources).map(([type, amount]) =>
+            `<span> ${type}: ${amount} </span>`
+        ).join(' | ')}
                         </li>
                     `).join('')}
                     </ul>
@@ -265,8 +267,8 @@ export class Renderer {
 
         // limit the number of logs to 10
         if (debugDashboard.children.length > 10) {
-        // Removing the oldest (last) child is very fast
-            debugDashboard.lastChild.remove(); 
+            // Removing the oldest (last) child is very fast
+            debugDashboard.lastChild.remove();
         }
     }
 
@@ -285,68 +287,59 @@ export class Renderer {
 
         // limit the number of logs to 10
         if (debugDashboard.children.length > 10) {
-        // Removing the oldest (last) child is very fast
-            debugDashboard.lastChild.remove(); 
+            // Removing the oldest (last) child is very fast
+            debugDashboard.lastChild.remove();
         }
     }
 
-    activateSettlementPlacementMode(gameMap) {
-        // add event listeners to all available settlement vertices
-        // get the settlement layer
+    activateSettlementPlacementMode(availableVertexCoords) {
         const vertexLayer = document.getElementById('vertex-layer');
-        if (!vertexLayer) {
-            console.error("Renderer: Vertex layer not found in SVG. Cannot activate settlement placement mode.");
-            return;
+        if (!vertexLayer) return;
+
+        vertexLayer.classList.add('placement-mode');
+
+        // 2. Draw ONLY the available spots passed from the controller
+        availableVertexCoords.forEach(vCoord => {
+            const vertexId = HexUtils.coordToId(vCoord);
+            const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
+
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", x);
+            circle.setAttribute("cy", y);
+            circle.setAttribute("r", 10);
+            circle.setAttribute("class", "vertex-settlement-available hitbox");
+            circle.dataset.id = vertexId; // Store ID for the delegation
+
+            vertexLayer.appendChild(circle);
+        });
+
+        // 3. Single Event Listener (Event Delegation)
+        // Remove existing listener first if necessary to prevent duplicates
+        vertexLayer.onclick = (event) => {
+            const target = event.target;
+            if (target.classList.contains('vertex-settlement-available')) {
+                const vertexId = target.dataset.id;
+                this.emitInputEvent('PLACE_SETTLEMENT', { vertexId });
+            }
+        };
+    }
+
+    // Helper to clean up the controller calls
+    emitInputEvent(type, data) {
+        if (this.controller) {
+            this.controller.inputEvent({ type, ...data });
         }
-
-        gameMap.tiles.forEach(tile => {
-            // create vertex elements tha is not yet created and not yet occupied (contained in gameMap.settlements)
-            const vCoordList = HexUtils.getVertexFromHex(tile.coord); // get all 6 vertex coords around the hex
-            vCoordList.forEach((vCoord, index) => {
-                const vertexId = HexUtils.coordToId(vCoord);
-                if (gameMap.settlements.has(vertexId) || document.querySelector(`circle[data-id='${vertexId}']`)){
-                    return; // skip occupied vertices or already created ones
-                }
-
-                // create a circle element for the vertex
-                const vertexCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
-                vertexCircle.setAttribute("cx", x);
-                vertexCircle.setAttribute("cy", y);
-                vertexCircle.setAttribute("r", 10);
-                vertexCircle.setAttribute("class", "vertex-settlement-available hitbox");
-                vertexCircle.dataset.id = vertexId;
-
-                // add click event listener
-                vertexCircle.addEventListener('click', (event) => {
-                    console.log(`Vertex ${vertexId} clicked for settlement placement.`);
-                    // send input event to controller
-                    if (this.controller){
-                        this.controller.inputEvent({type: 'PLACE_SETTLEMENT', vertexId: vertexId});
-                    }else{
-                        console.error("Renderer: Controller not attached. Cannot send PLACE_SETTLEMENT event.");
-                    }
-                });
-                vertexLayer.appendChild(vertexCircle);
-            });// end forEach vertex coord
-
-        });// end forEach tile
     }
 
     deactivateSettlementPlacementMode() {
-        // remove event listeners from all settlement vertices
         const vertexLayer = document.getElementById('vertex-layer');
-        if (!vertexLayer) {
-            console.error("Renderer: Vertex layer not found in SVG. Cannot deactivate settlement placement mode.");
-            return;
-        }
+        if (!vertexLayer) return;
+        // clean up
+        console.log(vertexLayer)
 
-        // get all vertex-settlement-available elements
-        const availableVertices = vertexLayer.querySelectorAll('.vertex-settlement-available');
-        // remove them from the SVG
-        availableVertices.forEach(vertex => {
-            vertex.remove();
-        }); 
+        vertexLayer.onclick = null;
+        vertexLayer.querySelectorAll('.vertex-settlement-available').forEach(spot => vertexLayer.removeChild(spot));
+        vertexLayer.classList.remove('placement-mode');
     }
 
     renderSettlement(vertexId, color, level) {
@@ -370,81 +363,71 @@ export class Renderer {
         vertexLayer.appendChild(settlementCircle);
     }
 
-    activateRoadPlacementMode(gameMap, vertexId) {
-        // get the edge layer
+    // Inside Renderer.js
+    activateRoadPlacementMode(validEdgeCoords) {
         const edgeLayer = document.getElementById('edge-layer');
-        if (!edgeLayer) {
-            console.error("Renderer: Edge layer not found in SVG. Cannot activate road placement mode.");
-            return;
-        }
+        if (!edgeLayer) return;
 
-        // for performance, first check if vertexId is provided,
-        // if so, only highlight edges connected to that vertex 
-        const vCoord0 = HexUtils.idToCoord(vertexId);
-        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.tileSize);
-        HexUtils.getAdjVerticesFromVertex(vCoord0).forEach(vCoord1 => {
-            console.log("vertex0:", vCoord0);
-            console.log("adjacent vertex coord:", vCoord1);
-            
-            const edge = HexUtils.getEdgeFromVertices(vCoord0, vCoord1);
-            console.log("Adjacent edge:", edge);
-            // check if the edge is already occupied
-            const edgeId = HexUtils.coordToId(edge);
-            if (gameMap.roads.has(edgeId)){
-                return; // skip occupied edges
-            }
-             
-            // draw a line for each adjacent edge
+        edgeLayer.classList.add('placement-mode');
+
+        validEdgeCoords.forEach(eCoord => {
+            // Get the two vertex endpoints for this edge
+            const edgeId = HexUtils.coordToId(eCoord);
+            const [v1Coord, v2Coord] = HexUtils.getVerticesFromEdge(eCoord);
+            const [x1, y1] = HexUtils.vertexToPixel(v1Coord, this.tileSize);
+            const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.tileSize);
+
             const edgeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.tileSize);
-            console.log("vertex0:", vCoord0, x0, y0);
-            console.log("vertex1:", vCoord1, x1, y1);
-            const dir = [x1 - x0, y1 - y0];
-            const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
-            const shorten_ratio = 0.2;
-            const x0_short = x0 + dir[0]*(shorten_ratio*this.tileSize/len);
-            const y0_short = y0 + dir[1]*(shorten_ratio*this.tileSize/len);
-            const x1_short = x1 - dir[0]*(shorten_ratio*this.tileSize/len);
-            const y1_short = y1 - dir[1]*(shorten_ratio*this.tileSize/len);
-            edgeLine.setAttribute("x1", x0_short);
-            edgeLine.setAttribute("y1", y0_short);
-            edgeLine.setAttribute("x2", x1_short);
-            edgeLine.setAttribute("y2", y1_short);
+
+            // Use your shortening logic for a better look
+            const shortened = this.getShortenedLine(x1, y1, x2, y2, 0.2);
+
+            edgeLine.setAttribute("x1", shortened.x1);
+            edgeLine.setAttribute("y1", shortened.y1);
+            edgeLine.setAttribute("x2", shortened.x2);
+            edgeLine.setAttribute("y2", shortened.y2);
+
             edgeLine.setAttribute("class", "edge-road-available hitbox");
-            edgeLine.setAttribute("data-id", edgeId);
-            edgeLine.style.strokeWidth = "8px";
-            edgeLine.style.stroke="rgba(0, 255, 0, 0)";
             edgeLine.dataset.id = edgeId;
 
-            // add click event listener
-            edgeLine.addEventListener('click', (event) => {
-                console.log(`edge ${edgeId} clicked for road placement.`);
-                // send input event to controller
-                if (this.controller){
-                    this.controller.inputEvent({type: 'PLACE_ROAD', edgeId: edgeId});
-                }else{
-                    console.error("Renderer: Controller not attached. Cannot send PLACE_ROAD event.");
-                }
-            });
-
+            // Styling moved to CSS classes where possible
+            edgeLine.style.strokeWidth = "12px"; // Slightly thicker for easier clicking
+            edgeLine.style.stroke="rgba(0, 255, 0, 0)"; // need this to show the hitbox
             edgeLayer.appendChild(edgeLine);
-        });// end forEach adjacent edges
-    };
+        });
+
+        // EVENT DELEGATION: One listener for all roads
+        edgeLayer.onclick = (event) => {
+            const target = event.target;
+            if (target.classList.contains('edge-road-available')) {
+                this.emitInputEvent('PLACE_ROAD', { edgeId: target.dataset.id });
+            }
+        };
+    }
 
     deactivateRoadPlacementMode() {
-        // remove event listeners from all road edges
         const edgeLayer = document.getElementById('edge-layer');
-        if (!edgeLayer) {
-            console.error("Renderer: Edge layer not found in SVG. Cannot deactivate road placement mode.");
-            return;
-        }
+        if (!edgeLayer) return;
 
-        // get all edge-road-available elements      
-        const availableEdges = edgeLayer.querySelectorAll('.edge-road-available');
-        // remove them from the SVG
-        availableEdges.forEach(edge => {
-            edge.remove();
-        });
+        // clean up
+        console.log(edgeLayer)
+        edgeLayer.onclick = null;
+        edgeLayer.querySelectorAll('.edge-road-available').forEach(spot => edgeLayer.removeChild(spot));
+        edgeLayer.classList.remove('placement-mode');
+    }
+
+    // Helper to keep math clean
+    getShortenedLine(x1, y1, x2, y2, ratio) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const offset_x = dx * ratio;
+        const offset_y = dy * ratio;
+        return {
+            x1: x1 + offset_x,
+            y1: y1 + offset_y,
+            x2: x2 - offset_x,
+            y2: y2 - offset_y
+        };
     }
 
     renderRoad(edgeId, color) {
@@ -466,12 +449,12 @@ export class Renderer {
         console.log("vertex0:", vCoord0, x0, y0);
         console.log("vertex1:", vCoord1, x1, y1);
         const dir = [x1 - x0, y1 - y0];
-        const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
+        const len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
         const shorten_ratio = 0.2;
-        const x0_short = x0 + dir[0]*(shorten_ratio*this.tileSize/len);
-        const y0_short = y0 + dir[1]*(shorten_ratio*this.tileSize/len);
-        const x1_short = x1 - dir[0]*(shorten_ratio*this.tileSize/len);
-        const y1_short = y1 - dir[1]*(shorten_ratio*this.tileSize/len);
+        const x0_short = x0 + dir[0] * (shorten_ratio * this.tileSize / len);
+        const y0_short = y0 + dir[1] * (shorten_ratio * this.tileSize / len);
+        const x1_short = x1 - dir[0] * (shorten_ratio * this.tileSize / len);
+        const y1_short = y1 - dir[1] * (shorten_ratio * this.tileSize / len);
         roadLine.setAttribute("x1", x0_short);
         roadLine.setAttribute("y1", y0_short);
         roadLine.setAttribute("x2", x1_short);
@@ -479,7 +462,7 @@ export class Renderer {
         roadLine.setAttribute("class", "road");
         roadLine.setAttribute("data-id", edgeId);
         roadLine.style.strokeWidth = "8px";
-        roadLine.style.stroke=`${color}`;
+        roadLine.style.stroke = `${color}`;
         roadLine.dataset.id = edgeId;
         edgeLayer.appendChild(roadLine);
     }

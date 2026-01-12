@@ -74,7 +74,7 @@ export const HexUtils = Object.freeze({
      */
     vertexToPixel(vCoord, tileSize) {
         // 1. get one of the adjacent hex coord
-        let hCoord = this.getAdjHexesFromHVertex(vCoord)[0];
+        let hCoord = this.getAdjHexesFromVertex(vCoord)[0];
 
         // 2. get the index of this vertex relative to this hex
         let hex_idx = this.getIndexOfVertex(hCoord, vCoord);
@@ -118,7 +118,7 @@ export const HexUtils = Object.freeze({
      * @param {Array} hCoord [q,r,s] axial coordinate of the hex
      * @returns Array of six vertex coordinates
      */
-    getVertexFromHex(hCoord) {
+    getVerticesFromHex(hCoord) {
         // input valid check
         if (!this.isValidHex(hCoord)) {
             throw new Error("Invalid hex coordinate");
@@ -137,7 +137,7 @@ export const HexUtils = Object.freeze({
      * @param {Array} vCoord: [q,r,s] axial coordinate of the vertex
      * @returns Array of three adjacent hex coordinates 
      */
-    getAdjHexesFromHVertex(vCoord) {
+    getAdjHexesFromVertex(vCoord) {
         // input valid check
         if (!this.isValidVertex(vCoord)) {
             throw new Error("Invalid hex vertex coordinate");

@@ -15,7 +15,7 @@ export class GameMap {
         this.roads = new Map(); // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
         this.settlements = new Map(); // register all (interactable) settlements/vertices, others will be conceptual "empty" settlements
         this.tradingPosts = new Map(); // register all trading posts on the map
-        this.robberTileId = '0,0,0'; // the tile id where the robber is currently located
+        this.robberTileCoord = [0,0,0]; // the tile coord where the robber is currently located
     }
 
     // load the map from json file to initializes the interactable elements
@@ -372,9 +372,9 @@ export class GameMap {
     getAllSettlementCoords() {
         let results = new Map();
         for (let [id, tile] of this.tiles) {
-            let vertexCoords = tile.hex.getVertexCoord();
-            for (let vCoord of vertexCoords) {
-                results.set(`${vCoord[0]},${vCoord[1]},${vCoord[2]}`, vCoord);
+            let vCoordList = HexUtils.getVerticesFromHex(tile.coord);
+            for (let vCoord of vCoordList) {
+                results.set(HexUtils.coordToId(vCoord), vCoord);
             }
         }
         return results;
@@ -385,7 +385,7 @@ export class GameMap {
         // get the vertex object
         if (this.settlements.has(vertexId)) {
             let settlement = this.settlements.get(vertexId);
-            let adjacentHexCoords = HexUtils.getAdjHexesFromHVertex(settlement.coord); // get the three hexes that share this vertex
+            let adjacentHexCoords = HexUtils.getAdjHexesFromVertex(settlement.coord); // get the three hexes that share this vertex
             // iterate through the hex coords and get their resources
             for (let hexCoord of adjacentHexCoords) {
                 let hexId = HexUtils.coordToId(hexCoord);
@@ -396,5 +396,55 @@ export class GameMap {
             }
         }
         return resources;
+    }
+
+    getValidSettlementSpots(){
+        let results = [];
+        let allSettlementCoords = this.getAllSettlementCoords();
+        for (let [key, vCoord] of allSettlementCoords) {
+            if (this.isSettlementSpotValid(vCoord)) {
+                results.push(vCoord);
+            }
+        }
+        return results;
+    }
+
+    isSettlementSpotValid(vCoord) {
+        let vertexId = HexUtils.coordToId(vCoord);
+        // Check if the vertex is already occupied
+        if (this.settlements.has(vertexId)) {
+            return false;
+        }
+
+        // Check if any adjacent hexes are occupied (i.e., no adjacent settlements)
+        let adjvCoordList = HexUtils.getAdjVerticesFromVertex(vCoord); // get the three hexes that share this vertex
+        for (let adjvCoord of adjvCoordList) {
+            let adjvertexId = HexUtils.coordToId(adjvCoord);
+            if (this.settlements.has(adjvertexId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    getValidRoadSpotsFromVertex(vCoord) {
+        const vCoordList = HexUtils.getAdjVerticesFromVertex(vCoord);
+        let results = [];
+        for (let vCoord1 of vCoordList) {
+            const eCoord = HexUtils.add(vCoord,vCoord1);
+            if (this.isEdgeValid(eCoord)) {
+                results.push(eCoord);
+            }
+        }
+        return results;
+    }
+
+    isEdgeValid(eCoord) {
+        let edgeId = HexUtils.coordToId(eCoord);
+        // Check if the edge is already occupied
+        if (this.roads.has(edgeId)) {
+            return false;
+        }
+        return true;
     }
 }

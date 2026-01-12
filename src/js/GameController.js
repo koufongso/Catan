@@ -3,6 +3,7 @@ import { ResourceType } from './map/ResourceType.js';
 import { Player } from './Player.js';
 import {Dice} from './Dice.js';
 import { SeededRandom } from './SeededRandom.js';
+import { HexUtils } from './utils/hex-utils.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -42,7 +43,7 @@ export class GameController {
             rng: this.rng,
             dice: new Dice(this.rng),
             currentState: GameState.SETUP,
-            lastSettlementPlaced: null // track last settlement (id) placed for resource distribution
+            lastSettlementPlaced: null // track last settlement coord placed for resource distribution
         }
 
         this.bankResources.clear();
@@ -159,10 +160,11 @@ export class GameController {
         // render the initial map and prompt to place first settlement
         if (this.renderer){
             // render intial map
-            this.renderer.renderInitialMap(this.gameContext.gameMap);
+            const gameMap = this.gameContext.gameMap
+            this.renderer.renderInitialMap(gameMap.tiles, gameMap.tradingPosts, gameMap.robberTileCoord);
 
             // "activate" vertex elements for settlement placement
-            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+            this.activateSettlementPlacementMode();
 
         }else{
             console.warn("Renderer not attached. Cannot render game map.");
@@ -183,17 +185,19 @@ export class GameController {
         this.renderer.deactivateSettlementPlacementMode();
 
         // add settlement to map
+        const vCoord = HexUtils.idToCoord(event.vertexId);
+        const vertexId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
-        this.gameContext.gameMap.updateSettlementById(event.vertexId, currentPlayer.id, 1);
-        currentPlayer.addSettlement(event.vertexId);
-        this.gameContext.lastSettlementPlaced = event.vertexId;
+        this.gameContext.gameMap.updateSettlementById(vertexId, currentPlayer.id, 1);
+        currentPlayer.addSettlement(vertexId);
+        this.gameContext.lastSettlementPlaced = vertexId;
 
         // render updated settlement on map
-        this.renderer.renderSettlement(event.vertexId, currentPlayer.color, 1);
+        this.renderer.renderSettlement(vertexId, currentPlayer.color, 1);
 
         // TODO: activate road placement mode for first road
         this.gameContext.currentState = GameState.PLACE_ROAD1;
-        this.renderer.activateRoadPlacementMode(this.gameContext.gameMap, event.vertexId); 
+        this.activateRoadPlacementMode(vCoord); 
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
     }
@@ -224,7 +228,7 @@ export class GameController {
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
         }
 
-        this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+        this.activateSettlementPlacementMode();
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
     }
@@ -234,10 +238,11 @@ export class GameController {
             return;
         }
 
-        this.renderer.deactivateSettlementPlacementMode();
+        this.deactivateSettlementPlacementMode();
 
         // add settlement to map
         const vertexId = event.vertexId;
+        const settlementCoord = HexUtils.idToCoord(vertexId)
         const currentPlayer = this.getCurrentPlayer();
         this.gameContext.gameMap.updateSettlementById(vertexId, currentPlayer.id, 1);
         currentPlayer.addSettlement(vertexId);
@@ -248,7 +253,7 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        this.renderer.activateRoadPlacementMode(this.gameContext.gameMap, vertexId); 
+        this.activateRoadPlacementMode(settlementCoord); 
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
     }
@@ -287,7 +292,7 @@ export class GameController {
             // else move to previous player and PLACE_SETTLEMENT2 state
             this.prevPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
-            this.renderer.activateSettlementPlacementMode(this.gameContext.gameMap);
+            this.activateSettlementPlacementMode();
             this.updateDebugHUD();
             this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 2.`);
         }
@@ -357,6 +362,42 @@ export class GameController {
         this.gameContext.turnNumber++;
     }
 
+    activateSettlementPlacementMode(){
+        if (this.renderer){
+            // compute all valid settlement spots
+            const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
+            console.log("Activating settlement placement mode. Available vertices:", availableVertexIds);
+            this.renderer.activateSettlementPlacementMode(availableVertexIds);
+        }else{
+            console.warn("Renderer not attached. Cannot activate settlement placement mode.");
+        }
+    }
 
+    deactivateSettlementPlacementMode(){
+        if (this.renderer){
+            this.renderer.deactivateSettlementPlacementMode();
+        }else{
+            console.warn("Renderer not attached. Cannot deactivate settlement placement mode.");
+        }
+    }
 
+    // Activate road placement mode based on a given vertex coordinate
+    activateRoadPlacementMode(vCoord){
+        if (this.renderer){
+            // compute all valid road spots based on last settlement placed
+            const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord);
+            console.log("Activating road placement mode. Available edges:", availableEdgeIds);
+            this.renderer.activateRoadPlacementMode(availableEdgeIds);
+        }else{
+            console.warn("Renderer not attached. Cannot activate road placement mode.");
+        }
+    }
+
+    deactivateRoadPlacementMode(){
+        if (this.renderer){
+            this.renderer.deactivateRoadPlacementMode();
+        }else{
+            console.warn("Renderer not attached. Cannot deactivate road placement mode.");
+        }
+    }
 }
