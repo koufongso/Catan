@@ -112,32 +112,118 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
 
 .built-settlement { stroke: white; stroke-width: 2px; }
 
+/* Debug Dashboard Text Styling */
+
 #debug-dashboard {
     position: absolute; /* Float it! */
     top: 50px;
     left: 10px;
     z-index: 10; /* Ensure it stays above the SVG */
     
-    width: 220px;
+    width: 300px;
     height: 400px;
-    background: rgba(255, 255, 255, 0.75); /* Semi-transparent for 'pro' look */
     backdrop-filter: blur(4px); /* Modern frosted-glass effect */
     border: 1px solid #999;
-    padding: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     box-sizing: border-box;
     
     pointer-events: auto; /* Ensure you can still scroll the list */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow: auto; /* Scroll if content overflows */
+    
+    background: #1a1a1ac0;
+    color: #ccc;
+    padding: 8px;
+    font-family: 'Consolas', 'Monaco', monospace; /* Monospace is vital for logs */
     
 }
 
-#debug-dashboard p, ul{
-    font-size: small;
-    font-family: Georgia, 'Times New Roman', Times, serif;
-    margin: 0.1em 0;
+.debug-entry {
+    border-left: 4px solid #444;
+    padding-left: 8px;
+    margin-bottom: 12px;
+    background: #252525;
+    border-bottom: 1px solid #333;
 }
+
+.debug-header {
+    background: #333;
+    padding: 2px 5px;
+    font-size: 0.8em;
+    display: flex;
+    justify-content: space-between;
+}
+
+.timestamp { color: #888; }
+.state { color: #ffca28; font-weight: bold; }
+
+.debug-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 11px;
+    padding: 5px 0;
+}
+
+.stat label {
+    color: #4fc3f7;
+    font-weight: bold;
+}
+
+details {
+    font-size: 10px;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.player-list {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0;
+}
+
+
+/* Container for the whole table */
+.res-matrix {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: #1a1a1a;
+    padding: 8px;
+    border-radius: 4px;
+    width: fit-content; /* Keeps it from stretching too wide */
+}
+
+.res-grid-row {
+    display: grid;
+    /* Column 1 (ID): 30px 
+       Columns 2-6 (Resources): 35px each 
+    */
+    grid-template-columns: 35px repeat(5, 40px); 
+    align-items: center;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.res-grid-row.header {
+    border-bottom: 2px solid #444;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+}
+
+.cell-id {
+    font-size: 10px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.cell-val {
+    text-align: center; /* Centers the number under the icon */
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.is-zero { color: #555; }
+.has-res { color: #fff; font-weight: bold; }
+/* -------------------end -------------------- */
 
 .hitbox{
     fill: rgba(0, 0, 0, 0); 

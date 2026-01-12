@@ -226,50 +226,64 @@ export class Renderer {
         wrapper.appendChild(clone);
     }
 
+
+    resourceIcons = {
+        brick: '🧱',
+        wood:  '🌲',
+        sheep:  '🐑',
+        wheat: '🌾',
+        rock:   '⛏️',
+        desert: '🌵',
+        any:   '❓'  // Useful for 3:1 generic ports
+    };
+
+    getResourceIcon(type) {
+        if (!type) return '❓';
+        const key = type.toLowerCase();
+        // Return the icon if found, otherwise return the first letter capitalized
+        return this.resourceIcons[key] || type.charAt(0).toUpperCase();
+    }
+
     renderDebugHUD(gameContext) {
         const debugDashboard = document.getElementById('debug-dashboard');
-        // add new HUD content
         const newLog = document.createElement('div');
-        newLog.innerHTML = (`
-            <div>
-                <p>Timestamp: ${new Date().toLocaleTimeString()}</p>
-                <p>Total Players: ${gameContext.totalPlayers}</p>
-                <p>Human Players: ${gameContext.humanPlayers}</p>
-                <p>AI Players: ${gameContext.aiPlayers}</p>
-                <p>Seed: ${gameContext.seed}</p>
-                <p>Current Turn: ${gameContext.turnNumber}</p>
-                <p>Current State: ${gameContext.currentState}</p>
-                <p>Settlements</p>
-                <ul>
-                    ${Array.from(gameContext.gameMap.settlements.entries()).map(([coord, settlement]) => `<li>Coord ${coord}: Owner ${settlement.owner}</li>`).join('')}
-                </ul>
-                <p>Roads</p><ul>
-                    ${Array.from(gameContext.gameMap.roads.entries()).map(([coord, road]) => `<li>Coord ${coord}: Owner ${road.owner}</li>`).join('')}
-                </ul>
-                <p>Current Robber: ${gameContext.gameMap.robberTileCoord}</p>
-                <p>Players Status:</p>
-                    <ul>
-                    ${gameContext.players.map(player => `
-                        <li>
-                        <strong>Player ${player.id}:</strong>
-                        ${Array.from(player.resources).map(([type, amount]) =>
-            `<span> ${type}: ${amount} </span>`
-        ).join(' | ')}
-                        </li>
-                    `).join('')}
-                    </ul>
-                <p>Current Player: Player index ${gameContext.currentPlayerIndex} - ${gameContext.players[gameContext.currentPlayerIndex].name}</p>
-                <p>Dice Last Roll: ${gameContext.dice.lastRoll}</p>
-            </div>
-            <br>
-        `);
-        debugDashboard.prepend(newLog);
+        newLog.className = 'debug-entry';
 
-        // limit the number of logs to 10
-        if (debugDashboard.children.length > 10) {
-            // Removing the oldest (last) child is very fast
-            debugDashboard.lastChild.remove();
-        }
+        // 1. Define the resources we want to track in the header
+        const resourceTypes = ['BRICK', 'WOOD', 'SHEEP', 'WHEAT', 'ROCK'];
+
+        const headerHtml = `
+            <div class="res-grid-row header">
+                <span class="cell-id">ID</span>
+                ${resourceTypes.map(type => `
+                    <span class="cell-val">${this.getResourceIcon(type)}</span>
+                `).join('')}
+            </div>
+        `;
+
+        const playersHtml = gameContext.players.map(p => `
+            <div class="res-grid-row">
+                <span class="cell-id" style="color: ${p.color}">P${p.id}</span>
+                ${resourceTypes.map(type => {
+                    const amount = p.resources.get(type) || 0;
+                    return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
+                }).join('')}
+            </div>
+        `).join('');
+
+        newLog.innerHTML = `
+        <div class="debug-header">
+            <span>${new Date().toLocaleTimeString()}</span>
+            <strong>${gameContext.currentState}</strong>
+        </div>
+        <div class="debug-table">
+            ${headerHtml}
+            ${playersHtml}
+        </div>
+        `;
+
+        debugDashboard.prepend(newLog);
+        if (debugDashboard.children.length > 10) debugDashboard.lastChild.remove();
     }
 
     renderDebugHUDLog(message) {
@@ -392,7 +406,7 @@ export class Renderer {
 
             // Styling moved to CSS classes where possible
             edgeLine.style.strokeWidth = "12px"; // Slightly thicker for easier clicking
-            edgeLine.style.stroke="rgba(0, 255, 0, 0)"; // need this to show the hitbox
+            edgeLine.style.stroke = "rgba(0, 255, 0, 0)"; // need this to show the hitbox
             edgeLayer.appendChild(edgeLine);
         });
 
