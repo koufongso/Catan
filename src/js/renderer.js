@@ -22,125 +22,118 @@ export class Renderer {
         this.controller = controller;
     }
 
-    renderInitialMap(gameMap) {
-        // get the template for game container
+
+    drawTile(layer, tile) {
+        const hexPoly = this.createPolygon(
+            tile.coord, 
+            tile.resource,
+            tile.id,
+            this.tileSize
+        );
+        layer.appendChild(hexPoly);
+    }
+
+    drawToken(layer, tile) {
+        // skip if no token or token is 7 (robber)
+        if (tile.numberToken === null || tile.numberToken === 7) return;
+
+        const [x, y] = HexUtils.hexToPixel(tile.coord, this.tileSize);
+        const isHighProb = (tile.numberToken === 6 || tile.numberToken === 8);
+
+        // Create Group for the token to keep SVG organized
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("class", "token-group");
+
+        // The White Circle
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", this.tileSize * 0.3);
+        circle.setAttribute("class", `number-token-circle ${isHighProb ? 'high-probability' : ''}`);
+
+        // The Text
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", y + 2.5);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("class", `number-token ${isHighProb ? 'high-probability' : ''}`);
+        text.textContent = tile.numberToken;
+
+        group.appendChild(circle);
+        group.appendChild(text);
+        layer.appendChild(group);
+    }
+
+    drawTradingPost(layer, tp) {
+        const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.tileSize);
+        const RAD60 = Math.PI / 3;
+        const RAD30 = Math.PI / 6;
+
+        // Draw the visual connection lines to the vertices
+        tp.indexList.forEach(index => {
+            const angle = RAD60 * index + RAD30;
+            const x = this.tileSize * Math.cos(angle) + x0;
+            const y = -this.tileSize * Math.sin(angle) + y0;
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            
+            // Shorten line for better aesthetics
+            const shortenRatio = 0.5;
+            const xStart = x0 + (x - x0) * shortenRatio;
+            const yStart = y0 + (y - y0) * shortenRatio;
+
+            line.setAttribute("x1", xStart);
+            line.setAttribute("y1", yStart);
+            line.setAttribute("x2", x);
+            line.setAttribute("y2", y);
+            line.setAttribute("class", "trading-post-line");
+            layer.appendChild(line);
+        });
+
+        // Add the resource label (e.g., "Brick:2")
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", x0);
+        label.setAttribute("y", y0);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("class", "trading-post-label");
+        
+        label.textContent = Object.entries(tp.tradeList)
+            .map(([res, val]) => `${res[0].toUpperCase()}:${val}`)
+            .join(" ");
+
+        layer.appendChild(label);
+    }
+
+    setupTemplate() {
         const temp = document.getElementById('game-template');
-        const clone = temp.content.cloneNode(true); // Copy the template
-        let layers = {
+        if (!temp) throw new Error("Game template not found in DOM");
+
+        const clone = temp.content.cloneNode(true); 
+        
+        // Group the layers into a clean object
+        const layers = {
             tiles: clone.getElementById('tile-layer'),
             vertices: clone.getElementById('vertex-layer'),
             edges: clone.getElementById('edge-layer')
         };
-        
 
-        // draw all tiles
+        return { clone, layers };
+    }
+
+    renderInitialMap(gameMap) {
+        const { clone, layers } = this.setupTemplate();
+
         gameMap.tiles.forEach(tile => {
-            // draw pologon for each tile
-            const hexPoly = this.createPolygon(
-                tile.coord, // [q,r,s]
-                tile.resource,
-                tile.id,
-                this.tileSize, // this.tileSize
-            );
-            layers.tiles.appendChild(hexPoly);
-
-            // draw number token
-            if (tile.numberToken !== null) {
-                const [x, y] = HexUtils.hexToPixel(tile.coord, this.tileSize);
-
-                if (tile.numberToken ===7){
-                    return; // no number token for 7
-                }
-
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", x);
-                circle.setAttribute("cy", y);
-                circle.setAttribute("r", this.tileSize*0.3);
-                const circleClass = (tile.numberToken === 6 || tile.numberToken === 8)
-                    ? "number-token-circle high-probability"
-                    : "number-token-circle";
-                circle.setAttribute("class", circleClass);
-
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", x);
-                text.setAttribute("y", y+2.5); // slight offset for vertical centering
-                text.setAttribute("text-anchor", "middle");
-                text.setAttribute("class", "number-token");
-                text.textContent = tile.numberToken;
-
-                // highlight if it's a 6 or 8
-                if (tile.numberToken === 6 || tile.numberToken === 8) {
-                    text.setAttribute("class", "number-token high-probability");
-                }
-
-                layers.tiles.appendChild(circle);
-                layers.tiles.appendChild(text);
-            }
+            this.drawTile(layers.tiles, tile);
+            this.drawToken(layers.tiles, tile);
         });
 
-        // draw the robber
-        {
-            const robberTile = gameMap.tiles.get(gameMap.robberTileId);
-            if (robberTile) {
-                const [x, y] = HexUtils.hexToPixel(robberTile.coord, this.tileSize);
-                const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                robberImg.setAttribute("href", "./src/assets/images/robber.png");
-                robberImg.setAttribute("x", x );
-                robberImg.setAttribute("y", y+2.5); // slight offset for vertical centering
-                robberImg.setAttribute("text-anchor", "middle");
-                robberImg.setAttribute("class", "robber");
-                robberImg.textContent = "R"; // skull emoji as placeholder
-                layers.tiles.appendChild(robberImg);
-            }
-        }
-
-        // draw all trading posts
-        //console.log("Rendering Trading Posts:");
         gameMap.tradingPosts.forEach(tp => {
-            // hex center the trading post is located at
-            const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.tileSize);
-
-            // draw line from hex center to each vertex index
-            for (let index of tp.indexList) {
-                const angle = RAD60 * index + RAD30; // 30 degree offset
-                const x = this.tileSize * Math.cos(angle) + x0;
-                const y = -this.tileSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
-                //console.log(`  Trading Post at hex ${tp.coord}, vertex index: ${index}, pixel: (${x},${y})`);
-                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                
-                // better visual effect by shortening the line a bit
-                const dir = [x-x0, y-y0];
-                const len = Math.sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
-                const shorten_ratio = 0.5;
-                const x0_short = x0 + dir[0]*(shorten_ratio*this.tileSize/len);
-                const y0_short = y0 + dir[1]*(shorten_ratio*this.tileSize/len);
-
-                line.setAttribute("x1", x0_short);
-                line.setAttribute("y1", y0_short);
-                line.setAttribute("x2", x);
-                line.setAttribute("y2", y);
-                line.setAttribute("class", "trading-post-line");
-                layers.tiles.appendChild(line);
-            }
-            
-            // add trade ratio
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.setAttribute("text-anchor", "middle");
-            text.setAttribute("class", "trading-post-label");
-            let trade_str = "";
-            text.setAttribute("x", x0);
-            text.setAttribute("y", y0);
-            for (let resource in tp.tradeList) {
-                trade_str += `${resource.charAt(0).toUpperCase() + resource.slice(1)}:${tp.tradeList[resource]} `;
-            }
-            text.textContent = trade_str;
-            layers.tiles.appendChild(text); 
+            this.drawTradingPost(layers.tiles, tp);
         });
 
-        // clear existing content and add the clone to main wrapper
-        let wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = '';
-        wrapper.appendChild(clone);
+        this.drawRobber(layers.tiles, gameMap.tiles.get(gameMap.robberTileId));
+        this.updateDOM(clone);
     }
 
 
