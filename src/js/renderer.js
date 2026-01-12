@@ -104,6 +104,40 @@ export class Renderer {
         layer.appendChild(label);
     }
 
+    drawRobber(layer, robberTile) {
+        if (!robberTile) return;
+
+        const [x, y] = HexUtils.hexToPixel(robberTile.coord, this.tileSize);
+        const size = this.tileSize * 0.8; // Adjust size as needed
+
+        // Create a group to center the image/text easily
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("class", "robber-group");
+
+        // Use <image> for the .png file
+        const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        robberImg.setAttributeNS("http://www.w3.org/1999/xlink", "href", "./src/assets/images/robber.png");
+        
+        // Center the image over the hex (SVG images draw from top-left)
+        robberImg.setAttribute("x", x - size / 2);
+        robberImg.setAttribute("y", y - size / 2);
+        robberImg.setAttribute("width", size);
+        robberImg.setAttribute("height", size);
+        robberImg.setAttribute("class", "robber-icon");
+
+        // Optional: Keep the "R" text as a fallback or label
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", y + 5); 
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("class", "robber-label");
+        text.textContent = "R"; 
+
+        group.appendChild(robberImg);
+        group.appendChild(text);
+        layer.appendChild(group);
+    }
+
     setupTemplate() {
         const temp = document.getElementById('game-template');
         if (!temp) throw new Error("Game template not found in DOM");
@@ -118,6 +152,12 @@ export class Renderer {
         };
 
         return { clone, layers };
+    }
+
+    updateDOM(clone) {
+        const wrapper = document.getElementById('main-wrapper');
+        wrapper.innerHTML = ''; // clear existing content
+        wrapper.appendChild(clone); // add the new one
     }
 
     renderInitialMap(gameMap) {
@@ -135,6 +175,7 @@ export class Renderer {
         this.drawRobber(layers.tiles, gameMap.tiles.get(gameMap.robberTileId));
         this.updateDOM(clone);
     }
+
 
 
     createPolygon(coord, resource, id, tileSize=this.tileSize) {
