@@ -1,4 +1,4 @@
-import { ResourceType } from './map/ResourceType.js';
+import { ResourceType } from '../constants/ResourceType.js';
 
 export class Player {
     constructor(id, name, color, type) {

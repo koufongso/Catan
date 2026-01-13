@@ -1,5 +1,5 @@
 import { HexUtils } from "../utils/hex-utils.js";
-import { ResourceType } from "./ResourceType.js";
+import { ResourceType } from "../constants/ResourceType.js";
 
 export class Tile {
     constructor(coord, resource, numberToken) {

@@ -1,8 +1,4 @@
-import { GameMap } from "./map/GameMap.js";
-import { Tile } from "./map/Tile.js";
-import { ResourceType } from "./map/ResourceType.js";
-import { GameController } from "./GameController.js";
-import { HexUtils } from "./utils/hex-utils.js";
+import { HexUtils } from "../utils/hex-utils.js";
 
 
 // constants for hex geometry
@@ -229,7 +225,7 @@ export class Renderer {
 
     resourceIcons = {
         brick: '🧱',
-        wood:  '🌲',
+        lumber:  '🌲',
         sheep:  '🐑',
         wheat: '🌾',
         rock:   '⛏️',

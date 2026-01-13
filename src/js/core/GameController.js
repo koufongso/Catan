@@ -1,9 +1,9 @@
-import { GameMap } from './map/GameMap.js';
-import { ResourceType } from './map/ResourceType.js';
-import { Player } from './Player.js';
+import { GameMap } from '../models/GameMap.js';
+import { ResourceType } from '../constants/ResourceType.js';
+import { Player } from '../models/Player.js';
 import {Dice} from './Dice.js';
-import { SeededRandom } from './SeededRandom.js';
-import { HexUtils } from './utils/hex-utils.js';
+import { SeededRandom } from '../utils/SeededRandom.js';
+import { HexUtils } from '../utils/hex-utils.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -314,7 +314,7 @@ export class GameController {
 
     async generateDefaultMap(seed = Date.now()){
         // load standard map layout
-        await this.gameContext.gameMap.loadMapFromJson('./src/assets/map_layout/standard_map.json');
+        await this.gameContext.gameMap.loadMapFromJson('./src/assets/data/standard_map.json');
         // assign default resources and number tokens
         this.gameContext.gameMap.assignResourceRandom(seed, {'WOOD':4, 'BRICK':3, 'SHEEP':4, 'WHEAT':4, 'ROCK':3, 'DESERT':1});
         this.gameContext.gameMap.assignNumberTokenRandom(seed, [2,3,3,4,4,5,5,6,6,7,8,8,9,9,10,10,11,11,12]);

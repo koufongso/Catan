@@ -1,8 +1,8 @@
-import { Tile } from "./Tile.js";
-import { Road } from "./Road.js";
-import { Settlement } from "./Settlement.js";
-import { ResourceType } from "./ResourceType.js";
-import { TradingPost } from "./TradingPost.js";
+import { Tile } from "./Terrain.js";
+import { Road } from "./buildings/Road.js";
+import { Settlement } from "./buildings/Settlement.js";
+import { ResourceType } from "../constants/ResourceType.js";
+import { TradingPost } from "./buildings/TradingPost.js";
 import { HexUtils } from "../utils/hex-utils.js";
 
 

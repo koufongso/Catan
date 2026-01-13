@@ -1,4 +1,4 @@
-import { HexUtils } from "../utils/hex-utils.js";
+import { HexUtils } from "../../utils/hex-utils.js";
 
 export class Road {
     constructor(coord, owner) {

@@ -1,5 +1,5 @@
 import { GameController } from "./GameController.js";
-import { Renderer } from "./Renderer.js";
+import { Renderer } from "../visuals/Renderer.js";
 
 // Main Game Engine class
 export class GameEngine{
