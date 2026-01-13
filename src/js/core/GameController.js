@@ -287,6 +287,8 @@ export class GameController {
         if (this.gameContext.currentPlayerIndex === 0) {
             // if fisrt player, game setup is complete, move to ROLL state
             this.gameContext.currentState = GameState.ROLL;
+            // prompt first player to roll dice
+            this.activateDiceRollMode();
             this.updateDebugHUD();
             this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Setup complete.`);
         } else {
@@ -303,9 +305,12 @@ export class GameController {
         if (event.type !== 'ROLL_DICE'){
             return;
         }
+        
+        this.deactivateDiceRollMode();
 
         // roll dice and update game state
         const rollResult = this.gameContext.dice.roll(2);
+        this.gameContext.lastRoll = rollResult;
         console.log("Dice rolled:", rollResult);
         this.updateDebugHUD();
     }
@@ -404,6 +409,23 @@ export class GameController {
             this.renderer.deactivateRoadPlacementMode();
         }else{
             console.warn("Renderer not attached. Cannot deactivate road placement mode.");
+        }
+    }
+
+
+    activateDiceRollMode(){
+        if (this.renderer){
+            this.renderer.activateDiceRollMode();
+        }else{
+            console.warn("Renderer not attached. Cannot activate dice roll mode.");
+        }
+    }
+
+    deactivateDiceRollMode(){
+        if (this.renderer){
+            this.renderer.deactivateDiceRollMode();
+        }else{
+            console.warn("Renderer not attached. Cannot deactivate dice roll mode.");
         }
     }
 }

@@ -397,4 +397,27 @@ export class Renderer {
         roadLine.dataset.id = edgeId;
         edgeLayer.appendChild(roadLine);
     }
+
+
+    activateDiceRollMode() {
+        const diceBtn = document.getElementById('dice-btn');
+        if (!diceBtn) {
+            console.error("Renderer: Dice button not found in HTML. Cannot activate dice roll mode.");
+            return;
+        }
+        diceBtn.classList.add('btn-active');
+        diceBtn.onclick = () => {
+            this.emitInputEvent('ROLL_DICE', {});
+        }
+    }
+
+    deactivateDiceRollMode(){
+        const diceBtn = document.getElementById('dice-btn');
+        if (!diceBtn) {
+            console.error("Renderer: Dice button not found in HTML. Cannot deactivate dice roll mode.");
+            return;
+        }
+        diceBtn.classList.remove('btn-active');
+        diceBtn.onclick = null;
+    }
 }
