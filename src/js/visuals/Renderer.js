@@ -157,7 +157,7 @@ export class Renderer {
         wrapper.appendChild(clone); // add the new one
     }
 
-    renderInitialMap(terrains, tradingPosts, robberCoord) {
+    renderMainUI(terrains, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
 
         terrains.forEach(t => {
@@ -170,6 +170,38 @@ export class Renderer {
         });
 
         this.drawRobber(layers.tiles, robberCoord);
+
+        // add action buttons event listeners
+        const diceBtn = clone.getElementById('dice-btn');
+        diceBtn.onclick = () => {
+            this.emitInputEvent('ROLL_DICE', {});
+        }
+
+        const buildRoadBtn = clone.getElementById('build-road-btn');
+        buildRoadBtn.onclick = () => {
+            this.emitInputEvent('BUILD_ROAD', {});
+        }
+
+        const buildSettlementBtn = clone.getElementById('build-settlement-btn');
+        buildSettlementBtn.onclick = () => {
+            this.emitInputEvent('BUILD_SETTLEMENT', {});
+        }
+
+        const buildCityBtn = clone.getElementById('build-city-btn');
+        buildCityBtn.onclick = () => {
+            this.emitInputEvent('BUILD_CITY', {});
+        }
+
+        const buyDevCardBtn = clone.getElementById('buy-dev-card-btn');
+        buyDevCardBtn.onclick = () => {
+            this.emitInputEvent('BUY_DEV_CARD', {});
+        }
+
+        const endTurnBtn = clone.getElementById('end-turn-btn');
+        endTurnBtn.onclick = () => {
+            this.emitInputEvent('END_TURN', {});
+        }
+
         this.updateDOM(clone);
     }
 
@@ -419,5 +451,10 @@ export class Renderer {
         }
         diceBtn.classList.remove('btn-active');
         diceBtn.onclick = null;
+    }
+
+        activateActionBtnMode(){
+        // build
+        const actionBtn = document.getElementById('action-btn');
     }
 }

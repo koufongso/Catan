@@ -162,7 +162,7 @@ export class GameController {
         if (this.renderer) {
             // render intial map
             const gameMap = this.gameContext.gameMap
-            this.renderer.renderInitialMap(gameMap.terrains, gameMap.tradingPosts, gameMap.robberCoord);
+            this.renderer.renderMainUI(gameMap.terrains, gameMap.tradingPosts, gameMap.robberCoord);
 
             // "activate" vertex elements for settlement placement
             this.activateSettlementPlacementMode();
@@ -288,7 +288,6 @@ export class GameController {
             // if fisrt player, game setup is complete, move to ROLL state
             this.gameContext.currentState = GameState.ROLL;
             // prompt first player to roll dice
-            this.activateDiceRollMode();
             this.updateDebugHUD();
             this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Setup complete.`);
         } else {
@@ -306,8 +305,6 @@ export class GameController {
             return;
         }
 
-        this.deactivateDiceRollMode();
-
         // roll dice and update game state
         const rollResult = this.gameContext.dice.roll(2);
         this.gameContext.lastRoll = rollResult;
@@ -315,14 +312,52 @@ export class GameController {
         // distribute resources based on roll
         const rolledNumber = rollResult.sum;
         // get all the terrain ids with the rolled number token
+        if (rolledNumber === 7) {
+            console.log("Robber rolled! (Not implemented yet)");
+        } else {
+            this.distributeResourcesByRoll(rolledNumber);
+        }
 
-
-
+        // transition to MAIN state
         this.gameContext.currentState = GameState.MAIN;
         this.updateDebugHUD();
     }
 
 
+    handleStateMain(event) {
+        // main game logic would go here
+        switch(event.type) {
+            case 'END_TURN':
+                this.__handleEventEnd(event);
+                break;
+            case 'BUILD_ROAD':
+                this.__handleEventBuildRoad(event);
+                break;
+            case 'BUILD_SETTLEMENT':
+                // TODO: handle build settlement
+                break;
+
+            case 'BUILD_CITY':
+                // TODO: handle build city
+                break; 
+
+            case 'BUY_DEV_CARD':
+                // TODO: handle buy development card
+                break;
+
+            case 'PLAY_DEV_CARD':
+                // TODO: handle play development card
+                break;
+
+            case 'TRADE':
+                // TODO: handle trade
+                break;
+
+            default:
+                // do nothing for events not belonging to MAIN state
+                return;
+        }
+    }
 
 
     async generateDefaultMap() {
@@ -445,7 +480,7 @@ export class GameController {
         if (action === '/add') {
             const target = parts[1]?.toLowerCase(); // e.g., "wheat"
             const value = parseInt(parts[2]);      // e.g., 5
-            
+
             const player = this.getCurrentPlayer();
             this.distributeResourceToPlayer(player.id, target, value);
             this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} ${target} to Player ${player.id}`);
@@ -492,6 +527,15 @@ export class GameController {
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
             player.addResource(resourceType, amount);
+        }
+    }
+
+    // activate all action buttons 
+    activateActionBtnMode(actionType) {
+        if (this.renderer) {
+            this.renderer.activateActionBtnMode(actionType);
+        } else {
+            console.warn("Renderer not attached. Cannot activate action button mode.");
         }
     }
 }
