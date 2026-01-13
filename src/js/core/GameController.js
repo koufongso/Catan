@@ -311,7 +311,14 @@ export class GameController {
         // roll dice and update game state
         const rollResult = this.gameContext.dice.roll(2);
         this.gameContext.lastRoll = rollResult;
-        console.log("Dice rolled:", rollResult);
+
+        // distribute resources based on roll
+        const rolledNumber = rollResult.sum;
+        // get all the terrain ids with the rolled number token
+
+
+
+        this.gameContext.currentState = GameState.MAIN;
         this.updateDebugHUD();
     }
 
@@ -433,22 +440,58 @@ export class GameController {
     executeCheat(inputString) {
         const parts = inputString.split('_');
         const action = parts[0].toLowerCase(); // e.g., "/add"
-        const target = parts[1]?.toLowerCase(); // e.g., "wheat"
-        const value = parseInt(parts[2]);      // e.g., 5
+
 
         if (action === '/add') {
+            const target = parts[1]?.toLowerCase(); // e.g., "wheat"
+            const value = parseInt(parts[2]);      // e.g., 5
+            
             const player = this.getCurrentPlayer();
+            this.distributeResourceToPlayer(player.id, target, value);
+            this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} ${target} to Player ${player.id}`);
+        }
 
-            // Use the retrofitted terminology check
-            if (player.resources.hasOwnProperty(target)) {
-                player.resources[target] += value;
+        if (action === '/dist') {
+            const rolledNumber = parseInt(parts[1]);
 
-                // Refresh the dashboard immediately
-                this.debug.renderDebugHUD(
-                    this.gameContext,
-                    `Cheat Executed: Added ${value} ${target} to Player ${player.id}`
-                );
-            }
+            this.distributeResourcesByRoll(rolledNumber);
+            this.debug.renderDebugHUD(this.gameContext, `Cheat: Rolled a ${rolledNumber} and distributed resources accordingly.`);
+        }
+    }
+
+
+    /**
+     * Distribute resources to players based on the rolled number.
+     * @param {*} rolledNumber 
+     */
+    distributeResourcesByRoll(rolledNumber) {
+        // get all the terrain ids with the rolled number token
+        const gameMap = this.gameContext.gameMap;
+        const terrainIds = gameMap.searchTerrainIdByNumberToken(rolledNumber);
+        terrainIds.forEach(terrainId => {
+            const terrain = gameMap.terrains.get(terrainId);
+            // get all adjacent vertex coords
+            const adjacentVertexCoords = HexUtils.getVerticesFromHex(terrain.coord);
+            adjacentVertexCoords.forEach(vCoord => {
+                const vertexId = HexUtils.coordToId(vCoord);
+                // check if there is a settlement at this vertex
+                if (gameMap.settlements.has(vertexId)) {
+                    const settlement = gameMap.settlements.get(vertexId);
+                    const ownerId = settlement.owner;
+                    const resourceType = terrain.resource;
+                    const amount = (settlement.level === 1) ? 1 : 2; // settlement gives 1, city gives 2
+                    // distribute resource to player with ownerId
+                    this.distributeResourceToPlayer(ownerId, resourceType, amount);
+                }
+            });
+        });
+    }
+
+    distributeResourceToPlayer(playerId, resourceType, amount) {
+        // find the player in the game context and give them the resource
+        const player = this.gameContext.players.find(p => p.id === playerId);
+        if (player) {
+            player.addResource(resourceType, amount);
         }
     }
 }
