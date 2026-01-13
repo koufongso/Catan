@@ -1,3 +1,4 @@
+import { ResourceType } from "../constants/ResourceType.js";
 import { HexUtils } from "../utils/hex-utils.js";
 
 
@@ -11,7 +12,7 @@ export class Renderer {
     constructor(svgId) {
         this.svg = document.getElementById(svgId);
         this.controller = null;
-        this.tileSize = 50; // default hex this.tileSize
+        this.hexSize = 50; // default hex this.hexSize
     }
 
     attachController(controller) {
@@ -19,22 +20,22 @@ export class Renderer {
     }
 
 
-    drawTile(layer, tile) {
+    drawHex(layer, terrain) {
         const hexPoly = this.createPolygon(
-            tile.coord,
-            tile.resource,
-            tile.id,
-            this.tileSize
+            terrain.coord,
+            terrain.type,
+            terrain.id,
+            this.hexSize
         );
         layer.appendChild(hexPoly);
     }
 
-    drawToken(layer, tile) {
+    drawToken(layer, terrain) {
         // skip if no token or token is 7 (robber)
-        if (tile.numberToken === null || tile.numberToken === 7) return;
+        if (terrain.numberToken === null || terrain.numberToken === 7) return;
 
-        const [x, y] = HexUtils.hexToPixel(tile.coord, this.tileSize);
-        const isHighProb = (tile.numberToken === 6 || tile.numberToken === 8);
+        const [x, y] = HexUtils.hexToPixel(terrain.coord, this.hexSize);
+        const isHighProb = (terrain.numberToken === 6 || terrain.numberToken === 8);
 
         // Create Group for the token to keep SVG organized
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -44,7 +45,7 @@ export class Renderer {
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("cx", x);
         circle.setAttribute("cy", y);
-        circle.setAttribute("r", this.tileSize * 0.3);
+        circle.setAttribute("r", this.hexSize * 0.3);
         circle.setAttribute("class", `number-token-circle ${isHighProb ? 'high-probability' : ''}`);
 
         // The Text
@@ -53,7 +54,7 @@ export class Renderer {
         text.setAttribute("y", y + 2.5);
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("class", `number-token ${isHighProb ? 'high-probability' : ''}`);
-        text.textContent = tile.numberToken;
+        text.textContent = terrain.numberToken;
 
         group.appendChild(circle);
         group.appendChild(text);
@@ -61,15 +62,15 @@ export class Renderer {
     }
 
     drawTradingPost(layer, tp) {
-        const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.tileSize);
+        const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.hexSize);
         const RAD60 = Math.PI / 3;
         const RAD30 = Math.PI / 6;
 
         // Draw the visual connection lines to the vertices
         tp.indexList.forEach(index => {
             const angle = RAD60 * index + RAD30;
-            const x = this.tileSize * Math.cos(angle) + x0;
-            const y = -this.tileSize * Math.sin(angle) + y0;
+            const x = this.hexSize * Math.cos(angle) + x0;
+            const y = -this.hexSize * Math.sin(angle) + y0;
 
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
@@ -103,8 +104,8 @@ export class Renderer {
     drawRobber(layer, robberTileCoord) {
         if (!robberTileCoord) return;
 
-        const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.tileSize);
-        const size = this.tileSize * 0.8; // Adjust size as needed
+        const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
+        const size = this.hexSize * 0.8; // Adjust size as needed
 
         // Create a group to center the image/text easily
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -156,34 +157,34 @@ export class Renderer {
         wrapper.appendChild(clone); // add the new one
     }
 
-    renderInitialMap(tiles, tradingPosts, robberTileCoord) {
+    renderInitialMap(terrains, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
 
-        tiles.forEach(tile => {
-            this.drawTile(layers.tiles, tile);
-            this.drawToken(layers.tiles, tile);
+        terrains.forEach(t => {
+            this.drawHex(layers.tiles, t);
+            this.drawToken(layers.tiles, t);
         });
 
         tradingPosts.forEach(tp => {
             this.drawTradingPost(layers.tiles, tp);
         });
 
-        this.drawRobber(layers.tiles, robberTileCoord);
+        this.drawRobber(layers.tiles, robberCoord);
         this.updateDOM(clone);
     }
 
 
 
-    createPolygon(coord, resource, id, tileSize = this.tileSize) {
+    createPolygon(coord, resource, id, hexSize = this.hexSize) {
         let SVG_NS = "http://www.w3.org/2000/svg";
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
         const points = [];
-        const [x0, y0] = HexUtils.hexToPixel(coord, tileSize);
+        const [x0, y0] = HexUtils.hexToPixel(coord, hexSize);
         for (let i = 0; i < 6; i++) {
             const angle = RAD60 * i + RAD30; // 30 degree offset
-            const x = tileSize * Math.cos(angle) + x0;
-            const y = - tileSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
+            const x = hexSize * Math.cos(angle) + x0;
+            const y = - hexSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
             points.push(`${x},${y}`);
         }
         poly.setAttribute("points", points.join(" "));
@@ -225,12 +226,10 @@ export class Renderer {
 
     resourceIcons = {
         brick: '🧱',
-        lumber:  '🌲',
-        sheep:  '🐑',
+        lumber: '🌲',
+        wool: '🐑',
         wheat: '🌾',
-        rock:   '⛏️',
-        desert: '🌵',
-        any:   '❓'  // Useful for 3:1 generic ports
+        ore: '⛏️',
     };
 
     getResourceIcon(type) {
@@ -246,7 +245,7 @@ export class Renderer {
         newLog.className = 'debug-entry';
 
         // 1. Define the resources we want to track in the header
-        const resourceTypes = ['BRICK', 'WOOD', 'SHEEP', 'WHEAT', 'ROCK'];
+        const resourceTypes = [ResourceType.BRICK, ResourceType.LUMBER, ResourceType.WOOL, ResourceType.WHEAT, ResourceType.ORE];
 
         const headerHtml = `
             <div class="res-grid-row header">
@@ -261,9 +260,9 @@ export class Renderer {
             <div class="res-grid-row">
                 <span class="cell-id" style="color: ${p.color}">P${p.id}</span>
                 ${resourceTypes.map(type => {
-                    const amount = p.resources.get(type) || 0;
-                    return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
-                }).join('')}
+            const amount = p.resources[type] || 0;
+            return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
+        }).join('')}
             </div>
         `).join('');
 
@@ -311,7 +310,7 @@ export class Renderer {
         // 2. Draw ONLY the available spots passed from the controller
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
-            const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
+            const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
 
             const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             circle.setAttribute("cx", x);
@@ -363,7 +362,7 @@ export class Renderer {
         // create a circle element for the settlement
         const settlementCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         const vCoord = vertexId.split(",").map(Number);
-        const [x, y] = HexUtils.vertexToPixel(vCoord, this.tileSize);
+        const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
         settlementCircle.setAttribute("cx", x);
         settlementCircle.setAttribute("cy", y);
         settlementCircle.setAttribute("r", level === 1 ? 12 : 18);
@@ -384,8 +383,8 @@ export class Renderer {
             // Get the two vertex endpoints for this edge
             const edgeId = HexUtils.coordToId(eCoord);
             const [v1Coord, v2Coord] = HexUtils.getVerticesFromEdge(eCoord);
-            const [x1, y1] = HexUtils.vertexToPixel(v1Coord, this.tileSize);
-            const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.tileSize);
+            const [x1, y1] = HexUtils.vertexToPixel(v1Coord, this.hexSize);
+            const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.hexSize);
 
             const edgeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
@@ -454,17 +453,17 @@ export class Renderer {
 
         // create a line element for the road
         const roadLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.tileSize);
-        const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.tileSize);
+        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.hexSize);
+        const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.hexSize);
         console.log("vertex0:", vCoord0, x0, y0);
         console.log("vertex1:", vCoord1, x1, y1);
         const dir = [x1 - x0, y1 - y0];
         const len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
         const shorten_ratio = 0.2;
-        const x0_short = x0 + dir[0] * (shorten_ratio * this.tileSize / len);
-        const y0_short = y0 + dir[1] * (shorten_ratio * this.tileSize / len);
-        const x1_short = x1 - dir[0] * (shorten_ratio * this.tileSize / len);
-        const y1_short = y1 - dir[1] * (shorten_ratio * this.tileSize / len);
+        const x0_short = x0 + dir[0] * (shorten_ratio * this.hexSize / len);
+        const y0_short = y0 + dir[1] * (shorten_ratio * this.hexSize / len);
+        const x1_short = x1 - dir[0] * (shorten_ratio * this.hexSize / len);
+        const y1_short = y1 - dir[1] * (shorten_ratio * this.hexSize / len);
         roadLine.setAttribute("x1", x0_short);
         roadLine.setAttribute("y1", y0_short);
         roadLine.setAttribute("x2", x1_short);

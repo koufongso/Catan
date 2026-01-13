@@ -1,10 +1,17 @@
+import { RNG } from '../utils/rng.js';
+
 export class Dice {
     constructor(rng) {
-        this.rng = rng; // an instance of SeededRandom
-        this.currentRoll = []; // Store individual dice for UI/debug
+        // check rng is an instance of RNG
+        if (!(rng instanceof RNG)) {
+            throw new Error("Dice requires an instance of RNG");
+        }
+
+        this.rng = rng; // an instance of RNG
+        this.currentRolls = []; // Store individual dice
         this.sum = 0; // sum of the current roll
     }
-
+    
     roll(nDice = 2) {
         let newSum = 0;
         let newValues = [];
@@ -13,14 +20,14 @@ export class Dice {
             newValues.push(val);
             newSum += val;
         }
-        this.currentRoll = newValues;
+        this.currentRolls = newValues;
         this.sum = newSum;
-        return this.getCurrent();
+        return this.getCurrentRolls();
     }
 
-    getCurrent() {
+    getCurrentRolls() {
         return {
-            values: this.currentRoll,
+            values: this.currentRolls,
             sum: this.sum
         };
     }

@@ -2,7 +2,7 @@ import { GameMap } from '../models/GameMap.js';
 import { ResourceType } from '../constants/ResourceType.js';
 import { Player } from '../models/Player.js';
 import {Dice} from './Dice.js';
-import { SeededRandom } from '../utils/SeededRandom.js';
+import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
 
 export const GameState = Object.freeze({
@@ -18,12 +18,12 @@ export const GameState = Object.freeze({
 });
 
 export class GameController {
-    constructor() {
+    constructor(seed = Date.now()){
         this.renderer = null;
 
         // game setup
-        this.seed = 0;
-        this.rng = new SeededRandom(this.seed);
+        this.seed = seed;
+        this.rng = new RNG(this.seed);
         this.gameContext = {};
         this.bankResources = new Map();
         this.resetGame();        
@@ -32,7 +32,7 @@ export class GameController {
         resetGame(){
         // reset game context
         this.gameContext = {
-            gameMap: new GameMap(),
+            gameMap: new GameMap(this.rng),
             players: [], // circular array of Player instances
             currentPlayerIndex: 0, // track whose turn it is
             totalPlayers: 0,
@@ -161,7 +161,7 @@ export class GameController {
         if (this.renderer){
             // render intial map
             const gameMap = this.gameContext.gameMap
-            this.renderer.renderInitialMap(gameMap.tiles, gameMap.tradingPosts, gameMap.robberTileCoord);
+            this.renderer.renderInitialMap(gameMap.terrains, gameMap.tradingPosts, gameMap.robberCoord);
 
             // "activate" vertex elements for settlement placement
             this.activateSettlementPlacementMode();
@@ -312,22 +312,21 @@ export class GameController {
 
 
 
-    async generateDefaultMap(seed = Date.now()){
+    async generateDefaultMap(){
         // load standard map layout
         await this.gameContext.gameMap.loadMapFromJson('./src/assets/data/standard_map.json');
         // assign default resources and number tokens
-        this.gameContext.gameMap.assignResourceRandom(seed, {'WOOD':4, 'BRICK':3, 'SHEEP':4, 'WHEAT':4, 'ROCK':3, 'DESERT':1});
-        this.gameContext.gameMap.assignNumberTokenRandom(seed, [2,3,3,4,4,5,5,6,6,7,8,8,9,9,10,10,11,11,12]);
-        // serach desert tile and swap with center tile
-        let desert_id = this.gameContext.gameMap.searchTileByResource(ResourceType.DESERT)
-        this.gameContext.gameMap.swapTile(desert_id[0], `0,0,0`, true, false);
-        // serach number token 7 and swap with desert tile
-        let token7_id = this.gameContext.gameMap.searchTileByNumberToken(7)
-        this.gameContext.gameMap.swapTile(token7_id[0], `0,0,0`, false, true);
+        // 1. get target coords (all coords)
+        const allCoords = this.gameContext.gameMap.getAllTerrainCoords();
+        this.gameContext.gameMap.assignTerrainTypesRandom(allCoords, {'hill':4, 'mountain':3, 'pasture':4, 'field':4, 'forest':3, 'desert':1});
 
-        // debug: print map info
-        console.log("Generated Default Map:");
-        console.log(this.gameContext.gameMap);
+        // 2. get terrains that are not desert
+        const productionCoords = allCoords.filter(coord => {
+            const terrain = this.gameContext.gameMap.terrains.get(HexUtils.coordToId(coord));
+            return terrain.type !== 'desert';
+        });
+
+        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, {2:1, 3:2, 4:2, 5:2, 6:2, 8:2, 9:2, 10:2, 11:2, 12:1});
     }
 
     isBankResourceAvailable(cost) {

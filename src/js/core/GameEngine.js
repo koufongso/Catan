@@ -3,9 +3,10 @@ import { Renderer } from "../visuals/Renderer.js";
 
 // Main Game Engine class
 export class GameEngine{
-    constructor(){
+    constructor(seed = undefined){
         // game engine setup
-        this.gameController = new GameController();
+        // create rng with seed
+        this.gameController = new GameController(seed);
         this.renderer = new Renderer('map-svg');
         this.gameController.attachRenderer(this.renderer);
         this.renderer.attachController(this.gameController);

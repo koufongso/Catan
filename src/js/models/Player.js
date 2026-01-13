@@ -8,13 +8,14 @@ export class Player {
         this.type = type;
 
         // resource inventory
-        this.resources = new Map();
-        // initialize all resource counts to zero
-        Object.values(ResourceType).forEach(type => {
-            if (typeof type === 'string' && type !== ResourceType.DESERT) {
-                this.resources.set(type, 0);
-            }
-        });
+        this.resources = {
+            [ResourceType.ORE]: 0,
+            [ResourceType.WOOL]: 0,
+            [ResourceType.LUMBER]: 0,
+            [ResourceType.WHEAT]: 0,
+            [ResourceType.BRICK]: 0,
+        };
+
 
         // asset ownership
         this.settlementIds = new Set();
@@ -32,7 +33,7 @@ export class Player {
     // cost is an object {resourceType: amount, ...}
     canAfford(cost) {
         for (let [type, amount] of Object.entries(cost)) {
-            if (this.resources.get(type) < amount) {
+            if (this.resources[type] < amount) {
                 return false;
             }
         }
@@ -44,10 +45,9 @@ export class Player {
     addResource(type, amount) {
         console.log(`Player ${this.name} (${this.id}) resource change: ${type} ${amount}`);
         console.log("Before:", this.resources);
-        if (this.resources.has(type)) {
-            const current = this.resources.get(type);
+        if (this.resources[type] !== undefined) {
             // Prevents resources from dropping below zero
-            this.resources.set(type, current + amount);
+            this.resources[type] = Math.max(0, this.resources[type] + amount);
         }
         console.log("After:", this.resources);
     }

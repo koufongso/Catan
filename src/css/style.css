@@ -23,13 +23,13 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     stroke-width: 2px;
 }
 
-/* Resource Colors */
-.wood { fill: #234719; }
-.wheat { fill: #F5BB3E; }
-.brick  { fill: #d25a39; }
-.rock  { fill: #967D7E; }
+/* Terrain Colors */
+.forest { fill: #234719; }
+.field { fill: #F5BB3E; }
+.hill  { fill: #d25a39; }
+.mountain  { fill: #967D7E; }
 .desert { fill: #D0AD69; }
-.sheep { fill: #6FAF47; }
+.pasture { fill: #6FAF47; }
 
 /* trading posts */
 .trading-post-line {
