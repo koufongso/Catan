@@ -188,6 +188,8 @@ export class GameController {
         // add settlement to map
         const vCoord = HexUtils.idToCoord(event.vertexId);
         const vertexId = event.vertexId;
+        this.addSettlementToPlayer(vertexId, this.getCurrentPlayer());
+
         const currentPlayer = this.getCurrentPlayer();
         this.gameContext.gameMap.updateSettlementById(vertexId, currentPlayer.id, 1);
         currentPlayer.addSettlement(vertexId);
@@ -242,19 +244,13 @@ export class GameController {
         this.deactivateSettlementPlacementMode();
 
         // add settlement to map
+        const vCoord = HexUtils.idToCoord(event.vertexId);
         const vertexId = event.vertexId;
-        const settlementCoord = HexUtils.idToCoord(vertexId)
-        const currentPlayer = this.getCurrentPlayer();
-        this.gameContext.gameMap.updateSettlementById(vertexId, currentPlayer.id, 1);
-        currentPlayer.addSettlement(vertexId);
-        this.gameContext.lastSettlementPlaced = vertexId;
-
-        // render updated settlement on map
-        this.renderer.renderSettlement(vertexId, currentPlayer.color, 1);
+        this.addSettlementToPlayer(vertexId, this.getCurrentPlayer());
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        this.activateRoadPlacementMode(settlementCoord);
+        this.activateRoadPlacementMode(vCoord);
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
     }
@@ -537,5 +533,22 @@ export class GameController {
         } else {
             console.warn("Renderer not attached. Cannot activate action button mode.");
         }
+    }
+
+
+    addSettlementToPlayer(vertexId, player) {
+        // double check if the spot is valid in case of cheating
+        const vCoord = HexUtils.idToCoord(vertexId);
+        if (!this.gameContext.gameMap.isSettlementSpotValid(vCoord)) {
+            throw new Error(`Invalid settlement spot: ${vCoord}`);
+        }
+
+        // add settlement to map
+        this.gameContext.gameMap.updateSettlementById(vertexId, player.id, 1);
+        player.addSettlement(vertexId);
+        this.gameContext.lastSettlementPlaced = vertexId;
+
+        // render updated settlement on map
+        this.renderer.renderSettlement(vertexId, player.color, 1);
     }
 }
