@@ -46,18 +46,22 @@ export class DebugDashboard {
             </div>
         `;
 
+        const playersHtml = gameContext.players.map((p, idx) => {
+            const isCurrent = idx === gameContext.currentPlayerIndex;
+            const totalVP = p.getVictoryPoints();
 
-        const playersHtml = gameContext.players.map(p => {
-            const totalVP = p.getVictoryPoints(); // Assuming you have this logic
             return `
-            <div class="res-grid-row">
-                <span class="cell-id" style="color: ${p.color}">P${p.id}</span>
-                <span class="cell-val has-res">${totalVP}</span> ${resourceTypes.map(type => {
+            <div class="res-grid-row ${isCurrent ? 'current-player' : ''}">
+                <span class="cell-id" style="color: ${p.color}">
+                    ${isCurrent ? '▶' : '&nbsp;'} P${p.id}
+                </span>
+                <span class="cell-val has-res">${totalVP}</span> 
+                ${resourceTypes.map(type => {
                 const amount = p.resources[type] || 0;
                 return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
             }).join('')}
             </div>
-        `;
+            `;
         }).join('');
 
         newLog.innerHTML = `
