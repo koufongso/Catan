@@ -3,8 +3,8 @@ import { Renderer } from "../visuals/Renderer.js";
 import { DebugDashboard } from "../visuals/DebugDashboard.js";
 
 // Main Game Engine class
-export class GameEngine{
-    constructor(seed = undefined){
+export class GameEngine {
+    constructor(seed = undefined) {
         // game engine setup
         // create rng with seed
         this.gameController = new GameController(seed);
@@ -17,16 +17,45 @@ export class GameEngine{
         this.renderer.attachController(this.gameController);
     }
 
-    async run(){
+    async run() {
         // start the game engine
         console.log("Starting Game Engine...");
+
+        this.initDebugConsole();
 
         // manual trigger to start the game for testing
         this.renderer.showConfig();
 
         // further game loop logic would go here
         console.log("Game Engine is running.");
-    
+
+    }
+
+    initDebugConsole() {
+        const input = document.getElementById('debug-input');
+        const submit = document.getElementById('debug-submit');
+
+        const handleCommand = () => {
+            const commandText = input.value.trim();
+            if (commandText) {
+                this.executeCheat(commandText);
+                input.value = ''; // Clear after use
+            }
+        };
+
+        submit.addEventListener('click', handleCommand);
+
+        // Add "Ctrl+Enter" support for the textarea
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleCommand();
+            }
+        });
+    }
+
+    executeCheat(commandText) {
+        this.gameController.executeCheat(commandText);
     }
 }
 

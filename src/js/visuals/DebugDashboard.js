@@ -17,7 +17,7 @@ export class DebugDashboard {
         return this.resourceIcons[key] || type.charAt(0).toUpperCase();
     }
 
-    renderDebugHUD(gameContext) {
+    renderDebugHUD(gameContext, logMessage = null) {
         const debugDashboard = document.getElementById('debug-dashboard');
         const newLog = document.createElement('div');
         newLog.className = 'debug-entry';
@@ -70,6 +70,7 @@ export class DebugDashboard {
             ${headerHtml}
             ${playersHtml}
         </div>
+        <div class="debug-log-message">${logMessage ? `💬 ${logMessage}` : ''}</div>
         `;
 
         debugDashboard.prepend(newLog);

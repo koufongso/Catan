@@ -42,11 +42,11 @@
             </svg>
 
             <div id="ui-layer">
-                <div id = "dice-layer">
+                <div id="dice-layer">
                     <div id="dice-result">Roll: 0 + 0 = 0</div>
                     <button id="dice-btn">Roll Dice</button>
                 </div>
-                
+
             </div>
         </div>
     </template>
@@ -55,8 +55,15 @@
         <!-- The game will be rendered here -->
     </div>
 
-    <div id="debug-dashboard">
+    <div id="debug-wrapper">
+        <div id="debug-dashboard">
+        </div>
+        <div>
+            <textarea id="debug-input" placeholder="Enter debug command here..."></textarea>
+            <button id="debug-submit">Submit</button>
+        </div>
     </div>
+
 
     <script type="module" src="src/js/core/GameEngine.js"></script>
 </body>

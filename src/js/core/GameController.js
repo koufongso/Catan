@@ -1,7 +1,7 @@
 import { GameMap } from '../models/GameMap.js';
 import { ResourceType } from '../constants/ResourceType.js';
 import { Player } from '../models/Player.js';
-import {Dice} from './Dice.js';
+import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
 
@@ -18,7 +18,7 @@ export const GameState = Object.freeze({
 });
 
 export class GameController {
-    constructor(seed = Date.now()){
+    constructor(seed = Date.now()) {
         this.renderer = null;
 
         // game setup
@@ -26,10 +26,10 @@ export class GameController {
         this.rng = new RNG(this.seed);
         this.gameContext = {};
         this.bankResources = new Map();
-        this.resetGame();        
+        this.resetGame();
     }
 
-        resetGame(){
+    resetGame() {
         // reset game context
         this.gameContext = {
             gameMap: new GameMap(this.rng),
@@ -54,32 +54,32 @@ export class GameController {
         });
     }
 
-    attachRenderer(renderer){
+    attachRenderer(renderer) {
         this.renderer = renderer;
     }
 
-    attachDebug(debug){
+    attachDebug(debug) {
         this.debug = debug;
     }
 
-    updateDebugHUD(){
-        if (this.debug){
+    updateDebugHUD() {
+        if (this.debug) {
             this.debug.renderDebugHUD(this.gameContext);
-        }else{
+        } else {
             console.warn("Debug not attached. Cannot update debug HUD.");
         }
     }
 
     // Simple log to console
-    renderDebugHUDLog(message){
+    renderDebugHUDLog(message) {
         console.log("Debug HUD Log:", message);
     }
 
     // main game loop methods would go here
-    async inputEvent(event){
+    async inputEvent(event) {
         console.log(`State: ${this.gameContext.currentState} | Event: ${event.type}`);
-        
-        switch(this.gameContext.currentState){
+
+        switch (this.gameContext.currentState) {
             case GameState.SETUP:
                 // handle setup events
                 await this.handleStateSetup(event);
@@ -106,7 +106,7 @@ export class GameController {
                 break;
             case GameState.ROLL:
                 // handle roll events
-                await this.handleStateRoll(event); 
+                await this.handleStateRoll(event);
                 break;
             case GameState.MAIN:
                 // handle main game events  
@@ -128,8 +128,8 @@ export class GameController {
      * then generate map and transition to INIT state
      * @param {*} event 
      */
-    async handleStateSetup(event){
-        if (event.type !== 'START_GAME'){
+    async handleStateSetup(event) {
+        if (event.type !== 'START_GAME') {
             return;
         }
 
@@ -148,18 +148,18 @@ export class GameController {
 
         // create player instances
         for (let i = 0; i < gameContext.humanPlayers; i++) {
-            gameContext.players.push(new Player(i, names[i], colors[i],'HUMAN'));
+            gameContext.players.push(new Player(i, names[i], colors[i], 'HUMAN'));
         }
         for (let j = 0; j < gameContext.aiPlayers; j++) {
-            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j+1}`, colors[gameContext.humanPlayers + j],'AI'));
+            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j + 1}`, colors[gameContext.humanPlayers + j], 'AI'));
         }
         // generate map
         await this.generateDefaultMap(this.gameContext.seed);
-        
+
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
         // render the initial map and prompt to place first settlement
-        if (this.renderer){
+        if (this.renderer) {
             // render intial map
             const gameMap = this.gameContext.gameMap
             this.renderer.renderInitialMap(gameMap.terrains, gameMap.tradingPosts, gameMap.robberCoord);
@@ -167,7 +167,7 @@ export class GameController {
             // "activate" vertex elements for settlement placement
             this.activateSettlementPlacementMode();
 
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot render game map.");
         }
 
@@ -176,8 +176,8 @@ export class GameController {
         this.renderDebugHUDLog("Game started. Please place your first settlement.");
     }
 
-    async handleStatePlaceSettlement1(event){
-        if (event.type !== 'PLACE_SETTLEMENT'){
+    async handleStatePlaceSettlement1(event) {
+        if (event.type !== 'PLACE_SETTLEMENT') {
             return;
         }
 
@@ -198,24 +198,24 @@ export class GameController {
 
         // TODO: activate road placement mode for first road
         this.gameContext.currentState = GameState.PLACE_ROAD1;
-        this.activateRoadPlacementMode(vCoord); 
+        this.activateRoadPlacementMode(vCoord);
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
     }
 
-    async handleStatePlaceRoad1(event){
-        if (event.type !== 'PLACE_ROAD'){
+    async handleStatePlaceRoad1(event) {
+        if (event.type !== 'PLACE_ROAD') {
             return;
         }
         // place road logic here
         // deactivate road placement mode
         this.renderer.deactivateRoadPlacementMode();
-        
+
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
         this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
         currentPlayer.addRoad(event.edgeId);
-        
+
         // render updated road on map
         this.renderer.renderRoad(event.edgeId, currentPlayer.color);
 
@@ -234,8 +234,8 @@ export class GameController {
         this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
     }
 
-    handleStatePlaceSettlement2(event){ 
-        if (event.type !== 'PLACE_SETTLEMENT'){
+    handleStatePlaceSettlement2(event) {
+        if (event.type !== 'PLACE_SETTLEMENT') {
             return;
         }
 
@@ -254,24 +254,24 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        this.activateRoadPlacementMode(settlementCoord); 
+        this.activateRoadPlacementMode(settlementCoord);
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
     }
 
-    handleStatePlaceRoad2(event){
-        if (event.type !== 'PLACE_ROAD'){
+    handleStatePlaceRoad2(event) {
+        if (event.type !== 'PLACE_ROAD') {
             return;
         }
         // place road logic here
         // deactivate road placement mode
         this.renderer.deactivateRoadPlacementMode();
-        
+
         // add road to map and register its ownership
         const currentPlayer = this.getCurrentPlayer();
         this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
         currentPlayer.addRoad(event.edgeId);
-        
+
         // render updated road on map
         this.renderer.renderRoad(event.edgeId, currentPlayer.color);
 
@@ -301,11 +301,11 @@ export class GameController {
         }
     }
 
-    async handleStateRoll(event){
-        if (event.type !== 'ROLL_DICE'){
+    async handleStateRoll(event) {
+        if (event.type !== 'ROLL_DICE') {
             return;
         }
-        
+
         this.deactivateDiceRollMode();
 
         // roll dice and update game state
@@ -318,19 +318,19 @@ export class GameController {
 
 
 
-    async generateDefaultMap(){
+    async generateDefaultMap() {
         // load standard map layout
         await this.gameContext.gameMap.loadMapFromJson('./src/assets/data/standard_map.json');
         // assign default resources and number tokens
         // 1. get target coords (all coords)
         const allCoords = this.gameContext.gameMap.getAllTerrainCoords();
-        this.gameContext.gameMap.assignTerrainTypesRandom(allCoords, {'hill':4, 'mountain':3, 'pasture':4, 'field':4, 'forest':3, 'desert':1});
+        this.gameContext.gameMap.assignTerrainTypesRandom(allCoords, { 'hill': 4, 'mountain': 3, 'pasture': 4, 'field': 4, 'forest': 3, 'desert': 1 });
 
         // 2. get terrains that are not desert
         const productionCoords = [];
         allCoords.forEach(coord => {
             const terrain = this.gameContext.gameMap.terrains.get(HexUtils.coordToId(coord));
-            
+
             if (terrain.type == 'desert') {
                 this.gameContext.gameMap.robberCoord = coord;
             } else {
@@ -339,7 +339,7 @@ export class GameController {
             }
         });
 
-        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, {2:1, 3:2, 4:2, 5:2, 6:2, 8:2, 9:2, 10:2, 11:2, 12:1});
+        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, { 2: 1, 3: 2, 4: 2, 5: 2, 6: 2, 8: 2, 9: 2, 10: 2, 11: 2, 12: 1 });
     }
 
     isBankResourceAvailable(cost) {
@@ -374,58 +374,81 @@ export class GameController {
         this.gameContext.turnNumber++;
     }
 
-    activateSettlementPlacementMode(){
-        if (this.renderer){
+    activateSettlementPlacementMode() {
+        if (this.renderer) {
             // compute all valid settlement spots
             const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
             this.renderer.activateSettlementPlacementMode(availableVertexIds);
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot activate settlement placement mode.");
         }
     }
 
-    deactivateSettlementPlacementMode(){
-        if (this.renderer){
+    deactivateSettlementPlacementMode() {
+        if (this.renderer) {
             this.renderer.deactivateSettlementPlacementMode();
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot deactivate settlement placement mode.");
         }
     }
 
     // Activate road placement mode based on a given vertex coordinate
-    activateRoadPlacementMode(vCoord){
-        if (this.renderer){
+    activateRoadPlacementMode(vCoord) {
+        if (this.renderer) {
             // compute all valid road spots based on last settlement placed
             const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord);
             console.log("Activating road placement mode. Available edges:", availableEdgeIds);
             this.renderer.activateRoadPlacementMode(availableEdgeIds);
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot activate road placement mode.");
         }
     }
 
-    deactivateRoadPlacementMode(){
-        if (this.renderer){
+    deactivateRoadPlacementMode() {
+        if (this.renderer) {
             this.renderer.deactivateRoadPlacementMode();
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot deactivate road placement mode.");
         }
     }
 
 
-    activateDiceRollMode(){
-        if (this.renderer){
+    activateDiceRollMode() {
+        if (this.renderer) {
             this.renderer.activateDiceRollMode();
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot activate dice roll mode.");
         }
     }
 
-    deactivateDiceRollMode(){
-        if (this.renderer){
+    deactivateDiceRollMode() {
+        if (this.renderer) {
             this.renderer.deactivateDiceRollMode();
-        }else{
+        } else {
             console.warn("Renderer not attached. Cannot deactivate dice roll mode.");
+        }
+    }
+
+
+    executeCheat(inputString) {
+        const parts = inputString.split('_');
+        const action = parts[0].toLowerCase(); // e.g., "/add"
+        const target = parts[1]?.toLowerCase(); // e.g., "wheat"
+        const value = parseInt(parts[2]);      // e.g., 5
+
+        if (action === '/add') {
+            const player = this.getCurrentPlayer();
+
+            // Use the retrofitted terminology check
+            if (player.resources.hasOwnProperty(target)) {
+                player.resources[target] += value;
+
+                // Refresh the dashboard immediately
+                this.debug.renderDebugHUD(
+                    this.gameContext,
+                    `Cheat Executed: Added ${value} ${target} to Player ${player.id}`
+                );
+            }
         }
     }
 }

@@ -411,7 +411,7 @@ export class Renderer {
         }
     }
 
-    deactivateDiceRollMode(){
+    deactivateDiceRollMode() {
         const diceBtn = document.getElementById('dice-btn');
         if (!diceBtn) {
             console.error("Renderer: Dice button not found in HTML. Cannot deactivate dice roll mode.");
