@@ -1,5 +1,6 @@
 import { GameController } from "./GameController.js";
 import { Renderer } from "../visuals/Renderer.js";
+import { DebugDashboard } from "../visuals/DebugDashboard.js";
 
 // Main Game Engine class
 export class GameEngine{
@@ -8,7 +9,11 @@ export class GameEngine{
         // create rng with seed
         this.gameController = new GameController(seed);
         this.renderer = new Renderer('map-svg');
+        this.debug = new DebugDashboard();
+
+        // link components
         this.gameController.attachRenderer(this.renderer);
+        this.gameController.attachDebug(this.debug);
         this.renderer.attachController(this.gameController);
     }
 

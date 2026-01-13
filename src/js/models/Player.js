@@ -70,4 +70,19 @@ export class Player {
             roads: Array.from(this.roadIds)
         };
     }
+
+    getVictoryPoints(){
+        let vp = 0;
+        // settlements
+        vp += this.settlementIds.size * 1;
+        // cities - assuming cityIds is a Set similar to settlementIds
+        // vp += this.cityIds.size * 2; // Uncomment if city logic is added
+        // victory point cards
+        vp += this.achievements.victoryPointCards;
+        // longest road
+        if (this.achievements.hasLongestRoad) vp += 2;
+        // largest army
+        if (this.achievements.hasLargestArmy) vp += 2;
+        return vp;
+    }
 }

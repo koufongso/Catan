@@ -58,20 +58,21 @@ export class GameController {
         this.renderer = renderer;
     }
 
+    attachDebug(debug){
+        this.debug = debug;
+    }
+
     updateDebugHUD(){
-        if (this.renderer){
-            this.renderer.renderDebugHUD(this.gameContext);
+        if (this.debug){
+            this.debug.renderDebugHUD(this.gameContext);
         }else{
-            console.warn("Renderer not attached. Cannot update debug HUD.");
+            console.warn("Debug not attached. Cannot update debug HUD.");
         }
     }
 
+    // Simple log to console
     renderDebugHUDLog(message){
-        if (this.renderer){
-            this.renderer.renderDebugHUDLog(message);
-        }else{
-            console.warn("Renderer not attached. Cannot render debug HUD log.");
-        }
+        console.log("Debug HUD Log:", message);
     }
 
     // main game loop methods would go here
@@ -321,9 +322,16 @@ export class GameController {
         this.gameContext.gameMap.assignTerrainTypesRandom(allCoords, {'hill':4, 'mountain':3, 'pasture':4, 'field':4, 'forest':3, 'desert':1});
 
         // 2. get terrains that are not desert
-        const productionCoords = allCoords.filter(coord => {
+        const productionCoords = [];
+        allCoords.forEach(coord => {
             const terrain = this.gameContext.gameMap.terrains.get(HexUtils.coordToId(coord));
-            return terrain.type !== 'desert';
+            
+            if (terrain.type == 'desert') {
+                this.gameContext.gameMap.robberCoord = coord;
+            } else {
+                // It's a resource-producing hex
+                productionCoords.push(coord);
+            }
         });
 
         this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, {2:1, 3:2, 4:2, 5:2, 6:2, 8:2, 9:2, 10:2, 11:2, 12:1});
@@ -365,7 +373,6 @@ export class GameController {
         if (this.renderer){
             // compute all valid settlement spots
             const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
-            console.log("Activating settlement placement mode. Available vertices:", availableVertexIds);
             this.renderer.activateSettlementPlacementMode(availableVertexIds);
         }else{
             console.warn("Renderer not attached. Cannot activate settlement placement mode.");

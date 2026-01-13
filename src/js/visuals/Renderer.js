@@ -103,7 +103,7 @@ export class Renderer {
 
     drawRobber(layer, robberTileCoord) {
         if (!robberTileCoord) return;
-
+        console.log("Drawing robber at:", robberTileCoord);
         const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
         const size = this.hexSize * 0.8; // Adjust size as needed
 
@@ -221,84 +221,6 @@ export class Renderer {
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
         wrapper.appendChild(clone);
-    }
-
-
-    resourceIcons = {
-        brick: '🧱',
-        lumber: '🌲',
-        wool: '🐑',
-        wheat: '🌾',
-        ore: '⛏️',
-    };
-
-    getResourceIcon(type) {
-        if (!type) return '❓';
-        const key = type.toLowerCase();
-        // Return the icon if found, otherwise return the first letter capitalized
-        return this.resourceIcons[key] || type.charAt(0).toUpperCase();
-    }
-
-    renderDebugHUD(gameContext) {
-        const debugDashboard = document.getElementById('debug-dashboard');
-        const newLog = document.createElement('div');
-        newLog.className = 'debug-entry';
-
-        // 1. Define the resources we want to track in the header
-        const resourceTypes = [ResourceType.BRICK, ResourceType.LUMBER, ResourceType.WOOL, ResourceType.WHEAT, ResourceType.ORE];
-
-        const headerHtml = `
-            <div class="res-grid-row header">
-                <span class="cell-id">ID</span>
-                ${resourceTypes.map(type => `
-                    <span class="cell-val">${this.getResourceIcon(type)}</span>
-                `).join('')}
-            </div>
-        `;
-
-        const playersHtml = gameContext.players.map(p => `
-            <div class="res-grid-row">
-                <span class="cell-id" style="color: ${p.color}">P${p.id}</span>
-                ${resourceTypes.map(type => {
-            const amount = p.resources[type] || 0;
-            return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
-        }).join('')}
-            </div>
-        `).join('');
-
-        newLog.innerHTML = `
-        <div class="debug-header">
-            <span>${new Date().toLocaleTimeString()}</span>
-            <strong>${gameContext.currentState}</strong>
-        </div>
-        <div class="debug-table">
-            ${headerHtml}
-            ${playersHtml}
-        </div>
-        `;
-
-        debugDashboard.prepend(newLog);
-        if (debugDashboard.children.length > 10) debugDashboard.lastChild.remove();
-    }
-
-    renderDebugHUDLog(message) {
-        const debugDashboard = document.getElementById('debug-dashboard');
-        // add new HUD content
-        const newLog = document.createElement('div');
-        newLog.innerHTML = (`
-            <div>
-                <p>Timestamp: ${new Date().toLocaleTimeString()}</p>
-                <p>${message}</p>
-            </div>
-            <br>
-        `);
-        debugDashboard.prepend(newLog);
-
-        // limit the number of logs to 10
-        if (debugDashboard.children.length > 10) {
-            // Removing the oldest (last) child is very fast
-            debugDashboard.lastChild.remove();
-        }
     }
 
     activateSettlementPlacementMode(availableVertexCoords) {

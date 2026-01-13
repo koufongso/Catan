@@ -120,7 +120,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     left: 10px;
     z-index: 10; /* Ensure it stays above the SVG */
     
-    width: 300px;
+    width: 350px;
     height: 400px;
     backdrop-filter: blur(4px); /* Modern frosted-glass effect */
     border: 1px solid #999;
@@ -195,9 +195,9 @@ details {
 .res-grid-row {
     display: grid;
     /* Column 1 (ID): 30px 
-       Columns 2-6 (Resources): 35px each 
+       Columns 2-7 (Resources + VP): 35px each 
     */
-    grid-template-columns: 35px repeat(5, 40px); 
+    grid-template-columns: 35px repeat(6, 40px); 
     align-items: center;
     border-bottom: 1px solid #2a2a2a;
 }
@@ -223,6 +223,14 @@ details {
 
 .is-zero { color: #555; }
 .has-res { color: #fff; font-weight: bold; }
+
+
+.cell-score {
+    font-weight: bold;
+    color: #ffd700;
+    margin-right: 10px;
+    min-width: 40px;
+}
 /* -------------------end -------------------- */
 
 .hitbox{
