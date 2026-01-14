@@ -157,6 +157,21 @@ export const HexUtils = Object.freeze({
         return results;
     },
 
+    getAdjEdgesFromVertex(vCoord) {
+        // input valid check
+        if (!this.isValidVertex(vCoord)) {
+            throw new Error("Invalid hex vertex coordinate");
+        }
+
+        // get the three adjacent vertex coordinates
+        let adjvCoords = this.getAdjVerticesFromVertex(vCoord);
+        let results = [];
+        for (let adjvCoord of adjvCoords) {
+            let eCoord = this.getEdgeFromVertices(vCoord, adjvCoord);
+            results.push(eCoord);
+        }
+        return results;
+    },
     /**
      * Check if two hex vertices are adjacent
      * @param {Array} vCoord1 hex vertex 1

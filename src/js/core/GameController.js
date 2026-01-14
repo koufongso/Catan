@@ -4,6 +4,7 @@ import { Player } from '../models/Player.js';
 import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
+import {COSTS} from '../constants/GameConstants.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -14,6 +15,11 @@ export const GameState = Object.freeze({
     PLACE_ROAD2: 'PLACE_ROAD2',
     ROLL: 'ROLL', // roll dice phase
     MAIN: 'MAIN', // main game loop: build, trade, end turn
+    MAIN_BUILD_ROAD: 'MAIN_BUILD_ROAD', // main game loop: build road sub-state
+    MAIN_BUILD_SETTLEMENT: 'MAIN_BUILD_SETTLEMENT', // main game loop: build settlement sub-state
+    MAIN_BUILD_CITY: 'MAIN_BUILD_CITY', // main game loop: build city sub-state
+    MAIN_BUY_DEV_CARD: 'MAIN_BUY_DEV_CARD', // main game loop: buy development card sub-state
+    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-state
     END: 'END' // game has ended
 });
 
@@ -108,9 +114,17 @@ export class GameController {
                 // handle roll events
                 await this.handleStateRoll(event);
                 break;
-            case GameState.MAIN:
-                // handle main game events  
-                await this.handleStateMain(event);
+            case GameState.MAIN: // nested main states
+                this.handleStateMain(event);
+                break;
+            case GameState.MAIN_BUILD_ROAD:
+                // handle main build road events
+                this.handleStateMainBuildRoad(event);
+                break;
+            case GameState.MAIN_BUILD_SETTLEMENT:
+            case GameState.MAIN_BUILD_CITY:
+            case GameState.MAIN_BUY_DEV_CARD:
+            case GameState.MAIN_PLAY_DEV_CARD:
                 break;
             case GameState.END:
                 // handle end game events
@@ -198,9 +212,10 @@ export class GameController {
         // render updated settlement on map
         this.renderer.renderSettlement(vertexId, currentPlayer.color, 1);
 
-        // TODO: activate road placement mode for first road
         this.gameContext.currentState = GameState.PLACE_ROAD1;
-        this.activateRoadPlacementMode(vCoord);
+        // compute all valid road spots based on last settlement placed
+        const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null);
+        this.activateRoadPlacementMode(availableEdgeIds);
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
     }
@@ -249,7 +264,9 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        this.activateRoadPlacementMode(vCoord);
+        const avaibleRoads = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null); // connected to last settlement placed
+
+        this.activateRoadPlacementMode(avaibleRoads);
         this.updateDebugHUD();
         this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
     }
@@ -273,8 +290,8 @@ export class GameController {
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
         console.log("Distributing initial resources for second settlement:", adjacentResources);
         adjacentResources.forEach(resourceType => {
-            currentPlayer.addResource(resourceType, 1);
-            this.updateBankResource(resourceType, -1);
+            currentPlayer.addResource({[resourceType]: 1});
+            this.addBankResource({[resourceType]: -1});
         });
 
         // check if current player is the first player
@@ -330,19 +347,15 @@ export class GameController {
             case 'BUILD_SETTLEMENT':
                 // TODO: handle build settlement
                 break;
-
             case 'BUILD_CITY':
                 // TODO: handle build city
                 break;
-
             case 'BUY_DEV_CARD':
                 // TODO: handle buy development card
                 break;
-
             case 'PLAY_DEV_CARD':
                 // TODO: handle play development card
                 break;
-
             case 'TRADE':
                 // TODO: handle trade
                 break;
@@ -352,6 +365,69 @@ export class GameController {
                 return;
         }
     }
+
+    __handleEventEnd(event) {
+        // end turn logic
+        this.nextPlayer();
+        this.nextTurn();
+        this.gameContext.currentState = GameState.ROLL;
+        this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
+    }
+
+    __handleEventBuildRoad(event) {
+        // build road logic
+        this.gameContext.currentState = GameState.MAIN_BUILD_ROAD;
+
+        // get current player
+        const currentPlayer = this.getCurrentPlayer();
+        const playerRoadIds = currentPlayer.getOwnedAssets()["roads"]
+        const playerRoadCoords = playerRoadIds.map(roadId => HexUtils.idToCoord(roadId));
+
+        // compute all valid road spots based on player's owned roads
+        let availableRoads = [];
+        playerRoadCoords.forEach(eCoord => {
+            HexUtils.getVerticesFromEdge(eCoord).forEach(vCoord => {
+                const availableECoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, currentPlayer.id);
+                availableRoads = availableRoads.concat(availableECoords);
+            });
+        });    
+        console.log("Player owned roads:", availableRoads);        
+
+        // activate road placement mode based on all settlement coords
+        this.activateRoadPlacementMode(availableRoads, currentPlayer.id);
+        this.debug.renderDebugHUD(this.gameContext, `Building road. Please place your road.`);
+    }
+
+    handleStateMainBuildRoad(event) {
+        if (event.type == 'PLACE_ROAD') {
+            // place road logic
+            this.gameContext.currentState = GameState.MAIN;
+            this.deactivateRoadPlacementMode();
+
+            const roadId = event.edgeId;
+            const currentPlayer = this.getCurrentPlayer();
+            // check if player can afford road
+            if (!currentPlayer.canAfford(COSTS.road)) {
+                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a road.`);
+                return;
+            }else{
+                currentPlayer.addResource({ [ResourceType.BRICK]: -1, [ResourceType.LUMBER]: -1 });
+                this.addBankResource({ [ResourceType.BRICK]: -1, [ResourceType.LUMBER]: -1 });
+            }
+            // deduct road cost from player and bank
+
+            this.addRoadToPlayer(roadId, currentPlayer, 'MAIN');
+            this.renderer.renderRoad(event.edgeId, currentPlayer.color);
+            this.debug.renderDebugHUD(this.gameContext, `Road placed.`);
+        }else if (event.type === 'CANCEL') {
+            this.gameContext.currentState = GameState.MAIN;
+            this.deactivateRoadPlacementMode();
+            this.debug.renderDebugHUD(this.gameContext, `Road building cancelled.`);
+        }
+    }
+
+
+
 
 
     async generateDefaultMap() {
@@ -387,10 +463,16 @@ export class GameController {
         return true;
     }
 
-    updateBankResource(type, amount) {
-        if (this.bankResources.has(type)) {
-            const current = this.bankResources.get(type);
-            this.bankResources.set(type, current + amount);
+    /**
+     * 
+     * @param {Object} resources resources to update {resourceType: amount, ...}
+     */
+    addBankResource(resources) {
+        for (let [type, amount] of Object.entries(resources)) {
+            if (this.bankResources.has(type)) {
+                const current = this.bankResources.get(type);
+                this.bankResources.set(type, current + amount);
+            }
         }
     }
 
@@ -428,13 +510,10 @@ export class GameController {
         }
     }
 
-    // Activate road placement mode based on a given vertex coordinate
-    activateRoadPlacementMode(vCoord) {
+    // Activate road placement mode based on a given edge coordinate list
+    activateRoadPlacementMode(eCoordList, owner = null) {
         if (this.renderer) {
-            // compute all valid road spots based on last settlement placed
-            const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord);
-            console.log("Activating road placement mode. Available edges:", availableEdgeIds);
-            this.renderer.activateRoadPlacementMode(availableEdgeIds);
+            this.renderer.activateRoadPlacementMode(eCoordList);
         } else {
             console.warn("Renderer not attached. Cannot activate road placement mode.");
         }
@@ -520,7 +599,7 @@ export class GameController {
         // find the player in the game context and give them the resource
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
-            player.addResource(resourceType, amount);
+            player.addResource({[resourceType]: amount});
         }
     }
 

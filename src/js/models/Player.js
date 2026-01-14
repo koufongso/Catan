@@ -42,14 +42,16 @@ export class Player {
 
 
     // add resource count (can be negative, which means removing resources)
-    addResource(type, amount) {
-        console.log(`Player ${this.name} (${this.id}) resource change: ${type} ${amount}`);
-        console.log("Before:", this.resources);
-        if (this.resources[type] !== undefined) {
-            // Prevents resources from dropping below zero
-            this.resources[type] = Math.max(0, this.resources[type] + amount);
+    addResource(resources) {
+        for (let [type, amount] of Object.entries(resources)) {
+            console.log(`Player ${this.name} (${this.id}) resource change: ${type} ${amount}`);
+            console.log("Before:", this.resources);
+            if (this.resources[type] !== undefined) {
+                // Prevents resources from dropping below zero
+                this.resources[type] = Math.max(0, this.resources[type] + amount);
+            }
+            console.log("After:", this.resources);
         }
-        console.log("After:", this.resources);
     }
 
 
@@ -71,7 +73,7 @@ export class Player {
         };
     }
 
-    getVictoryPoints(){
+    getVictoryPoints() {
         let vp = 0;
         // settlements
         vp += this.settlementIds.size * 1;

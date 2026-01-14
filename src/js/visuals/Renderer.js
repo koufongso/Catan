@@ -326,7 +326,11 @@ export class Renderer {
         vertexLayer.appendChild(settlementCircle);
     }
 
-    // Inside Renderer.js
+    /**
+     * 
+     * @param {Array} validEdgeCoords list of edge coordinates where roads can be placed
+     * @returns 
+     */
     activateRoadPlacementMode(validEdgeCoords) {
         const edgeLayer = document.getElementById('edge-layer');
         if (!edgeLayer) return;

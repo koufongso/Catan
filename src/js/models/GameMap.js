@@ -436,7 +436,7 @@ export class GameMap {
     }
 
     /**
-     * Return a list of unoccupied road spots (edge coordinates) connected to the given vertex coordinate
+     * Return a list of unoccupied road spots (edge coordinates), if owner is specified, only return roads that are connected to owner's settlement or road
      * @param {Array} vCoord 
      * @returns {Array} list of edge coordinates
      */
@@ -453,7 +453,7 @@ export class GameMap {
     }
 
     /**
-     * Return true if the road spot (edge coordinate) is valid (unoccupied), if owner is given, check if connected to owner's settlement or road
+     * Return true if the road spot (edge coordinate) is valid (unoccupied), if owner is given, check if connected to owner's road
      * @param {*} eCoord 
      * @returns 
      */
@@ -464,19 +464,10 @@ export class GameMap {
             return false;
         }
 
-        // If owner is specified, check if the road is connected to an existing road or settlement owned by the player
+        // If owner is specified, check if the road is connected to an existing road  owned by the player
         if (owner !== null) {
-            let adjvCoordList = HexUtils.getAdjVerticesFromEdge(eCoord); // check the two vertices of this edge
+            let adjvCoordList = HexUtils.getVerticesFromEdge(eCoord); // check the two vertices of this edge
             for (let vCoord of adjvCoordList) {
-                // check for settlement or road owned by the player
-                let vertexId = HexUtils.coordToId(vCoord);
-                if (this.settlements.has(vertexId)) {
-                    let settlement = this.settlements.get(vertexId);
-                    if (settlement.owner === owner) {
-                        return true; // found connected settlement owned by the player
-                    }
-                }
-
                 // check for connected roads owned by the player
                 let adjEdgeCoords = HexUtils.getAdjEdgesFromVertex(vCoord); // for the vertex, get all adjacent edges
                 for (let adjEdgeCoord of adjEdgeCoords) {
@@ -495,7 +486,7 @@ export class GameMap {
     }
 
     isRoadConnectedToSettlement(eCoord, settlementCoord, owner) {
-        let adjvCoordList = HexUtils.getAdjVerticesFromEdge(eCoord);
+        let adjvCoordList = HexUtils.getVerticesFromEdge(eCoord);
         for (let vCoord of adjvCoordList) {
             if (HexUtils.areCoordsEqual(vCoord, settlementCoord)) {
                 let vertexId = HexUtils.coordToId(vCoord);
