@@ -18,8 +18,8 @@ export class Player {
 
 
         // asset ownership
-        this.settlementIds = new Set();
-        this.roadIds = new Set();
+        this.settlements = new Set();
+        this.roads = new Set();
 
         // Achievement/Special Status (Data only, logic handled by ScoreService)
         this.achievements = {
@@ -56,27 +56,46 @@ export class Player {
 
 
     // add a settlement object to player's list
-    addSettlement(vertexId) {
-        this.settlementIds.add(vertexId);
+    addSettlement(settlement) {
+        this.settlements.add(settlement);
+    }
+
+    getSettlements(level = null) {
+        switch(level) {
+        case null: // all settlements
+            return Array.from(this.settlements);
+        case 0:
+        case 1:
+        case 2:
+            return Array.from(this.settlements).filter(s => s.level === level);
+        default:
+            throw new Error("Invalid settlement level filter");
+        }
     }
 
     // add a road object to player's list
-    addRoad(edgeId) {
-        this.roadIds.add(edgeId);
+    addRoad(road) {
+        this.roads.add(road);
+    }
+
+    getRoads() {
+        return Array.from(this.roads);
     }
 
     // helper function to get all owned assets ids
     getOwnedAssets() {
         return {
-            settlements: Array.from(this.settlementIds),
-            roads: Array.from(this.roadIds)
+            settlements: Array.from(this.settlements),
+            roads: Array.from(this.roads)
         };
     }
 
     getVictoryPoints() {
         let vp = 0;
         // settlements
-        vp += this.settlementIds.size * 1;
+        for (let settlement of this.settlements) {
+            vp += settlement.level; // 1 for settlement, 2 for city
+        }
         // cities - assuming cityIds is a Set similar to settlementIds
         // vp += this.cityIds.size * 2; // Uncomment if city logic is added
         // victory point cards
