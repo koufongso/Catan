@@ -383,18 +383,23 @@ export class GameMap {
         return resources;
     }
 
-    getValidSettlementSpots() {
+    /**
+     * Get a list of unoccupied settlement spots (vertex coordinates) on the map, if owner is given, only return spots connected to owner's road
+     * @param {*} owner 
+     * @returns 
+     */
+    getValidSettlementSpots(owner = null) {
         let results = [];
         let allSettlementCoords = this.getAllSettlementCoords();
         for (let [key, vCoord] of allSettlementCoords) {
-            if (this.isSettlementSpotValid(vCoord)) {
+            if (this.isSettlementSpotValid(vCoord, owner)) {
                 results.push(vCoord);
             }
         }
         return results;
     }
 
-    isSettlementSpotValid(vCoord) {
+    isSettlementSpotValid(vCoord, owner = null) {
         let vertexId = HexUtils.coordToId(vCoord);
         // Check if the vertex is already occupied
         if (this.settlements.has(vertexId)) {
@@ -406,31 +411,103 @@ export class GameMap {
         for (let adjvCoord of adjvCoordList) {
             let adjvertexId = HexUtils.coordToId(adjvCoord);
             if (this.settlements.has(adjvertexId)) {
+                // has adjacent settlement
                 return false;
             }
         }
+
+        // If owner is specified, check if there's at least one connected road owned by the player
+        if (owner !== null) {
+            let vCoordList = HexUtils.getAdjVerticesFromVertex(vCoord); // get the three edges connected to this vertex
+            for (let vCoord1 of vCoordList) {
+                const roadCoord = HexUtils.add(vCoord, vCoord1); // the road coord
+                const roadId = HexUtils.coordToId(roadCoord);
+                if (this.roads.has(roadId)) {
+                    const road = this.roads.get(roadId);
+                    if (road.owner === owner) {
+                        return true; // found a connected road owned by the player
+                    }
+                }
+            }
+            return false; // no connected road found
+        }
+
         return true;
     }
 
-    getValidRoadSpotsFromVertex(vCoord) {
+    /**
+     * Return a list of unoccupied road spots (edge coordinates) connected to the given vertex coordinate
+     * @param {Array} vCoord 
+     * @returns {Array} list of edge coordinates
+     */
+    getValidRoadSpotsFromVertex(vCoord, owner = null) {
         const vCoordList = HexUtils.getAdjVerticesFromVertex(vCoord);
         let results = [];
         for (let vCoord1 of vCoordList) {
             const eCoord = HexUtils.add(vCoord, vCoord1);
-            if (this.isEdgeValid(eCoord)) {
+            if (this.isRoadSpotValid(eCoord, owner)) {
                 results.push(eCoord);
             }
         }
         return results;
     }
 
-    isEdgeValid(eCoord) {
+    /**
+     * Return true if the road spot (edge coordinate) is valid (unoccupied), if owner is given, check if connected to owner's settlement or road
+     * @param {*} eCoord 
+     * @returns 
+     */
+    isRoadSpotValid(eCoord, owner = null) {
         let edgeId = HexUtils.coordToId(eCoord);
         // Check if the edge is already occupied
         if (this.roads.has(edgeId)) {
             return false;
         }
+
+        // If owner is specified, check if the road is connected to an existing road or settlement owned by the player
+        if (owner !== null) {
+            let adjvCoordList = HexUtils.getAdjVerticesFromEdge(eCoord); // check the two vertices of this edge
+            for (let vCoord of adjvCoordList) {
+                // check for settlement or road owned by the player
+                let vertexId = HexUtils.coordToId(vCoord);
+                if (this.settlements.has(vertexId)) {
+                    let settlement = this.settlements.get(vertexId);
+                    if (settlement.owner === owner) {
+                        return true; // found connected settlement owned by the player
+                    }
+                }
+
+                // check for connected roads owned by the player
+                let adjEdgeCoords = HexUtils.getAdjEdgesFromVertex(vCoord); // for the vertex, get all adjacent edges
+                for (let adjEdgeCoord of adjEdgeCoords) {
+                    let adjEdgeId = HexUtils.coordToId(adjEdgeCoord);
+                    if (this.roads.has(adjEdgeId)) {
+                        const road = this.roads.get(adjEdgeId);
+                        if (road.owner === owner) {
+                            return true; // found connected road owned by the player
+                        }
+                    }
+                }
+            }
+            return false;
+        }
         return true;
+    }
+
+    isRoadConnectedToSettlement(eCoord, settlementCoord, owner) {
+        let adjvCoordList = HexUtils.getAdjVerticesFromEdge(eCoord);
+        for (let vCoord of adjvCoordList) {
+            if (HexUtils.areCoordsEqual(vCoord, settlementCoord)) {
+                let vertexId = HexUtils.coordToId(vCoord);
+                if (this.settlements.has(vertexId)) {
+                    let settlement = this.settlements.get(vertexId);
+                    if (settlement.owner === owner) {
+                        return true; // connected to the settlement owned by the player
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     getAllTerrainCoords() {

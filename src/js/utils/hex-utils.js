@@ -51,6 +51,9 @@ export const HexUtils = Object.freeze({
             (val1 == 1 && val2 == 1 && val3 == 0));
     },
 
+    areCoordsEqual(coord1, coord2) {
+        return (coord1[0] === coord2[0] && coord1[1] === coord2[1] && coord1[2] === coord2[2]);
+    },
     /* --------------------------rendering--------------------------------------- */
     /**
      * Convert hex axial coordinate to pixel coordinate (x to right, y to down)

@@ -215,8 +215,7 @@ export class GameController {
 
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
-        this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
-        currentPlayer.addRoad(event.edgeId);
+        this.addRoadToPlayer(event.edgeId, currentPlayer, 'INITIAL');
 
         // render updated road on map
         this.renderer.renderRoad(event.edgeId, currentPlayer.color);
@@ -265,8 +264,7 @@ export class GameController {
 
         // add road to map and register its ownership
         const currentPlayer = this.getCurrentPlayer();
-        this.gameContext.gameMap.updateRoadById(event.edgeId, currentPlayer.id);
-        currentPlayer.addRoad(event.edgeId);
+        this.addRoadToPlayer(event.edgeId, currentPlayer, 'INITIAL');
 
         // render updated road on map
         this.renderer.renderRoad(event.edgeId, currentPlayer.color);
@@ -322,7 +320,7 @@ export class GameController {
 
     handleStateMain(event) {
         // main game logic would go here
-        switch(event.type) {
+        switch (event.type) {
             case 'END_TURN':
                 this.__handleEventEnd(event);
                 break;
@@ -335,7 +333,7 @@ export class GameController {
 
             case 'BUILD_CITY':
                 // TODO: handle build city
-                break; 
+                break;
 
             case 'BUY_DEV_CARD':
                 // TODO: handle buy development card
@@ -539,7 +537,7 @@ export class GameController {
     addSettlementToPlayer(vertexId, player) {
         // double check if the spot is valid in case of cheating
         const vCoord = HexUtils.idToCoord(vertexId);
-        if (!this.gameContext.gameMap.isSettlementSpotValid(vCoord)) {
+        if (!this.gameContext.gameMap.isSettlementSpotValid(vCoord)) { // no owner check for initial placement
             throw new Error(`Invalid settlement spot: ${vCoord}`);
         }
 
@@ -550,5 +548,25 @@ export class GameController {
 
         // render updated settlement on map
         this.renderer.renderSettlement(vertexId, player.color, 1);
+    }
+
+    addRoadToPlayer(edgeId, player, phase = 'MAIN') {
+        // double check if the spot is valid in case of cheating
+        const eCoord = HexUtils.idToCoord(edgeId);
+
+        if (phase === 'INITIAL') {
+            // during initial placement, check if the road is connected to the last settlement placed
+            if (!this.gameContext.gameMap.isRoadSpotValid(eCoord, null) && !this.gameContext.gameMap.isRoadConnectedToSettlement(eCoord, this.gameContext.lastSettlementPlaced, player.id)) {
+                throw new Error(`Invalid road spot: ${eCoord}`);
+            }
+        } else {
+            if (!this.gameContext.gameMap.isRoadSpotValid(eCoord, player.id)) { // check owner for normal placement (either connected to own settlement or road)
+                throw new Error(`Invalid road spot: ${eCoord}`);
+            }
+        }
+
+        // add road to map
+        this.gameContext.gameMap.updateRoadById(edgeId, player.id);
+        player.addRoad(edgeId);
     }
 }
