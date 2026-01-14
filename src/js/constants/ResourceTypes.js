@@ -1,4 +1,4 @@
-export const ResourceType = Object.freeze({
+export const RESOURCE_TYPES = Object.freeze({
     LUMBER: 'lumber',
     ORE: 'ore',
     BRICK: 'brick',

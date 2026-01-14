@@ -1,4 +1,4 @@
-import { ResourceType } from "../constants/ResourceType.js";
+import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { HexUtils } from "../utils/hex-utils.js";
 
 

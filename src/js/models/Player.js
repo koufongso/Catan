@@ -1,4 +1,4 @@
-import { ResourceType } from '../constants/ResourceType.js';
+import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 
 export class Player {
     constructor(id, name, color, type) {
@@ -9,11 +9,11 @@ export class Player {
 
         // resource inventory
         this.resources = {
-            [ResourceType.ORE]: 0,
-            [ResourceType.WOOL]: 0,
-            [ResourceType.LUMBER]: 0,
-            [ResourceType.WHEAT]: 0,
-            [ResourceType.BRICK]: 0,
+            [RESOURCE_TYPES.ORE]: 0,
+            [RESOURCE_TYPES.WOOL]: 0,
+            [RESOURCE_TYPES.LUMBER]: 0,
+            [RESOURCE_TYPES.WHEAT]: 0,
+            [RESOURCE_TYPES.BRICK]: 0,
         };
 
 
@@ -31,7 +31,7 @@ export class Player {
         };
     }
 
-    // cost is an object {resourceType: amount, ...}
+    // cost is an object {RESOURCE_TYPES: amount, ...}
     canAfford(cost) {
         for (let [type, amount] of Object.entries(cost)) {
             if (this.resources[type] + amount < 0) {

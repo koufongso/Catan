@@ -1,6 +1,6 @@
-import { ResourceType } from '../constants/ResourceType.js';
+import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 
-const VALID_RESOURCES = new Set(Object.values(ResourceType));
+const VALID_RESOURCES = new Set(Object.values(RESOURCE_TYPES));
 
 export const ResourceUtils = {
     /**
@@ -11,7 +11,7 @@ export const ResourceUtils = {
     },
 
     /**
-     * Normalizes input and returns a valid ResourceType or null
+     * Normalizes input and returns a valid RESOURCE_TYPES or null
      */
     from(type) {
         if (!type) return null;

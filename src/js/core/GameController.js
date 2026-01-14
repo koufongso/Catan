@@ -1,5 +1,5 @@
 import { GameMap } from '../models/GameMap.js';
-import { ResourceType } from '../constants/ResourceType.js';
+import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 import { Player } from '../models/Player.js';
 import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
@@ -53,8 +53,8 @@ export class GameController {
         }
 
         this.bankResources.clear();
-        Object.values(ResourceType).forEach(type => {
-            if (type !== ResourceType.DESERT) {
+        Object.values(RESOURCE_TYPES).forEach(type => {
+            if (type !== RESOURCE_TYPES.DESERT) {
                 this.bankResources.set(type, 19); // standard Catan bank count
             }
         });
@@ -323,9 +323,9 @@ export class GameController {
         // add adjacnet resources to player for second settlement
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
         console.log("Distributing initial resources for second settlement:", adjacentResources);
-        adjacentResources.forEach(resourceType => {
-            currentPlayer.addResource({[resourceType]: 1});
-            this.addBankResource({[resourceType]: -1});
+        adjacentResources.forEach(RESOURCE_TYPES => {
+            currentPlayer.addResource({[RESOURCE_TYPES]: 1});
+            this.addBankResource({[RESOURCE_TYPES]: -1});
         });
 
         // check if current player is the first player
@@ -415,7 +415,7 @@ export class GameController {
             this.nextTurn();
             this.gameContext.currentState = GameState.ROLL;
             this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
-        }s
+        }
     }
 
     __handleEventBuildRoad(event) {
@@ -584,7 +584,7 @@ export class GameController {
 
     /**
      * 
-     * @param {Object} resources resources to update {resourceType: amount, ...}
+     * @param {Object} resources resources to update {RESOURCE_TYPES: amount, ...}
      */
     addBankResource(resources) {
         for (let [type, amount] of Object.entries(resources)) {
@@ -684,11 +684,11 @@ export class GameController {
 
             if (target === 'all') {
                 player.addResource({
-                    [ResourceType.BRICK]: value,
-                    [ResourceType.LUMBER]: value,
-                    [ResourceType.WOOL]: value,
-                    [ResourceType.WHEAT]: value,
-                    [ResourceType.ORE]: value
+                    [RESOURCE_TYPES.BRICK]: value,
+                    [RESOURCE_TYPES.LUMBER]: value,
+                    [RESOURCE_TYPES.WOOL]: value,
+                    [RESOURCE_TYPES.WHEAT]: value,
+                    [RESOURCE_TYPES.ORE]: value
                 });
                 this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of all resources to Player ${player.id}`);
             }else{
@@ -731,20 +731,20 @@ export class GameController {
                 if (gameMap.settlements.has(vertexId)) {
                     const settlement = gameMap.settlements.get(vertexId);
                     const ownerId = settlement.owner;
-                    const resourceType = terrain.resource;
+                    const RESOURCE_TYPES = terrain.resource;
                     const amount = (settlement.level === 1) ? 1 : 2; // settlement gives 1, city gives 2
                     // distribute resource to player with ownerId
-                    this.distributeResourceToPlayer(ownerId, resourceType, amount);
+                    this.distributeResourceToPlayer(ownerId, RESOURCE_TYPES, amount);
                 }
             });
         });
     }
 
-    distributeResourceToPlayer(playerId, resourceType, amount) {
+    distributeResourceToPlayer(playerId, RESOURCE_TYPES, amount) {
         // find the player in the game context and give them the resource
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
-            player.addResource({[resourceType]: amount});
+            player.addResource({[RESOURCE_TYPES]: amount});
         }
     }
 

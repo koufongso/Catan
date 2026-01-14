@@ -1,6 +1,6 @@
 import { HexUtils } from "../utils/hex-utils.js";
 import { ResourceUtils } from "../utils/resource-utils.js";
-import { ResourceType } from "../constants/ResourceType.js";
+import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 
 export class Terrain {
     constructor(coord, type, numberToken) {
@@ -57,11 +57,11 @@ export class Terrain {
     assignResource() {
         // A simple mapping within the class
         const map = {
-            mountain: ResourceType.ORE,
-            pasture: ResourceType.WOOL,
-            forest: ResourceType.LUMBER,
-            field: ResourceType.WHEAT,
-            hill: ResourceType.BRICK,
+            mountain: RESOURCE_TYPES.ORE,
+            pasture: RESOURCE_TYPES.WOOL,
+            forest: RESOURCE_TYPES.LUMBER,
+            field: RESOURCE_TYPES.WHEAT,
+            hill: RESOURCE_TYPES.BRICK,
             desert: null
         };
         this.resource = map[this.type];

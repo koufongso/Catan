@@ -1,12 +1,26 @@
-import { ResourceType } from './ResourceType.js';
+import { RESOURCE_TYPES } from './ResourceTypes.js';
 
 // maximum number of players allowed in the game
 export const MAX_PLAYERS = 4;
 
+export const NUMBER_TOKENS = {
+    2: 1,
+    3: 2,
+    4: 2,
+    5: 2,
+    6: 2,
+    8: 2,
+    9: 2,
+    10: 2,
+    11: 2,
+    12: 1
+};
+
+
 // cost to build each structure
 export const COSTS = {
-    road: { [ResourceType.BRICK]: -1, [ResourceType.LUMBER]: -1 },
-    settlement: { [ResourceType.BRICK]: -1, [ResourceType.LUMBER]: -1, [ResourceType.WOOL]: -1, [ResourceType.WHEAT]: -1 },
-    city: { [ResourceType.ORE]: -3, [ResourceType.WHEAT]: -2 },
-    devCard: { [ResourceType.ORE]: -1, [ResourceType.WOOL]: -1, [ResourceType.WHEAT]: -1 }
+    road: { [RESOURCE_TYPES.BRICK]: -1, [RESOURCE_TYPES.LUMBER]: -1 },
+    settlement: { [RESOURCE_TYPES.BRICK]: -1, [RESOURCE_TYPES.LUMBER]: -1, [RESOURCE_TYPES.WOOL]: -1, [RESOURCE_TYPES.WHEAT]: -1 },
+    city: { [RESOURCE_TYPES.ORE]: -3, [RESOURCE_TYPES.WHEAT]: -2 },
+    devCard: { [RESOURCE_TYPES.ORE]: -1, [RESOURCE_TYPES.WOOL]: -1, [RESOURCE_TYPES.WHEAT]: -1 }
 };

@@ -1,4 +1,4 @@
-import { ResourceType } from "../constants/ResourceType.js";
+import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 
 export class DebugDashboard {
 
@@ -34,13 +34,13 @@ export class DebugDashboard {
         }
 
         // 1. Define the resources we want to track in the header
-        const resourceTypes = [ResourceType.BRICK, ResourceType.LUMBER, ResourceType.WOOL, ResourceType.WHEAT, ResourceType.ORE];
+        const RESOURCE_TYPESs = [RESOURCE_TYPES.BRICK, RESOURCE_TYPES.LUMBER, RESOURCE_TYPES.WOOL, RESOURCE_TYPES.WHEAT, RESOURCE_TYPES.ORE];
 
         const headerHtml = `
             <div class="res-grid-row header">
                 <span class="cell-id">ID</span>
                 <span class="cell-val">VP</span>
-                ${resourceTypes.map(type => `
+                ${RESOURCE_TYPESs.map(type => `
                     <span class="cell-val">${this.getResourceIcon(type)}</span>
                 `).join('')}
             </div>
@@ -56,7 +56,7 @@ export class DebugDashboard {
                     ${isCurrent ? '▶' : '&nbsp;'} P${p.id}
                 </span>
                 <span class="cell-val has-res">${totalVP}</span> 
-                ${resourceTypes.map(type => {
+                ${RESOURCE_TYPESs.map(type => {
                 const amount = p.resources[type] || 0;
                 return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
             }).join('')}
