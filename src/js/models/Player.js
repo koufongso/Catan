@@ -33,7 +33,7 @@ export class Player {
     // cost is an object {resourceType: amount, ...}
     canAfford(cost) {
         for (let [type, amount] of Object.entries(cost)) {
-            if (this.resources[type] < amount) {
+            if (this.resources[type] + amount < 0) {
                 return false;
             }
         }

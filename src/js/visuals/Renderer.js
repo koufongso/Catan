@@ -202,6 +202,11 @@ export class Renderer {
             this.emitInputEvent('END_TURN', {});
         }
 
+        const cancelBtn = clone.getElementById('cancel-btn');
+        cancelBtn.onclick = () => {
+            this.emitInputEvent('CANCEL_ACTION', {});
+        }
+
         this.updateDOM(clone);
     }
 
@@ -306,6 +311,7 @@ export class Renderer {
     }
 
     renderSettlement(vertexId, color, level) {
+        console.log(`Rendering settlement at ${vertexId} with color ${color} and level ${level}`);
         // render a settlement at the given vertexId with the given color and level
         const vertexLayer = document.getElementById('vertex-layer');
         if (!vertexLayer) {
