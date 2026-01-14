@@ -137,8 +137,43 @@ export class GameController {
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
+
+        // check for win condition after each event (right after action finished, back to MAIN state)
+        const currentState = this.gameContext.currentState;
+        if (currentState === GameState.MAIN) {
+            const winner = this.checkWinCondition();
+            if (winner.length > 0) {
+                this.gameContext.currentState = GameState.END;
+                this.renderer.renderGameOver(winner);
+                this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
+            }
+        }
     }
 
+    checkWinCondition() {
+        let winner = []; // in case of multiple winners (can this happen?)
+        for (let player of this.gameContext.players) {
+            if (player.getVictoryPoints() >= 10) {
+                winner.push(player);
+            }
+        }
+        return winner;
+    }
+
+    handleStateEnd(event) {
+        // handle end game events
+        if (event.type === 'RESTART_GAME') {
+            this.restartGame();
+            this.renderer.showConfig(); // render setup UI again
+        }
+    }
+
+    restartGame() {
+        // reset game context
+        this.gameContext = new GameContext();
+        this.gameContext.currentState = GameState.SETUP;
+        this.debug.renderDebugHUD(this.gameContext, "Game restarted.");
+    }
 
     /**
      * If click "start game" button in setup state, 
@@ -369,11 +404,18 @@ export class GameController {
     }
 
     __handleEventEnd(event) {
-        // end turn logic
-        this.nextPlayer();
-        this.nextTurn();
-        this.gameContext.currentState = GameState.ROLL;
-        this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
+        const winner = this.checkWinCondition();
+        if (winner.length > 0) {
+            // game over, render UI
+            this.gameContext.currentState = GameState.END;
+            this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
+        }else{
+            // continue to next turn
+            this.nextPlayer();
+            this.nextTurn();
+            this.gameContext.currentState = GameState.ROLL;
+            this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
+        }s
     }
 
     __handleEventBuildRoad(event) {
@@ -653,6 +695,13 @@ export class GameController {
                 player.addResource({ [target]: value });
                 this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of resource ${target} to Player ${player.id}`);
             }
+        }
+
+        if (action === '/setvp') {
+            const value = parseInt(parts[1]);
+            const player = this.getCurrentPlayer();
+            player.achievements.cheatVP += value;
+            this.debug.renderDebugHUD(this.gameContext, `Cheat: Set VP for Player ${player.id} to ${player.getVictoryPoints()}`);
         }
 
         if (action === '/dist') {

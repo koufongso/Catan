@@ -26,7 +26,8 @@ export class Player {
             hasLongestRoad: false,
             hasLargestArmy: false,
             victoryPointCards: 0,
-            knightsPlayed: 0
+            knightsPlayed: 0,
+            cheatVP: 0 // Victory points from cheats (for testing purposes)
         };
     }
 
@@ -104,6 +105,8 @@ export class Player {
         if (this.achievements.hasLongestRoad) vp += 2;
         // largest army
         if (this.achievements.hasLargestArmy) vp += 2;
+        // cheat VP
+        vp += this.achievements.cheatVP;
         return vp;
     }
 }

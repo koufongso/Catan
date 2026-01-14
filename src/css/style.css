@@ -322,3 +322,35 @@ details {
     cursor: not-allowed;
     filter: grayscale(1);
 }
+
+
+/* Game Over Overlay */
+.game-over-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85); /* Dim the background game */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* Higher than debug HUD and Map */
+    backdrop-filter: blur(8px); /* Optional modern look */
+}
+
+.game-over-card {
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 4px solid #ffd700; /* Gold border for winners */
+}
+
+#winner-announcement {
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 20px;
+    font-weight: bold;
+}

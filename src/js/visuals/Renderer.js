@@ -260,6 +260,17 @@ export class Renderer {
         wrapper.appendChild(clone);
     }
 
+    renderGameOver(winners) {
+        const temp = document.getElementById('game-over-template');
+        const clone = temp.content.cloneNode(true);
+
+        const winnerAnnouncement = clone.querySelector('#winner-announcement');
+        winnerAnnouncement.textContent = `Winner: ${winners.map(p => p.name).join(', ')}`;
+
+        // Append to body to ensure it covers the entire viewport
+        document.body.appendChild(clone);
+    }
+
     activateSettlementPlacementMode(availableVertexCoords) {
         const vertexLayer = document.getElementById('vertex-layer');
         if (!vertexLayer) return;
