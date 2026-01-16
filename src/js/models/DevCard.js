@@ -1,4 +1,4 @@
-import { DEV_CARD_TYPES, DEV_CARD_DISTRIBUTION } from "../../constants/DevCardType.js";
+import { DEV_CARD_TYPES, DEV_CARD_DISTRIBUTION } from "../constants/DevCardTypes.js";
 import { RNG } from "../utils/rng.js";
 
 
@@ -11,7 +11,7 @@ export class DevCard {
 
         this.type = type;
         this.turnBought = turnBought; // turn number when the card was bought (sleeping card rule)
-        this.isPlayed = false;
+        this.played = false;
         this.vp = (type === DEV_CARD_TYPES.VICTORY_POINT) ? 1 : 0;
     }
 
@@ -20,7 +20,21 @@ export class DevCard {
     }
 
     markAsPlayed() {
-        this.isPlayed = true;
+        this.played = true;
+    }
+
+    isPlayable(currentTurnNumber) {
+        // sleeping card rule: can only play if bought in a previous turn
+        return !this.isPlayed() && !this.isLocked(currentTurnNumber);
+    }
+
+    isLocked(currentTurnNumber) {
+        // locked if bought this turn
+        return currentTurnNumber <= this.turnBought;
+    }
+
+    isPlayed() {
+        return this.played;
     }
 }
 

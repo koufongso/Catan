@@ -60,6 +60,19 @@
         </div>
     </template>
 
+    <template id="action-confirm-template">
+        <div class="modal-overlay" id="confirm-modal">
+            <div class="confirm-card">
+                <h3 id="confirm-title">Are you sure?</h3>
+                <p id="confirm-message">This action cannot be undone.</p>
+                <div class="modal-buttons">
+                    <button id="action-confirm-btn" class="btn-primary">Confirm</button>
+                    <button id="action-cancel-btn" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
     <template id="game-over-template">
         <div class="game-over-overlay">
             <div class="game-over-card">

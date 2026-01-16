@@ -20,6 +20,7 @@ export class Player {
         // asset ownership
         this.settlements = new Set();
         this.roads = new Set();
+        this.devCards = []; // array of DevCard objects
 
         // Achievement/Special Status (Data only, logic handled by ScoreService)
         this.achievements = {
@@ -61,6 +62,17 @@ export class Player {
         this.settlements.add(settlement);
     }
 
+    // add a road object to player's list
+    addRoad(road) {
+        this.roads.add(road);
+    }
+
+    // add a dev card object to player's list
+    addDevCard(devCard) {
+        this.devCards.push(devCard);
+    }
+
+
     getSettlements(level = null) {
         switch(level) {
         case null: // all settlements
@@ -74,20 +86,30 @@ export class Player {
         }
     }
 
-    // add a road object to player's list
-    addRoad(road) {
-        this.roads.add(road);
-    }
+
 
     getRoads() {
         return Array.from(this.roads);
+    }
+
+    getDevCards() {
+        return this.devCards;
+    }
+
+    getResource(){
+        return this.resources;
+    }
+
+    getHands(){
+        return {'resource':this.resources, 'devCard':this.getDevCards()};
     }
 
     // helper function to get all owned assets ids
     getOwnedAssets() {
         return {
             settlements: Array.from(this.settlements),
-            roads: Array.from(this.roads)
+            roads: Array.from(this.roads),
+            devCards: this.devCards
         };
     }
 

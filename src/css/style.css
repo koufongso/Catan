@@ -232,9 +232,9 @@ details {
 .res-grid-row {
     display: grid;
     /* Column 1 (ID): 30px 
-       Columns 2-7 (Resources + VP): 35px each 
+       Columns 2-8 (Resources + VP + Dev Cards): 35px each 
     */
-    grid-template-columns: 35px repeat(6, 40px); 
+    grid-template-columns: 30px repeat(7, 35px); 
     align-items: center;
     border-bottom: 1px solid #2a2a2a;
 }
@@ -260,7 +260,7 @@ details {
 
 .is-zero { color: #555; }
 .has-res { color: #fff; font-weight: bold; }
-
+.has-cards { color: #ff69b4; font-weight: bold; }
 
 .cell-score {
     font-weight: bold;
@@ -268,7 +268,73 @@ details {
     margin-right: 10px;
     min-width: 40px;
 }
-/* -------------------end -------------------- */
+
+.player-debug-wrapper .debug-details {
+    max-height: 0;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 0.8em;
+    padding: 0 10px;
+    transition: max-height 0.2s ease-out;
+}
+
+.player-debug-wrapper.expanded .debug-details {
+    max-height: 100px; /* Adjust based on content */
+    padding: 5px 10px;
+    border-bottom: 1px solid #444;
+}
+
+/* Container for all badges */
+.dev-card-inventory {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+/* Individual Type Badge (e.g., all Knights) */
+.dev-card-badge {
+    display: flex;
+    align-items: center;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 2px 6px;
+    height: 22px; /* Fixed height keeps the row slim */
+}
+
+.card-icon-main {
+    margin-right: 6px;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.2));
+}
+
+/* Group for the numbers */
+.badge-stats {
+    display: flex;
+    gap: 5px;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    color: #eee;
+}
+
+/* Dim the zeros so they don't clutter the view */
+.stat-item.zero {
+    opacity: 0.2;
+    filter: grayscale(1);
+}
+
+/* Highlight playable cards with a slight glow */
+.stat-item:last-child:not(.zero) {
+    color: #00ff00;
+    font-weight: bold;
+}
+
+/* ------------------- debug end -------------------- */
 
 .hitbox{
     fill: rgba(0, 0, 0, 0); 

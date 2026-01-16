@@ -478,4 +478,37 @@ export class Renderer {
         // build
         const actionBtn = document.getElementById('action-btn');
     }
+
+
+    /**
+     * Display a confirmation modal for actions that require user confirmation,
+     * when confirm button is clicked, emit CONFIRM_ACTION event
+     * when cancel button is clicked, emit CANCEL_ACTION event
+     * @param {string} title - title of the confirmation modal
+     * @param {string} message - message of the confirmation modal 
+     */
+    activateActionConfirmationUI({title, message}) {
+        const temp = document.getElementById('action-confirm-template');
+        const clone = temp.content.cloneNode(true);
+        
+        // 1. Inject the text
+        clone.getElementById('confirm-title').textContent = title;
+        clone.getElementById('confirm-message').textContent = message;
+
+        // 2. Wrap the element so we can remove it later
+        const overlay = clone.getElementById('confirm-modal');
+
+        // 3. Attach Listeners
+        clone.getElementById('action-confirm-btn').onclick = () => {
+            overlay.remove();
+            this.emitInputEvent('CONFIRM_ACTION', {});
+        };
+
+        clone.getElementById('action-cancel-btn').onclick = () => {
+            overlay.remove();
+            this.emitInputEvent('CANCEL_ACTION', {});
+        };
+
+        document.body.appendChild(clone);
+    }
 }

@@ -5,6 +5,7 @@ import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
 import {COSTS} from '../constants/GameConstants.js';
+import { DevCardDeck } from '../models/DevCard.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -49,7 +50,8 @@ export class GameController {
             rng: this.rng,
             dice: new Dice(this.rng),
             currentState: GameState.SETUP,
-            lastSettlementPlaced: null // track last settlement coord placed for resource distribution
+            lastSettlementPlaced: null, // track last settlement coord placed for resource distribution
+            devCardDeck: new DevCardDeck(this.rng)
         }
 
         this.bankResources.clear();
@@ -128,6 +130,8 @@ export class GameController {
                 this.handleStateMainBuildCity(event);
                 break;
             case GameState.MAIN_BUY_DEV_CARD:
+                this.handleStateMainBuyDevCard(event);
+                break;
             case GameState.MAIN_PLAY_DEV_CARD:
                 break;
             case GameState.END:
@@ -389,6 +393,7 @@ export class GameController {
                 break;
             case 'BUY_DEV_CARD':
                 // TODO: handle buy development card
+                this.__handleEventBuyDevCard(event);
                 break;
             case 'PLAY_DEV_CARD':
                 // TODO: handle play development card
@@ -462,6 +467,14 @@ export class GameController {
         const playerSettlementCoords = playerSettlements.map(settlement => settlement.coord);
         this.activateSettlementPlacementMode(playerSettlementCoords, 2);
         this.debug.renderDebugHUD(this.gameContext, `Building city. Please place your city.`);
+    }
+
+    __handleEventBuyDevCard(event)
+    {
+        this.gameContext.currentState = GameState.MAIN_BUY_DEV_CARD;
+        // TODO: let rendere prompt to confirm purchase
+        this.renderer.activateActionConfirmationUI({title: 'Buy a Development Card', message: 'Are you sure?'});
+        this.debug.renderDebugHUD(this.gameContext, `Buying development card. Please confirm purchase.`);
     }
 
     handleStateMainBuildRoad(event) {
@@ -546,6 +559,35 @@ export class GameController {
             this.gameContext.currentState = GameState.MAIN;
             this.deactivateSettlementPlacementMode();
             this.debug.renderDebugHUD(this.gameContext, `City building cancelled.`);
+        }
+    }
+
+
+    handleStateMainBuyDevCard(event)
+    {
+        if (event.type === 'CONFIRM_ACTION') {
+            // check if player can afford dev card
+            const currentPlayer = this.getCurrentPlayer();
+            if (!currentPlayer.canAfford(COSTS.devCard)) {
+                this.gameContext.currentState = GameState.MAIN;
+                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to buy a development card.`);
+                return;
+            }
+
+            // deduct dev card cost from player and bank
+            currentPlayer.addResource(COSTS.devCard);
+            this.addBankResourceFromCost(COSTS.devCard);
+
+            // add dev card to player and render
+            const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
+            currentPlayer.addDevCard(devCard);
+            
+            this.gameContext.currentState = GameState.MAIN;
+            this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
+
+        }else if (event.type === 'CANCEL_ACTION') {
+            this.gameContext.currentState = GameState.MAIN;
+            this.debug.renderDebugHUD(this.gameContext, `Development card purchase cancelled.`);
         }
     }
 
