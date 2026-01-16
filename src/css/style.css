@@ -443,13 +443,71 @@ body {
     }
 }
 
+/* Game Over Overlay */
 .game-over-overlay {
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85); /* Dim the background game */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(8px);
+    z-index: 10000; /* Higher than debug HUD and Map */
+    backdrop-filter: blur(8px); /* Optional modern look */
 }
+
+.game-over-card {
+    background: #1e1e1e; /* Soft dark gray, easier than pure black */
+    color: #eeeeee;
+    padding: 3rem;
+    border-radius: 16px;
+    text-align: center;
+    
+    /* A very subtle, solid border */
+    border: 2px solid #444; 
+    
+    /* Large, soft shadow to make it feel like it's floating */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    
+    max-width: 450px;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.game-over-card h1 {
+    margin: 0 0 1rem;
+    font-size: 2rem;
+    color: #fff;
+}
+
+.game-over-card p {
+    color: #bbb; /* Dimmer text for descriptions */
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+/* A simple, comfortable button */
+#play-again-btn {
+    background: #007bff; /* A standard, comfortable blue */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#play-again-btn:hover {
+    background: #0056b3;
+}
+
+#winner-announcement {
+    font-size: 2.5rem;
+    color: white;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+
