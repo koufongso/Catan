@@ -24,3 +24,12 @@ export const COSTS = {
     city: { [RESOURCE_TYPES.ORE]: -3, [RESOURCE_TYPES.WHEAT]: -2 },
     devCard: { [RESOURCE_TYPES.ORE]: -1, [RESOURCE_TYPES.WOOL]: -1, [RESOURCE_TYPES.WHEAT]: -1 }
 };
+
+// initial resources in the bank
+export const INITIAL_BANK_RESOURCES = {
+    [RESOURCE_TYPES.ORE]: 19,
+    [RESOURCE_TYPES.WOOL]: 19,
+    [RESOURCE_TYPES.WHEAT]: 19,
+    [RESOURCE_TYPES.BRICK]: 19,
+    [RESOURCE_TYPES.LUMBER]: 19,
+};

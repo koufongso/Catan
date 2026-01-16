@@ -59,7 +59,20 @@ export class DebugDashboard {
                 <span class="cell-val">🃏</span>
             </div>
         `;
-        
+
+        const bankHtml = `    
+        <div id="bank-resources" class="player-debug-wrapper">
+            <div class="res-grid-row">
+                <span class="cell-id">Bank</span>
+                <span class="cell-val">--</span> 
+                ${resourceList.map(type => {
+            const amount = gameContext.bankResources.get(type) || 0;
+            return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
+        }).join('')}
+            </div>
+        </div>`
+
+
         // player info table
         const playersHtml = gameContext.players.map((p, idx) => {
             const isCurrent = idx === gameContext.currentPlayerIndex;
@@ -109,9 +122,9 @@ export class DebugDashboard {
                     </span>
                     <span class="cell-val has-res">${totalVP}</span> 
                     ${resourceList.map(type => {
-                        const amount = p.resources[type] || 0;
-                        return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
-                    }).join('')}
+                const amount = p.resources[type] || 0;
+                return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
+            }).join('')}
                     <span class="cell-val ${devCardCount > 0 ? 'has-cards' : 'is-zero'}">${devCardCount}</span>
                 </div>
                 
@@ -132,6 +145,7 @@ export class DebugDashboard {
         <div>${diceInfo}</div>
         <div class="debug-table">
             ${headerHtml}
+            ${bankHtml}
             ${playersHtml}
         </div>
         <div class="debug-log-message">${logMessage ? `💬 ${logMessage}` : ''}</div>

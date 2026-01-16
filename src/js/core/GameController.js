@@ -4,7 +4,7 @@ import { Player } from '../models/Player.js';
 import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
-import {COSTS} from '../constants/GameConstants.js';
+import {COSTS, INITIAL_BANK_RESOURCES} from '../constants/GameConstants.js';
 import { DevCardDeck } from '../models/DevCard.js';
 
 export const GameState = Object.freeze({
@@ -51,15 +51,14 @@ export class GameController {
             dice: new Dice(this.rng),
             currentState: GameState.SETUP,
             lastSettlementPlaced: null, // track last settlement coord placed for resource distribution
-            devCardDeck: new DevCardDeck(this.rng)
+            devCardDeck: new DevCardDeck(this.rng),
+            bankResources: this.bankResources
         }
 
         this.bankResources.clear();
-        Object.values(RESOURCE_TYPES).forEach(type => {
-            if (type !== RESOURCE_TYPES.DESERT) {
-                this.bankResources.set(type, 19); // standard Catan bank count
-            }
-        });
+        for (let [type, amount] of Object.entries(INITIAL_BANK_RESOURCES)) {
+            this.bankResources.set(type, amount);
+        }
     }
 
     attachRenderer(renderer) {
@@ -637,6 +636,28 @@ export class GameController {
         }
     }
 
+    /**
+     * Get resources from bank, if not enough, give whatever is left
+     * @param {Object} requestResources a resource request object {RESOURCE_TYPES: amount, ...}
+     * @returns the actual resources taken from bank
+     */
+    getResourceFromBank(requestResources) {
+        let returnedResources = {};
+        for (let [type, amount] of Object.entries(requestResources)) {
+            if (this.bankResources.has(type)) {
+                const current = this.bankResources.get(type);
+                if (current < amount) { // not enough in bank, return whatever is left
+                    returnedResources[type] = current;
+                    this.bankResources.set(type, 0);
+                } else { // enough in bank
+                    returnedResources[type] = amount;
+                    this.bankResources.set(type, current - amount);
+                }
+            }   
+        }
+        return returnedResources;
+    }
+
     addBankResourceFromCost(cost) {
         for (let [type, amount] of Object.entries(cost)) {
             if (this.bankResources.has(type)) {
@@ -773,20 +794,23 @@ export class GameController {
                 if (gameMap.settlements.has(vertexId)) {
                     const settlement = gameMap.settlements.get(vertexId);
                     const ownerId = settlement.owner;
-                    const RESOURCE_TYPES = terrain.resource;
+                    const resourceType = terrain.resource;
                     const amount = (settlement.level === 1) ? 1 : 2; // settlement gives 1, city gives 2
                     // distribute resource to player with ownerId
-                    this.distributeResourceToPlayer(ownerId, RESOURCE_TYPES, amount);
+                    this.distributeResourceToPlayer(ownerId, resourceType, amount);
                 }
             });
         });
     }
 
-    distributeResourceToPlayer(playerId, RESOURCE_TYPES, amount) {
+    distributeResourceToPlayer(playerId, resourceType, amount) {
+        // first check if bank has enough resources
+        const returnedResources = this.getResourceFromBank({[resourceType]: amount});
+
         // find the player in the game context and give them the resource
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
-            player.addResource({[RESOURCE_TYPES]: amount});
+            player.addResource(returnedResources);
         }
     }
 
