@@ -1,6 +1,7 @@
 import { GameController } from "./GameController.js";
 import { Renderer } from "../visuals/Renderer.js";
 import { DebugDashboard } from "../visuals/DebugDashboard.js";
+import { DebugController } from "../debug/DebugController.js";
 
 // Main Game Engine class
 export class GameEngine {
@@ -15,6 +16,8 @@ export class GameEngine {
         this.gameController.attachRenderer(this.renderer);
         this.gameController.attachDebug(this.debug);
         this.renderer.attachController(this.gameController);
+        
+        this.debugController = new DebugController(this.gameController);
     }
 
     async run() {
@@ -74,7 +77,7 @@ export class GameEngine {
     }
 
     executeCheat(commandText) {
-        this.gameController.executeCheat(commandText);
+        this.debugController.parse(commandText);
     }
 }
 

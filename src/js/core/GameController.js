@@ -4,7 +4,7 @@ import { Player } from '../models/Player.js';
 import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
-import {COSTS, INITIAL_BANK_RESOURCES} from '../constants/GameConstants.js';
+import { COSTS, INITIAL_BANK_RESOURCES } from '../constants/GameConstants.js';
 import { DevCardDeck } from '../models/DevCard.js';
 
 export const GameState = Object.freeze({
@@ -327,8 +327,8 @@ export class GameController {
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
         console.log("Distributing initial resources for second settlement:", adjacentResources);
         adjacentResources.forEach(RESOURCE_TYPES => {
-            currentPlayer.addResource({[RESOURCE_TYPES]: 1});
-            this.addBankResource({[RESOURCE_TYPES]: -1});
+            currentPlayer.addResources({ [RESOURCE_TYPES]: 1 });
+            this.addBankResource({ [RESOURCE_TYPES]: -1 });
         });
 
         // check if current player is the first player
@@ -413,7 +413,7 @@ export class GameController {
             // game over, render UI
             this.gameContext.currentState = GameState.END;
             this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
-        }else{
+        } else {
             // continue to next turn
             this.nextPlayer();
             this.nextTurn();
@@ -438,8 +438,8 @@ export class GameController {
                 const availableECoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, currentPlayer.id);
                 availableRoads = availableRoads.concat(availableECoords);
             });
-        });    
-        console.log("Player owned roads:", availableRoads);        
+        });
+        console.log("Player owned roads:", availableRoads);
 
         // activate road placement mode based on all settlement coords
         this.activateRoadPlacementMode(availableRoads, currentPlayer.id);
@@ -468,11 +468,10 @@ export class GameController {
         this.debug.renderDebugHUD(this.gameContext, `Building city. Please place your city.`);
     }
 
-    __handleEventBuyDevCard(event)
-    {
+    __handleEventBuyDevCard(event) {
         this.gameContext.currentState = GameState.MAIN_BUY_DEV_CARD;
         // TODO: let rendere prompt to confirm purchase
-        this.renderer.activateActionConfirmationUI({title: 'Buy a Development Card', message: 'Are you sure?'});
+        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card', message: 'Are you sure?' });
         this.debug.renderDebugHUD(this.gameContext, `Buying development card. Please confirm purchase.`);
     }
 
@@ -488,15 +487,15 @@ export class GameController {
             if (!currentPlayer.canAfford(COSTS.road)) {
                 this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a road.`);
                 return;
-            }else{
+            } else {
                 // deduct road cost from player and bank
-                currentPlayer.addResource(COSTS.road);
+                currentPlayer.addResources(COSTS.road);
                 this.addBankResourceFromCost(COSTS.road);
             }
 
             this.addRoadToPlayerAndRender(roadId, currentPlayer, 'MAIN');
             this.debug.renderDebugHUD(this.gameContext, `Road placed.`);
-        }else if (event.type === 'CANCEL_ACTION') {
+        } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
             this.deactivateRoadPlacementMode();
             this.debug.renderDebugHUD(this.gameContext, `Road building cancelled.`);
@@ -508,7 +507,7 @@ export class GameController {
             // place settlement logic
             this.gameContext.currentState = GameState.MAIN;
             this.deactivateSettlementPlacementMode();
-            
+
             const settlementId = event.vertexId;
             const currentPlayer = this.getCurrentPlayer();
 
@@ -519,13 +518,13 @@ export class GameController {
             }
 
             // deduct settlement cost from player and bank
-            currentPlayer.addResource(COSTS.settlement);
+            currentPlayer.addResources(COSTS.settlement);
             this.addBankResourceFromCost(COSTS.settlement);
             // add settlement to map and render
             this.addSettlementToPlayerAndRender(settlementId, currentPlayer);
             this.debug.renderDebugHUD(this.gameContext, `Settlement placed.`);
 
-        }else if (event.type === 'CANCEL_ACTION') {
+        } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
             this.deactivateSettlementPlacementMode();
             this.debug.renderDebugHUD(this.gameContext, `Settlement building cancelled.`);
@@ -548,13 +547,13 @@ export class GameController {
             }
 
             // deduct city cost from player and bank
-            currentPlayer.addResource(COSTS.city);
+            currentPlayer.addResources(COSTS.city);
             this.addBankResourceFromCost(COSTS.city);
             // add city to map and render
             this.addCityToPlayerAndRender(cityId, currentPlayer);
             this.debug.renderDebugHUD(this.gameContext, `City placed.`);
 
-        }else if (event.type === 'CANCEL_ACTION') {
+        } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
             this.deactivateSettlementPlacementMode();
             this.debug.renderDebugHUD(this.gameContext, `City building cancelled.`);
@@ -562,8 +561,7 @@ export class GameController {
     }
 
 
-    handleStateMainBuyDevCard(event)
-    {
+    handleStateMainBuyDevCard(event) {
         if (event.type === 'CONFIRM_ACTION') {
             // check if player can afford dev card
             const currentPlayer = this.getCurrentPlayer();
@@ -574,17 +572,17 @@ export class GameController {
             }
 
             // deduct dev card cost from player and bank
-            currentPlayer.addResource(COSTS.devCard);
+            currentPlayer.addResources(COSTS.devCard);
             this.addBankResourceFromCost(COSTS.devCard);
 
             // add dev card to player and render
             const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
             currentPlayer.addDevCard(devCard);
-            
+
             this.gameContext.currentState = GameState.MAIN;
             this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
 
-        }else if (event.type === 'CANCEL_ACTION') {
+        } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
             this.debug.renderDebugHUD(this.gameContext, `Development card purchase cancelled.`);
         }
@@ -653,7 +651,7 @@ export class GameController {
                     returnedResources[type] = amount;
                     this.bankResources.set(type, current - amount);
                 }
-            }   
+            }
         }
         return returnedResources;
     }
@@ -663,7 +661,7 @@ export class GameController {
             if (this.bankResources.has(type)) {
                 const current = this.bankResources.get(type);
                 this.bankResources.set(type, current - amount); // subtracting because cost is negative number (what player pays)
-            }   
+            }
         }
     }
 
@@ -746,7 +744,7 @@ export class GameController {
             const player = this.getCurrentPlayer();
 
             if (target === 'all') {
-                player.addResource({
+                player.addResources({
                     [RESOURCE_TYPES.BRICK]: value,
                     [RESOURCE_TYPES.LUMBER]: value,
                     [RESOURCE_TYPES.WOOL]: value,
@@ -754,8 +752,8 @@ export class GameController {
                     [RESOURCE_TYPES.ORE]: value
                 });
                 this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of all resources to Player ${player.id}`);
-            }else{
-                player.addResource({ [target]: value });
+            } else {
+                player.addResources({ [target]: value });
                 this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of resource ${target} to Player ${player.id}`);
             }
         }
@@ -805,12 +803,12 @@ export class GameController {
 
     distributeResourceToPlayer(playerId, resourceType, amount) {
         // first check if bank has enough resources
-        const returnedResources = this.getResourceFromBank({[resourceType]: amount});
+        const returnedResources = this.getResourceFromBank({ [resourceType]: amount });
 
         // find the player in the game context and give them the resource
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
-            player.addResource(returnedResources);
+            player.addResources(returnedResources);
         }
     }
 
@@ -845,7 +843,7 @@ export class GameController {
         if (!settlement || settlement.owner !== player.id || settlement.level !== 1) {
             throw new Error(`Invalid city upgrade spot: ${vertexId}`);
         }
-        
+
         // update city to map
         settlement.upgrade();
 
@@ -876,3 +874,6 @@ export class GameController {
         this.renderer.renderRoad(edgeId, player.color);
     }
 }
+
+
+
