@@ -54,9 +54,9 @@
                     <button id="buy-dev-card-btn">Buy Dev Card</button>
                     <button id="cancel-btn">Cancel</button>
                 </div>
-                    <button id="end-turn-btn">End Turn</button>
-                </div>  
+                <button id="end-turn-btn">End Turn</button>
             </div>
+        </div>
         </div>
     </template>
 
@@ -87,14 +87,25 @@
         <!-- The game will be rendered here -->
     </div>
 
-    <div id="debug-wrapper">
-        <div id="debug-dashboard">
+    <div>
+        <div id="debug-toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="debug-toggle-btn">
+                <span class="slider"></span>
+            </label>
+            <span class="debug-label">Debug Console</span>
         </div>
-        <div>
-            <textarea id="debug-input" placeholder="Enter debug command here..."></textarea>
-            <button id="debug-submit">Submit</button>
+
+        <div id="debug-wrapper" class="hidden">
+            <div id="debug-dashboard">
+            </div>
+            <div id="debug-input-area">
+                <textarea id="debug-input" placeholder="Enter debug command here..."></textarea>
+                <button id="debug-submit">Submit</button>
+            </div>
         </div>
     </div>
+
 
 
     <script type="module" src="src/js/core/GameEngine.js"></script>

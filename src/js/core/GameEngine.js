@@ -52,6 +52,25 @@ export class GameEngine {
                 handleCommand();
             }
         });
+
+        // add toggle button
+        const debugWrapper = document.getElementById('debug-wrapper');
+        const debugBtn = document.getElementById('debug-toggle-btn');
+
+        function toggleDebug() {
+            debugWrapper.classList.toggle('hidden');
+        }
+
+        // Click listener
+        debugBtn.addEventListener('click', toggleDebug);
+
+        // Keyboard listener (Tilde/Backtick key)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '`') { // The key below ESC
+                e.preventDefault();
+                toggleDebug();
+            }
+        });
     }
 
     executeCheat(commandText) {
