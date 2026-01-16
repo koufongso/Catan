@@ -1,11 +1,11 @@
-import { DevCardType, DEV_CARD_DISTRIBUTION } from "../../constants/DevCardType.js";
-import { RNG } from "../../utils/rng.js";
+import { DEV_CARD_TYPES, DEV_CARD_DISTRIBUTION } from "../../constants/DevCardType.js";
+import { RNG } from "../utils/rng.js";
 
 
 export class DevCard {
     constructor(type, turnBought) {
         // type check
-        if (!Object.values(DevCardType).includes(type)) {
+        if (!Object.values(DEV_CARD_TYPES).includes(type)) {
             throw new Error(`Invalid development card type: ${type}`);
         }
 
