@@ -4,7 +4,7 @@ import { Player } from '../models/Player.js';
 import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
-import { COSTS, INITIAL_BANK_RESOURCES } from '../constants/GameConstants.js';
+import { COSTS, INITIAL_BANK_RESOURCES, PLAYER_NAMES, PLAYER_COLORS, NUMBER_TOKENS_DISTRIBUTION } from '../constants/GameConstants.js';
 import { DevCardDeck } from '../models/DevCard.js';
 
 export const GameState = Object.freeze({
@@ -199,15 +199,12 @@ export class GameController {
         gameContext.totalPlayers = gameContext.humanPlayers + gameContext.aiPlayers;
         gameContext.seed = event.seed || Date.now();
 
-        const colors = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple'];
-        const names = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
-
         // create player instances
         for (let i = 0; i < gameContext.humanPlayers; i++) {
-            gameContext.players.push(new Player(i, names[i], colors[i], 'HUMAN'));
+            gameContext.players.push(new Player(i, PLAYER_NAMES[i], PLAYER_COLORS[i], 'HUMAN'));
         }
         for (let j = 0; j < gameContext.aiPlayers; j++) {
-            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j + 1}`, colors[gameContext.humanPlayers + j], 'AI'));
+            gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j + 1}`, PLAYER_COLORS[gameContext.humanPlayers + j], 'AI'));
         }
         // generate map
         await this.generateDefaultMap(this.gameContext.seed);
@@ -621,7 +618,7 @@ export class GameController {
             }
         });
 
-        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, { 2: 1, 3: 2, 4: 2, 5: 2, 6: 2, 8: 2, 9: 2, 10: 2, 11: 2, 12: 1 });
+        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, NUMBER_TOKENS_DISTRIBUTION);
     }
 
     isBankResourceAvailable(cost) {

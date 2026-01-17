@@ -3,8 +3,10 @@ import { RESOURCE_TYPES } from './ResourceTypes.js';
 
 // maximum number of players allowed in the game
 export const MAX_PLAYERS = 4;
+export const PLAYER_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple'];
+export const PLAYER_NAMES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
 
-export const NUMBER_TOKENS = {
+export const NUMBER_TOKENS_DISTRIBUTION = {
     2: 1,
     3: 2,
     4: 2,
