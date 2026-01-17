@@ -1,6 +1,6 @@
 import { HexUtils } from "../utils/hex-utils.js";
-import { ResourceUtils } from "../utils/resource-utils.js";
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
+import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 
 export class Terrain {
     constructor(coord, type, numberToken) {
@@ -30,7 +30,7 @@ export class Terrain {
     }
 
     isValidTerrainType(type) {
-        const validTypes = ['mountain', 'pasture', 'forest', 'field', 'hill', 'desert'];
+        const validTypes = Object.values(TERRAIN_TYPES);
         return validTypes.includes(type);
     }
 
@@ -57,12 +57,12 @@ export class Terrain {
     assignResource() {
         // A simple mapping within the class
         const map = {
-            mountain: RESOURCE_TYPES.ORE,
-            pasture: RESOURCE_TYPES.WOOL,
-            forest: RESOURCE_TYPES.LUMBER,
-            field: RESOURCE_TYPES.WHEAT,
-            hill: RESOURCE_TYPES.BRICK,
-            desert: null
+            [TERRAIN_TYPES.MOUNTAIN]: RESOURCE_TYPES.ORE,
+            [TERRAIN_TYPES.PASTURE]: RESOURCE_TYPES.WOOL,
+            [TERRAIN_TYPES.FOREST]: RESOURCE_TYPES.LUMBER,
+            [TERRAIN_TYPES.FIELD]: RESOURCE_TYPES.WHEAT,
+            [TERRAIN_TYPES.HILL]: RESOURCE_TYPES.BRICK,
+            [TERRAIN_TYPES.DESERT]: null
         };
         this.resource = map[this.type];
     }

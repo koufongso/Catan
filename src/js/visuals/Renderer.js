@@ -1,5 +1,6 @@
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { HexUtils } from "../utils/hex-utils.js";
+import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 
 
 // constants for hex geometry
@@ -561,7 +562,7 @@ export class Renderer {
         const cardDiv = clone.querySelector('.card-container');
         const img = clone.querySelector('.card-image');
 
-        img.src = `./src/assets/images/cards/${type.toLowerCase()}.png`;
+        img.src = TEXTURE_PATHS.CARD[type];
         img.alt = `${type} Card`;
         cardDiv.classList.add('resource-card');
         return clone;
@@ -578,7 +579,7 @@ export class Renderer {
         const cardDiv = clone.querySelector('.card-container');
         const img = clone.querySelector('.card-image');
 
-        img.src = `./src/assets/images/cards/${devCard.type.toLowerCase()}.png`;
+        img.src = TEXTURE_PATHS.CARD[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
         cardDiv.classList.add('dev-card');
         console.log("current turn number:", currentTurnNumber, "dev card:", devCard); 
