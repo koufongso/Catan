@@ -41,6 +41,12 @@
                 <g id="vertex-layer"></g>
             </svg>
 
+            <!-- Show player hands -->
+            <div id="player-hands-container"></div>
+
+            <!-- Show player used dev cards -->
+            <div id="player-used-devcards-container"></div>
+
             <div id="ui-layer">
                 <div id="dice-layer">
                     <div id="dice-result">Roll: 0 + 0 = 0</div>
@@ -56,7 +62,6 @@
                 </div>
                 <button id="end-turn-btn">End Turn</button>
             </div>
-        </div>
         </div>
     </template>
 
@@ -106,6 +111,11 @@
         </div>
     </div>
 
+    <template id="card-template">
+        <div class="card-container">
+            <img class="card-image" src="" alt="Card Image">
+        </div>
+    </template>
 
 
     <script type="module" src="src/js/core/GameEngine.js"></script>

@@ -511,4 +511,82 @@ export class Renderer {
 
         document.body.appendChild(clone);
     }
+
+
+    /**
+     * Render the card
+     * @param {Object} resources  {[RESOURCE_TYPES]: amount}, ...}
+     * @param {Array} devCards list of dev card types
+     */
+    renderPlayerAssets(player, currentTurnNumber) {
+        const hands = player.getHands();
+        console.log("Rendering player hands:", hands);
+        const resources = hands['resources']; // resource is an object {RESOURCE_TYPE: amount, ...}
+        const devCards = hands['devCards'];   // devCards is an array of dev card objects
+
+
+        const handsContainer = document.getElementById('player-hands-container');
+        const usedDevCardsContainer = document.getElementById('player-used-devcards-container');
+        handsContainer.innerHTML = ''; // clear existing content
+        usedDevCardsContainer.innerHTML = ''; // clear existing content
+
+        // resource resources
+        console.log("Rendering resources:", resources); 
+        for (const [type, amount] of Object.entries(resources)) {
+            for (let i = 0; i < amount; i++) {
+                const cardHtml = this.createResourceCardHtml(type);
+                handsContainer.appendChild(cardHtml);
+            }
+        }
+
+        // dev cards
+        console.log("Rendering dev cards:", devCards);
+        devCards.forEach(card => {
+            if (card.isPlayed()) {
+                return; // skip played cards
+            }
+            const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
+            handsContainer.appendChild(cardHtml);
+        });
+    }
+
+
+    /**
+     * Create a resource card HTML element
+     * @param {RESOURCE_TYPES} type 
+     */
+    createResourceCardHtml(type) {
+        const template = document.getElementById('card-template');
+        const clone = template.content.cloneNode(true);
+        const cardDiv = clone.querySelector('.card-container');
+        const img = clone.querySelector('.card-image');
+
+        img.src = `./src/assets/images/cards/${type.toLowerCase()}.png`;
+        img.alt = `${type} Card`;
+        cardDiv.classList.add('resource-card');
+        return clone;
+    }
+
+    /**
+     * Create a dev card HTML element
+     * @param {DevCard} devCard a dev card object
+     * @param {number} currentTurnNumber the current turn number (use to check if dev card is locked)
+     */
+    createDevCardHtml(devCard, currentTurnNumber) {
+        const template = document.getElementById('card-template');
+        const clone = template.content.cloneNode(true);
+        const cardDiv = clone.querySelector('.card-container');
+        const img = clone.querySelector('.card-image');
+
+        img.src = `./src/assets/images/cards/${devCard.type.toLowerCase()}.png`;
+        img.alt = `${devCard.type} Dev Card`;
+        cardDiv.classList.add('dev-card');
+        console.log("current turn number:", currentTurnNumber, "dev card:", devCard); 
+        if (devCard.isLocked(currentTurnNumber)) {
+            cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
+        }
+
+        return clone;
+    }
+
 }

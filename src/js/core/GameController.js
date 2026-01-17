@@ -330,6 +330,7 @@ export class GameController {
             currentPlayer.addResources({ [RESOURCE_TYPES]: 1 });
             this.addBankResource({ [RESOURCE_TYPES]: -1 });
         });
+        this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
 
         // check if current player is the first player
         if (this.gameContext.currentPlayerIndex === 0) {
@@ -365,6 +366,7 @@ export class GameController {
             console.log("Robber rolled! (Not implemented yet)");
         } else {
             this.distributeResourcesByRoll(rolledNumber);
+            this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
         }
 
         // transition to MAIN state
@@ -412,11 +414,13 @@ export class GameController {
         if (winner.length > 0) {
             // game over, render UI
             this.gameContext.currentState = GameState.END;
+            this.renderer.renderGameOver(winner);
             this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
         } else {
             // continue to next turn
             this.nextPlayer();
             this.nextTurn();
+            this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber); // update to next player's aseets
             this.gameContext.currentState = GameState.ROLL;
             this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
         }
@@ -487,13 +491,16 @@ export class GameController {
             if (!currentPlayer.canAfford(COSTS.road)) {
                 this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a road.`);
                 return;
-            } else {
-                // deduct road cost from player and bank
-                currentPlayer.addResources(COSTS.road);
-                this.addBankResourceFromCost(COSTS.road);
-            }
+            } 
 
+            // successfully placed road
+            // deduct road cost from player and bank
+            currentPlayer.addResources(COSTS.road);
+            this.addBankResourceFromCost(COSTS.road);
+            // add road to map and render
             this.addRoadToPlayerAndRender(roadId, currentPlayer, 'MAIN');
+
+            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
             this.debug.renderDebugHUD(this.gameContext, `Road placed.`);
         } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
@@ -522,6 +529,7 @@ export class GameController {
             this.addBankResourceFromCost(COSTS.settlement);
             // add settlement to map and render
             this.addSettlementToPlayerAndRender(settlementId, currentPlayer);
+            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
             this.debug.renderDebugHUD(this.gameContext, `Settlement placed.`);
 
         } else if (event.type === 'CANCEL_ACTION') {
@@ -549,6 +557,8 @@ export class GameController {
             // deduct city cost from player and bank
             currentPlayer.addResources(COSTS.city);
             this.addBankResourceFromCost(COSTS.city);
+            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
+
             // add city to map and render
             this.addCityToPlayerAndRender(cityId, currentPlayer);
             this.debug.renderDebugHUD(this.gameContext, `City placed.`);
@@ -579,8 +589,10 @@ export class GameController {
             const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
             currentPlayer.addDevCard(devCard);
 
-            this.gameContext.currentState = GameState.MAIN;
+            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
             this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
+
+            this.gameContext.currentState = GameState.MAIN;
 
         } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
@@ -733,47 +745,6 @@ export class GameController {
     }
 
 
-    executeCheat(inputString) {
-        const parts = inputString.split('_');
-        const action = parts[0].toLowerCase(); // e.g., "/add"
-
-
-        if (action === '/add') {
-            const target = parts[1]?.toLowerCase(); // e.g., "wheat"
-            const value = parseInt(parts[2]);      // e.g., 5
-            const player = this.getCurrentPlayer();
-
-            if (target === 'all') {
-                player.addResources({
-                    [RESOURCE_TYPES.BRICK]: value,
-                    [RESOURCE_TYPES.LUMBER]: value,
-                    [RESOURCE_TYPES.WOOL]: value,
-                    [RESOURCE_TYPES.WHEAT]: value,
-                    [RESOURCE_TYPES.ORE]: value
-                });
-                this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of all resources to Player ${player.id}`);
-            } else {
-                player.addResources({ [target]: value });
-                this.debug.renderDebugHUD(this.gameContext, `Cheat: Added ${value} of resource ${target} to Player ${player.id}`);
-            }
-        }
-
-        if (action === '/setvp') {
-            const value = parseInt(parts[1]);
-            const player = this.getCurrentPlayer();
-            player.achievements.cheatVP += value;
-            this.debug.renderDebugHUD(this.gameContext, `Cheat: Set VP for Player ${player.id} to ${player.getVictoryPoints()}`);
-        }
-
-        if (action === '/dist') {
-            const rolledNumber = parseInt(parts[1]);
-
-            this.distributeResourcesByRoll(rolledNumber);
-            this.debug.renderDebugHUD(this.gameContext, `Cheat: Rolled a ${rolledNumber} and distributed resources accordingly.`);
-        }
-    }
-
-
     /**
      * Distribute resources to players based on the rolled number.
      * @param {*} rolledNumber 
@@ -806,7 +777,7 @@ export class GameController {
         const returnedResources = this.getResourceFromBank({ [resourceType]: amount });
 
         // find the player in the game context and give them the resource
-        const player = this.gameContext.players.find(p => p.id === playerId);
+        const player = this.gameContext.players[playerId];
         if (player) {
             player.addResources(returnedResources);
         }

@@ -5,7 +5,8 @@ export class DebugController {
     constructor(gameController) {
         this.controller = gameController; // reference to the main game controller
         this.gameContext = gameController.gameContext; // shared game state
-        this.debug = gameController.debug; // reference to the debug dashboard 
+        this.debug = gameController.debug; // reference to the debug dashboard
+        this.renderer = gameController.renderer; // reference to the renderer
 
 
         // cheat commands
@@ -21,6 +22,10 @@ export class DebugController {
                 const player = this.gameContext.players[playerIndex];
                 player.addResources({ [type]: parseInt(qty) });
                 this.debug.renderDebugHUD(this.gameContext, `Added ${qty} ${type} to Player ${playerIndex}`);
+                
+                if (playerIndex === this.gameContext.currentPlayerIndex) {
+                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                }
             },
 
             /**
@@ -37,6 +42,10 @@ export class DebugController {
                     player.addResources({ [type]: amount });
                 }
                 this.debug.renderDebugHUD(this.gameContext, `Added ${qty} of all resources to Player ${playerIndex}`);
+
+                if (playerIndex === this.gameContext.currentPlayerIndex) {
+                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                }
             },
 
             /**
@@ -51,6 +60,11 @@ export class DebugController {
                 const player = this.gameContext.players[playerIndex];
                 player.achievements.cheatVP += parseInt(amount);
                 this.debug.renderDebugHUD(this.gameContext, `Added ${amount} cheat VP to Player ${playerIndex}`);
+                
+                if (playerIndex === this.gameContext.currentPlayerIndex) {
+                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                }
+                // note: since VP are added as bunus cheat VP, no need to re-render assets
             },
 
             /**
@@ -72,6 +86,7 @@ export class DebugController {
                     return;
                 } else {
                     this.controller.distributeResourcesByRoll(diceValue);
+                    this.renderer.renderPlayerAssets(this.gameContext.players[this.gameContext.currentPlayerIndex], this.gameContext.turnNumber);
                 }
                 this.debug.renderDebugHUD(this.gameContext, `Forced dice roll to ${diceValue}`);
             },

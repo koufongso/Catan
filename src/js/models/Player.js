@@ -101,7 +101,7 @@ export class Player {
     }
 
     getHands(){
-        return {'resource':this.resources, 'devCard':this.getDevCards()};
+        return {'resources':this.resources, 'devCards':this.getDevCards()};
     }
 
     // helper function to get all owned assets ids

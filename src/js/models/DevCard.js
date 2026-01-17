@@ -29,8 +29,11 @@ export class DevCard {
     }
 
     isLocked(currentTurnNumber) {
-        // locked if bought this turn
-        return currentTurnNumber <= this.turnBought;
+        if (currentTurnNumber === undefined) {
+            throw new Error("Current turn number is required to check if dev card is locked");
+        }
+        // locked if bought this turn, except for victory point cards
+        return (this.type !== DEV_CARD_TYPES.VICTORY_POINT && currentTurnNumber <= this.turnBought);
     }
 
     isPlayed() {

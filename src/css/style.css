@@ -7,7 +7,6 @@ body {
     padding: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
 }
 
 #map-svg {
@@ -511,3 +510,60 @@ body {
 }
 
 
+
+/* ============================================================
+ 5. PLAYER HANDS & ASSETS
+ ============================================================= */
+#player-hands-container{
+    display: block;
+    justify-content: center; /* Keeps the cards centered in your hand */
+    align-items: flex-end;   /* Aligns cards to the bottom */
+    width: 1000px;           /* Set this to the maximum width of your hand area */
+    height: 130px;
+    padding: 20px;
+    border: 2px dashed rgba(255,255,255,0.2); /* Just to see the container */
+    
+    overflow: visible;  /* Allows cards to overflow if needed */
+}
+
+
+.card-container {
+    width: 100px;
+    height: auto;
+    border-radius: 11px;
+    overflow: hidden;
+    display: inline-flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    margin-left: -40px; /* Overlap effect */
+    
+    /* 1. Setup the transition (how long the move takes) */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    
+    /* Original Shadow */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    cursor: pointer; /* Makes it feel interactive */
+}
+
+/* 2. The Hover State */
+.card-container:hover {
+    /* 3. Move it up (negative Y) */
+    transform: translateY(-10px);
+    
+    /* 4. Make the shadow deeper to simulate height */
+    box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+}
+
+.card-image {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+.card-container:first-child {
+    margin-left: 0;
+}
+
+.dev-card-locked{ /* Locked Dev Card Style */
+    filter: grayscale(1);
+}
