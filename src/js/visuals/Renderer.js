@@ -1,6 +1,7 @@
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { HexUtils } from "../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../constants/GameConstants.js";
+import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 
 
 // constants for hex geometry
@@ -21,14 +22,14 @@ export class Renderer {
     }
 
 
-    drawHex(layer, terrain) {
+    drawHex(tileLayer, terrain) {
         const hexPoly = this.createPolygon(
             terrain.coord,
             terrain.type,
             terrain.id,
             this.hexSize
         );
-        layer.appendChild(hexPoly);
+        tileLayer.appendChild(hexPoly);
     }
 
     drawToken(layer, terrain) {
@@ -114,7 +115,7 @@ export class Renderer {
 
         // Use <image> for the .png file
         const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "image");
-        robberImg.setAttributeNS("http://www.w3.org/1999/xlink", "href", "./src/assets/images/robber.png");
+        robberImg.setAttributeNS("http://www.w3.org/1999/xlink", "href", TEXTURE_PATHS.UI.ROBBER);
 
         // Center the image over the hex (SVG images draw from top-left)
         robberImg.setAttribute("x", x - size / 2);
@@ -144,6 +145,7 @@ export class Renderer {
 
         // Group the layers into a clean object
         const layers = {
+            defs: clone.getElementById('defs-layer'),
             tiles: clone.getElementById('tile-layer'),
             vertices: clone.getElementById('vertex-layer'),
             edges: clone.getElementById('edge-layer')
@@ -160,6 +162,30 @@ export class Renderer {
 
     renderMainUI(terrains, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
+        
+        // set up defs for terrain patterns
+        let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        layers.defs.appendChild(defs);
+
+        for (const [type, path] of Object.entries(TEXTURE_PATHS.TERRAINS)) {
+            const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+            console.log("Creating pattern for:", type, path);
+            pattern.setAttribute("id", `pattern-${type.toLowerCase()}`);
+            pattern.setAttribute("patternContentUnits", "objectBoundingBox");
+            pattern.setAttribute("width", "1");
+            pattern.setAttribute("height", "1");
+
+            const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            image.setAttributeNS("http://www.w3.org/1999/xlink", "href", path);
+            image.setAttribute("x", "0");
+            image.setAttribute("y", "0");
+            image.setAttribute("width", "1");
+            image.setAttribute("height", "1");
+            image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+
+            pattern.appendChild(image);
+            defs.appendChild(pattern);
+        }
 
         terrains.forEach(t => {
             this.drawHex(layers.tiles, t);
@@ -213,22 +239,24 @@ export class Renderer {
 
 
 
-    createPolygon(coord, resource, id, hexSize = this.hexSize) {
+    createPolygon(coord, type, id, hexSize = this.hexSize) {
         let SVG_NS = "http://www.w3.org/2000/svg";
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
         const points = [];
         const [x0, y0] = HexUtils.hexToPixel(coord, hexSize);
+        const renderHexSize = 0.94 * hexSize; // slightly smaller for better visuals
         for (let i = 0; i < 6; i++) {
             const angle = RAD60 * i + RAD30; // 30 degree offset
-            const x = hexSize * Math.cos(angle) + x0;
-            const y = - hexSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
+            const x = renderHexSize * Math.cos(angle) + x0;
+            const y = - renderHexSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
             points.push(`${x},${y}`);
         }
         poly.setAttribute("points", points.join(" "));
 
         // set class based on resource type for styling
-        poly.setAttribute("class", `hex-tile ${resource.toLowerCase()}`);
+        poly.setAttribute("fill", `url(#pattern-${type.toLowerCase()})`);
+        poly.setAttribute("class", `hex-tile`);
         poly.dataset.id = id;
 
         return poly;
@@ -562,7 +590,7 @@ export class Renderer {
         const cardDiv = clone.querySelector('.card-container');
         const img = clone.querySelector('.card-image');
 
-        img.src = TEXTURE_PATHS.CARD[type];
+        img.src = TEXTURE_PATHS.CARDS[type];
         img.alt = `${type} Card`;
         cardDiv.classList.add('resource-card');
         return clone;
@@ -579,7 +607,7 @@ export class Renderer {
         const cardDiv = clone.querySelector('.card-container');
         const img = clone.querySelector('.card-image');
 
-        img.src = TEXTURE_PATHS.CARD[devCard.type];
+        img.src = TEXTURE_PATHS.CARDS[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
         cardDiv.classList.add('dev-card');
         console.log("current turn number:", currentTurnNumber, "dev card:", devCard); 

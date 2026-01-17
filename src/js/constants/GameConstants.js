@@ -1,5 +1,6 @@
 import { DEV_CARD_TYPES } from './DevCardTypes.js';
 import { RESOURCE_TYPES } from './ResourceTypes.js';
+import { TERRAIN_TYPES } from './TerrainTypes.js';
 
 // maximum number of players allowed in the game
 export const MAX_PLAYERS = 4;
@@ -38,15 +39,15 @@ export const INITIAL_BANK_RESOURCES = {
 };
 
 export const TEXTURE_PATHS = {
-    TERRAIN: {
-        FOREST: '/src/assets/terrain/forest.png',       // Wood
-        HILLS: '/src/assets/terrain/hills.png',         // Brick
-        PASTURE: '/src/assets/terrain/pasture.png',     // Wool
-        FIELDS: '/src/assets/terrain/fields.png',       // Wheat
-        MOUNTAINS: '/src/assets/terrain/mountains.png', // Ore
-        DESERT: '/src/assets/terrain/desert.png'
+    TERRAINS: {
+        [TERRAIN_TYPES.FOREST]: '/src/assets/images/terrains/forest.png',       // Wood
+        [TERRAIN_TYPES.HILL]: '/src/assets/images/terrains/hill.png',         // Brick
+        [TERRAIN_TYPES.PASTURE]: '/src/assets/images/terrains/pasture.png',     // Wool
+        [TERRAIN_TYPES.FIELD]: '/src/assets/images/terrains/field.png',       // Wheat
+        [TERRAIN_TYPES.MOUNTAIN]: '/src/assets/images/terrains/mountain.png', // Ore
+        [TERRAIN_TYPES.DESERT]: '/src/assets/images/terrains/desert.png'
     },
-    CARD:{
+    CARDS:{
         [DEV_CARD_TYPES.KNIGHT]: '/src/assets/images/cards/knight.png',
         [DEV_CARD_TYPES.VICTORY_POINT]: '/src/assets/images/cards/victory_point.png',
         [DEV_CARD_TYPES.ROAD_BUILDING]: '/src/assets/images/cards/road_building.png',

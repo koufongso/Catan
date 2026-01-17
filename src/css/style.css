@@ -16,8 +16,10 @@ body {
 
 /* Terrain & Tiles */
 .hex-tile {
-    stroke: #555;
-    stroke-width: 2px;
+    stroke: #EFD999;
+    stroke-width: 5px;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
 .forest {
