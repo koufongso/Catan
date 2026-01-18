@@ -37,30 +37,16 @@ export class Renderer {
         if (terrain.numberToken === null || terrain.numberToken === 7) return;
 
         const [x, y] = HexUtils.hexToPixel(terrain.coord, this.hexSize);
-        const isHighProb = (terrain.numberToken === 6 || terrain.numberToken === 8);
-
-        // Create Group for the token to keep SVG organized
-        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        group.setAttribute("class", "token-group");
 
         // The White Circle
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("cx", x);
         circle.setAttribute("cy", y);
-        circle.setAttribute("r", this.hexSize * 0.3);
-        circle.setAttribute("class", `number-token-circle ${isHighProb ? 'high-probability' : ''}`);
+        circle.setAttribute("r", this.hexSize / 2 * 0.9);
+        circle.setAttribute("class", `token-circle token-number`);
+        circle.setAttribute("fill", `url(#pattern-number-${terrain.numberToken})`);
 
-        // The Text
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", x);
-        text.setAttribute("y", y + 2.5);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("class", `number-token ${isHighProb ? 'high-probability' : ''}`);
-        text.textContent = terrain.numberToken;
-
-        group.appendChild(circle);
-        group.appendChild(text);
-        layer.appendChild(group);
+        layer.appendChild(circle);
     }
 
     drawTradingPost(layer, tp) {
@@ -107,34 +93,15 @@ export class Renderer {
         if (!robberTileCoord) return;
         console.log("Drawing robber at:", robberTileCoord);
         const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
-        const size = this.hexSize * 0.8; // Adjust size as needed
 
         // Create a group to center the image/text easily
-        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        group.setAttribute("class", "robber-group");
-
-        // Use <image> for the .png file
-        const robberImg = document.createElementNS("http://www.w3.org/2000/svg", "image");
-        robberImg.setAttributeNS("http://www.w3.org/1999/xlink", "href", TEXTURE_PATHS.UI.ROBBER);
-
-        // Center the image over the hex (SVG images draw from top-left)
-        robberImg.setAttribute("x", x - size / 2);
-        robberImg.setAttribute("y", y - size / 2);
-        robberImg.setAttribute("width", size);
-        robberImg.setAttribute("height", size);
-        robberImg.setAttribute("class", "robber-icon");
-
-        // Optional: Keep the "R" text as a fallback or label
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", x);
-        text.setAttribute("y", y + 5);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("class", "robber-label");
-        text.textContent = "R";
-
-        group.appendChild(robberImg);
-        group.appendChild(text);
-        layer.appendChild(group);
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", this.hexSize / 2 * 0.9);
+        circle.setAttribute("class", "token-circle token-robber");
+        circle.setAttribute("fill", `url(#pattern-robber)`);
+        layer.appendChild(circle);
     }
 
     setupTemplate() {
@@ -160,13 +127,11 @@ export class Renderer {
         wrapper.appendChild(clone); // add the new one
     }
 
-    renderMainUI(terrains, tradingPosts, robberCoord) {
-        const { clone, layers } = this.setupTemplate();
-        
-        // set up defs for terrain patterns
+    setupPatterns(layer) {
+        // create defs element
         let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        layers.defs.appendChild(defs);
 
+        // pattern definitions for each terrain type
         for (const [type, path] of Object.entries(TEXTURE_PATHS.TERRAINS)) {
             const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
             console.log("Creating pattern for:", type, path);
@@ -187,15 +152,64 @@ export class Renderer {
             defs.appendChild(pattern);
         }
 
+        // patterns definition for robber token
+        const robberPattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+        robberPattern.setAttribute("id", `pattern-robber`);
+        robberPattern.setAttribute("patternContentUnits", "objectBoundingBox");
+        robberPattern.setAttribute("width", "1");
+        robberPattern.setAttribute("height", "1");
+
+        const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        image.setAttributeNS("http://www.w3.org/1999/xlink", "href", TEXTURE_PATHS.TOKENS.ROBBER);
+        
+        image.setAttribute("x", "0");
+        image.setAttribute("y", "0");
+        image.setAttribute("width", "1");
+        image.setAttribute("height", "1");
+        image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+        robberPattern.appendChild(image);
+        defs.appendChild(robberPattern);
+
+        // patern for number token
+        for (const [number, path] of Object.entries(TEXTURE_PATHS.TOKENS.NUMBERS)) {
+            const tokenPattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+            tokenPattern.setAttribute("id", `pattern-number-${number}`);
+            tokenPattern.setAttribute("patternContentUnits", "objectBoundingBox");
+            tokenPattern.setAttribute("width", "1");
+            tokenPattern.setAttribute("height", "1");
+
+            const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            image.setAttributeNS("http://www.w3.org/1999/xlink", "href", path);
+            image.setAttribute("x", "0");
+            image.setAttribute("y", "0");
+            image.setAttribute("width", "1");
+            image.setAttribute("height", "1");
+            image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+            tokenPattern.appendChild(image);
+            defs.appendChild(tokenPattern);
+        }
+
+        layer.appendChild(defs);
+    }
+
+    renderMainUI(terrains, tradingPosts, robberCoord) {
+        const { clone, layers } = this.setupTemplate();
+
+        // set up defs for patterns
+        this.setupPatterns(layers.defs);
+
+        // draw terrains
         terrains.forEach(t => {
             this.drawHex(layers.tiles, t);
             this.drawToken(layers.tiles, t);
         });
 
+        // draw trading posts
         tradingPosts.forEach(tp => {
             this.drawTradingPost(layers.tiles, tp);
         });
 
+        // draw robber
         this.drawRobber(layers.tiles, robberCoord);
 
         // add action buttons event listeners
@@ -503,7 +517,7 @@ export class Renderer {
         diceBtn.onclick = null;
     }
 
-        activateActionBtnMode(){
+    activateActionBtnMode() {
         // build
         const actionBtn = document.getElementById('action-btn');
     }
@@ -516,10 +530,10 @@ export class Renderer {
      * @param {string} title - title of the confirmation modal
      * @param {string} message - message of the confirmation modal 
      */
-    activateActionConfirmationUI({title, message}) {
+    activateActionConfirmationUI({ title, message }) {
         const temp = document.getElementById('action-confirm-template');
         const clone = temp.content.cloneNode(true);
-        
+
         // 1. Inject the text
         clone.getElementById('confirm-title').textContent = title;
         clone.getElementById('confirm-message').textContent = message;
@@ -560,7 +574,7 @@ export class Renderer {
         usedDevCardsContainer.innerHTML = ''; // clear existing content
 
         // resource resources
-        console.log("Rendering resources:", resources); 
+        console.log("Rendering resources:", resources);
         for (const [type, amount] of Object.entries(resources)) {
             for (let i = 0; i < amount; i++) {
                 const cardHtml = this.createResourceCardHtml(type);
@@ -610,7 +624,7 @@ export class Renderer {
         img.src = TEXTURE_PATHS.CARDS[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
         cardDiv.classList.add('dev-card');
-        console.log("current turn number:", currentTurnNumber, "dev card:", devCard); 
+        console.log("current turn number:", currentTurnNumber, "dev card:", devCard);
         if (devCard.isLocked(currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
         }

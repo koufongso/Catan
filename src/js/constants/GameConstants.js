@@ -47,7 +47,7 @@ export const TEXTURE_PATHS = {
         [TERRAIN_TYPES.MOUNTAIN]: '/src/assets/images/terrains/mountain.png', // Ore
         [TERRAIN_TYPES.DESERT]: '/src/assets/images/terrains/desert.png'
     },
-    CARDS:{
+    CARDS: {
         [DEV_CARD_TYPES.KNIGHT]: '/src/assets/images/cards/knight.png',
         [DEV_CARD_TYPES.VICTORY_POINT]: '/src/assets/images/cards/victory_point.png',
         [DEV_CARD_TYPES.ROAD_BUILDING]: '/src/assets/images/cards/road_building.png',
@@ -59,8 +59,22 @@ export const TEXTURE_PATHS = {
         [RESOURCE_TYPES.ORE]: '/src/assets/images/cards/ore.png',
         [RESOURCE_TYPES.WOOL]: '/src/assets/images/cards/wool.png',
     },
+    TOKENS: {
+        NUMBERS: {
+            2: '/src/assets/images/tokens/2_token.png',
+            3: '/src/assets/images/tokens/3_token.png',
+            4: '/src/assets/images/tokens/4_token.png',
+            5: '/src/assets/images/tokens/5_token.png',
+            6: '/src/assets/images/tokens/6_token.png',
+            8: '/src/assets/images/tokens/8_token.png',
+            9: '/src/assets/images/tokens/9_token.png',
+            10: '/src/assets/images/tokens/10_token.png',
+            11: '/src/assets/images/tokens/11_token.png',
+            12: '/src/assets/images/tokens/12_token.png',
+        },
+        ROBBER: '/src/assets/images/tokens/robber_token.png'
+    },
     UI: {
-        ROBBER: '/src/assets/images/ui/robber_token.png',
         PORT_ICON: '/src/assets/images/ui/port_icon.png'
     }
 }
