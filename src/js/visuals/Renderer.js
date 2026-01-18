@@ -2,6 +2,7 @@ import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { HexUtils } from "../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
+import { Player } from "../models/Player.js";
 
 
 // constants for hex geometry
@@ -562,25 +563,56 @@ export class Renderer {
      * @param {Array} devCards list of dev card types
      */
     renderPlayerAssets(player, currentTurnNumber) {
-        const hands = player.getHands();
-        console.log("Rendering player hands:", hands);
-        const resources = hands['resources']; // resource is an object {RESOURCE_TYPE: amount, ...}
-        const devCards = hands['devCards'];   // devCards is an array of dev card objects
+        this.renderPlayerResourceCards(player);
+        this.renderPlayerDevCards(player, currentTurnNumber);
+    }
 
+    /**
+     * Render the resource cards in player's hand (regular hand display)
+     * @param {*} player 
+     */
+    renderPlayerResourceCards(player) {
+        const resourcesContainer = document.getElementById('player-hands-resources-container');
+        this.__renderPlayerResources(player, resourcesContainer);
+    }
 
-        const handsContainer = document.getElementById('player-hands-container');
-        const usedDevCardsContainer = document.getElementById('player-used-devcards-container');
-        handsContainer.innerHTML = ''; // clear existing content
-        usedDevCardsContainer.innerHTML = ''; // clear existing content
+    /**
+     * Generic helper to render resources into ANY container.
+     * @param {Player} player player object
+     * @param {*} container the target container to render into
+     * @param {*} onCardClick callback when a card is clicked (optional)
+     */
+    __renderPlayerResources(player, container, onCardClick = null) {
+                const resources = player.getResources();
+        container.innerHTML = ''; // clear existing content
 
         // resource resources
-        console.log("Rendering resources:", resources);
         for (const [type, amount] of Object.entries(resources)) {
             for (let i = 0; i < amount; i++) {
                 const cardHtml = this.createResourceCardHtml(type);
-                handsContainer.appendChild(cardHtml);
+                const cardDiv = cardHtml.querySelector('.card-container');
+                if (onCardClick) {
+                    cardDiv.onclick = () => onCardClick(type, cardDiv);
+                }
+                container.appendChild(cardHtml);
             }
         }
+    }
+
+    renderPlayerDevCards(player, currentTurnNumber) {
+        const devCards = player.getDevCards();
+        const devCardsContainer = document.getElementById('player-hands-devcards-container');
+        const usedDevCardsContainer = document.getElementById('player-used-devcards-container');
+        devCardsContainer.innerHTML = '';
+        usedDevCardsContainer.innerHTML = ''; // clear existing content
+
+        // used dev cards
+        devCards.forEach(card => {
+            if (card.isPlayed()) {
+                const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
+                usedDevCardsContainer.appendChild(cardHtml);
+            }
+        });
 
         // dev cards
         console.log("Rendering dev cards:", devCards);
@@ -589,7 +621,7 @@ export class Renderer {
                 return; // skip played cards
             }
             const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
-            handsContainer.appendChild(cardHtml);
+            devCardsContainer.appendChild(cardHtml);
         });
     }
 
@@ -602,6 +634,7 @@ export class Renderer {
         const template = document.getElementById('card-template');
         const clone = template.content.cloneNode(true);
         const cardDiv = clone.querySelector('.card-container');
+        cardDiv.dataset.type = type;
         const img = clone.querySelector('.card-image');
 
         img.src = TEXTURE_PATHS.CARDS[type];
@@ -630,6 +663,86 @@ export class Renderer {
         }
 
         return clone;
+    }
+
+    /**
+     * Let the player select cards to discard
+     * @param {*} player 
+     */
+    activateDiscardSelectionMode(player) {
+        // render text (not implemented yet)
+        // TODO: prompt/notify the player to discard cards
+
+        // render player's hands with selectable cards (only show the resources for now)
+        // grab the overlay template
+        const modalWindowTemplate = document.getElementById('universal-modal-template');
+        const clone = modalWindowTemplate.content.cloneNode(true);
+
+        const overlay = clone.querySelector('.modal-overlay');
+        overlay.id = 'discard-modal-overlay';
+        const modalCard = clone.querySelector('.modal-card');
+        const numCardsToDiscard = Math.floor(player.getTotalResourceCount() / 2);
+
+        const modelTitle = modalCard.querySelector('#modal-title')
+        modelTitle.textContent = `${player.name}: Select ${numCardsToDiscard} Cards to Discard (0/${numCardsToDiscard})`;
+        
+        // add confirm button (disable when not enough cards selected, enable when enough)
+        const btns = clone.querySelector('#modal-btns');
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Confirm Discard';
+        confirmBtn.classList.add('btn-disabled');
+        confirmBtn.disabled = true; // initially disabled
+        btns.appendChild(confirmBtn);
+
+        // render player's resource cards into the modal body
+        const modalBody  = modalCard.querySelector('#modal-body');
+        this.__renderPlayerResources(player, modalBody, (clickedType, cardDiv) => {
+            // card clicked, first check how many are selected
+            const selectedCards = modalBody.querySelectorAll('.discard-selected');
+            if (selectedCards.length >= numCardsToDiscard && !cardDiv.classList.contains('discard-selected')) {
+                // already selected enough and trying to select more (is not selected yet)
+                return;
+            }
+
+            // can be selected/deselected
+            cardDiv.classList.toggle('discard-selected');
+
+            // update the title with current count
+            const newSelectedCards = modalBody.querySelectorAll('.discard-selected');
+            modelTitle.textContent = `${player.name}:Select ${numCardsToDiscard} Cards to Discard (${newSelectedCards.length}/${numCardsToDiscard})`;
+
+            // update the confirm button state
+            confirmBtn.disabled = newSelectedCards.length < numCardsToDiscard;
+            if (confirmBtn.disabled) {
+                confirmBtn.classList.add('btn-disabled');
+                confirmBtn.classList.remove('btn-primary');
+            } else {
+                confirmBtn.classList.remove('btn-disabled');
+                confirmBtn.classList.add('btn-primary');
+            }
+        });
+
+        // send all selected cards when confirm is clicked
+        confirmBtn.onclick = () => {
+            const selectedCardsArray = Array.from(modalBody.querySelectorAll('.discard-selected')).map(cardDiv => cardDiv.dataset.type);
+            this.emitInputEvent('CONFIRM_DISCARD', { selectedCards: selectedCardsArray });
+            this.deactivateDiscardSelectionMode();
+        };
+        // append to main wrapper
+        document.getElementById('main-wrapper').appendChild(clone);
+    }
+
+
+    deactivateDiscardSelectionMode() {
+        // remove the modal from DOM
+        const modal = document.getElementById('discard-modal-overlay');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    activateRobberPlacementMode(validTileCoords) {
+        console.log("TODO: Activating robber placement mode. Not implemented yet.");
     }
 
 }

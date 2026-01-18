@@ -96,12 +96,39 @@ export class Player {
         return this.devCards;
     }
 
-    getResource(){
+    getResources(){
         return this.resources;
     }
 
+    getTotalResourceCount(type=null){
+        // if type is specified, return count of that resource
+        if(type){
+            return this.resources[type] || 0;
+        }
+
+        // else return total count of all resources
+        let total = 0;
+        for (let amount of Object.values(this.resources)) {
+            total += amount;
+        }   
+        return total;
+    }
+
+    /**
+     * Discard resources from player
+     * @param {*} resources the resources to discard {resourceType: amount, ...}
+     */
+    discardResources(resources) {
+        for (let [type, amount] of Object.entries(resources)) {
+            if (this.resources[type] !== undefined) {
+                this.resources[type] = Math.max(0, this.resources[type] - amount);
+            }
+        }
+    }
+
+
     getHands(){
-        return {'resources':this.resources, 'devCards':this.getDevCards()};
+        return {'resources':this.getResources(), 'devCards':this.getDevCards()};
     }
 
     // helper function to get all owned assets ids

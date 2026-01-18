@@ -37,6 +37,10 @@ export class DebugController {
                 const [qty, pIdx] = args;
                 const amount = parseInt(qty);
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
+                if (!this.isValidPlayerIndex(playerIndex)) {
+                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
+                    return;
+                }
                 const player = this.gameContext.players[playerIndex];
                 for (const type of Object.values(RESOURCE_TYPES)) {
                     player.addResources({ [type]: amount });
@@ -57,6 +61,10 @@ export class DebugController {
             vp: (args) => {
                 const [amount, pIdx] = args;
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
+                if (!this.isValidPlayerIndex(playerIndex)) {
+                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
+                    return;
+                }   
                 const player = this.gameContext.players[playerIndex];
                 player.achievements.cheatVP += parseInt(amount);
                 this.debug.renderDebugHUD(this.gameContext, `Added ${amount} cheat VP to Player ${playerIndex}`);
@@ -77,19 +85,26 @@ export class DebugController {
                 const diceValue = parseInt(value);
 
                 if (diceValue < 2 || diceValue > 12) {
-                    console.warn("Dice roll must be between 2 and 12.");
+                    this.debug.renderDebugHUD(this.gameContext, "Dice roll must be between 2 and 12.");
                     return;
                 }
 
                 if (diceValue === 7) {
-                    this.controller.rob();
-                    return;
+                    this.controller.activateRobber();
                 } else {
                     this.controller.distributeResourcesByRoll(diceValue);
                     this.renderer.renderPlayerAssets(this.gameContext.players[this.gameContext.currentPlayerIndex], this.gameContext.turnNumber);
                 }
                 this.debug.renderDebugHUD(this.gameContext, `Forced dice roll to ${diceValue}`);
             },
+
+            /**
+             * refresh the debug HUD
+             * @param {*} args 
+             */
+            refresh: (args) => {
+                this.debug.renderDebugHUD(this.gameContext, `Refreshed Debug HUD`);
+            }
         };
     }
 
@@ -100,5 +115,9 @@ export class DebugController {
         const action = this.commands[cmd.toLowerCase()];
         console.log("Executing cheat command:", cmd, args);
         if (action) action(args);
+    }
+
+    isValidPlayerIndex(index) {
+        return index >= 0 && index < this.gameContext.players.length;
     }
 };

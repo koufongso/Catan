@@ -493,6 +493,59 @@ body {
 }
 
 
+.modal-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85); /* Dim the background game */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* Higher than debug HUD and Map */
+    backdrop-filter: blur(8px); /* Optional modern look */
+    overflow-y: auto;
+}
+
+.modal-card {
+    background: #1e1e1e; /* Soft dark gray, easier than pure black */
+    color: #eeeeee;
+    padding: 3rem;
+    border-radius: 16px;
+    text-align: center;
+    
+    /* A very subtle, solid border */
+    border: 2px solid #444; 
+    
+    /* Large, soft shadow to make it feel like it's floating */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    
+    max-width: auto;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    overflow-y: auto;
+}
+
+.btn-primary{
+    background: #007bff; /* A standard, comfortable blue */ 
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-disabled{
+    background: #444; 
+    color: #aaa;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
 
 /* ============================================================
  5. PLAYER HANDS & ASSETS
@@ -549,4 +602,8 @@ body {
 
 .dev-card-locked{ /* Locked Dev Card Style */
     filter: grayscale(1);
+}
+
+.discard-selected{
+    border: 4px solid #ff4444;
 }

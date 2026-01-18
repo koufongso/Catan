@@ -15,12 +15,15 @@ export const GameState = Object.freeze({
     PLACE_SETTLEMENT2: 'PLACE_SETTLEMENT2', // place second settlement and road
     PLACE_ROAD2: 'PLACE_ROAD2',
     ROLL: 'ROLL', // roll dice phase
+    DISCARD: 'DISCARD', // discard resources if over 7 when 7 is rolled
+    MOVE_ROBBER: 'MOVE_ROBBER', // move robber after 7 is rolled
+    ROB_PLAYER: 'ROB_PLAYER', // rob a player after moving robber
     MAIN: 'MAIN', // main game loop: build, trade, end turn
     MAIN_BUILD_ROAD: 'MAIN_BUILD_ROAD', // main game loop: build road sub-state
     MAIN_BUILD_SETTLEMENT: 'MAIN_BUILD_SETTLEMENT', // main game loop: build settlement sub-state
     MAIN_BUILD_CITY: 'MAIN_BUILD_CITY', // main game loop: build city sub-state
     MAIN_BUY_DEV_CARD: 'MAIN_BUY_DEV_CARD', // main game loop: buy development card sub-state
-    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-state
+    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-
     END: 'END' // game has ended
 });
 
@@ -52,7 +55,8 @@ export class GameController {
             currentState: GameState.SETUP,
             lastSettlementPlaced: null, // track last settlement coord placed for resource distribution
             devCardDeck: new DevCardDeck(this.rng),
-            bankResources: this.bankResources
+            bankResources: this.bankResources,
+            playersToDiscard: [] // players that need to discard when 7 is rolled
         }
 
         this.bankResources.clear();
@@ -114,6 +118,10 @@ export class GameController {
             case GameState.ROLL:
                 // handle roll events
                 await this.handleStateRoll(event);
+                break;
+            case GameState.DISCARD:
+                // handle discard events
+                this.handleStateDiscard(event);
                 break;
             case GameState.MAIN: // nested main states
                 this.handleStateMain(event);
@@ -360,15 +368,17 @@ export class GameController {
         const rolledNumber = rollResult.sum;
         // get all the terrain ids with the rolled number token
         if (rolledNumber === 7) {
-            console.log("Robber rolled! (Not implemented yet)");
+            // check players that needs to discard cards
+            this.avtivateRobber();
         } else {
             this.distributeResourcesByRoll(rolledNumber);
             this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
+            // transition to MAIN state
+            this.gameContext.currentState = GameState.MAIN;
+            this.updateDebugHUD();
         }
 
-        // transition to MAIN state
-        this.gameContext.currentState = GameState.MAIN;
-        this.updateDebugHUD();
+
     }
 
 
@@ -488,7 +498,7 @@ export class GameController {
             if (!currentPlayer.canAfford(COSTS.road)) {
                 this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a road.`);
                 return;
-            } 
+            }
 
             // successfully placed road
             // deduct road cost from player and bank
@@ -840,6 +850,93 @@ export class GameController {
 
         // render road
         this.renderer.renderRoad(edgeId, player.color);
+    }
+
+
+    activateRobber() {
+        this.gameContext.playersToDiscard = this.getPlayersNeedsToDiscard();
+        if (this.gameContext.playersToDiscard.length > 0) {
+            // activate selection mode for discarding cards
+            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
+            this.gameContext.currentState = GameState.DISCARD; // wait for players to discard
+            this.updateDebugHUD();
+        } else {
+            // no one need to discard
+            this.renderer.activateMoveRobberMode(); // render to select where to move robber
+            this.gameContext.currentState = GameState.MOVE_ROBBER;
+            this.updateDebugHUD();
+        }
+    }
+
+    /**
+     * Find players that need to discard cards (more than 7 resource cards in hand)
+     * @returns an array of player objects
+     */
+    getPlayersNeedsToDiscard() {
+        let playersToDiscard = [];
+        this.gameContext.players.forEach(player => {
+            const totalResources = player.getTotalResourceCount();
+            if (totalResources > 7) {
+                playersToDiscard.push(player);
+            }
+        });
+        return playersToDiscard;
+    }
+
+    handleStateDiscard(event) {
+        if (event.type !== 'CONFIRM_DISCARD') {
+            return;
+        }
+        
+        // discard logic
+        const player = this.gameContext.playersToDiscard[0];
+
+        // check if the number of selected cards is correct
+        const totalResources = player.getTotalResourceCount();
+        const requiredDiscard = Math.floor(totalResources / 2);
+        const selectedCards = event.selectedCards; // array of resource types to discard
+
+        // summarize the types and the counts of selected cards
+        let discardCount = {};
+        selectedCards.forEach(cardType => {
+            if (discardCount[cardType]) {
+                discardCount[cardType]++;
+            } else {
+                discardCount[cardType] = 1;
+            }
+        });
+
+        // check if the selected cards are valid (i.e., player has enough of each type)
+        let selectedCount = 0;
+        for (const cardType in discardCount) {
+            if (player.getTotalResourceCount(cardType) < discardCount[cardType]) {
+                throw new Error(`Player does not have enough ${cardType} cards to discard`);
+            }
+            selectedCount += discardCount[cardType];
+        }
+
+        if (selectedCount !== requiredDiscard) {
+            throw new Error(`Player must discard exactly ${requiredDiscard} cards, but selected ${selectedCount}`);
+        }
+
+        // pass validation test,
+        // actually discard the cards
+        player.discardResources(discardCount);
+
+        // remove player from playersToDiscard list
+        this.gameContext.playersToDiscard.shift();
+
+        // if there are more players to discard, activate selection mode for next player
+        if (this.gameContext.playersToDiscard.length > 0) {
+            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
+        } else {
+            // no more players to discard, activate move robber mode
+            this.renderer.deactivateDiscardSelectionMode();
+            this.renderer.activateRobberPlacementMode();
+            this.gameContext.currentState = GameState.MOVE_ROBBER;
+            this.debug.renderDebugHUD(this.gameContext, `All players have discarded. Please move the robber.`);
+
+        }
     }
 }
 

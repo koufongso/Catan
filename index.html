@@ -43,8 +43,9 @@
             </svg>
 
             <!-- Show player hands -->
-            <div id="player-hands-container"></div>
-
+            <div id="player-hands-resources-container"></div>
+            <!-- Show player dev cards (unused) -->
+            <div id="player-hands-devcards-container"></div>
             <!-- Show player used dev cards -->
             <div id="player-used-devcards-container"></div>
 
@@ -78,6 +79,21 @@
             </div>
         </div>
     </template>
+
+    <template id="universal-modal-template">
+        <div class="modal-overlay">
+            <div class="modal-card">
+                <h1 id="modal-title"></h1>
+
+                <div id="modal-body"></div>
+
+                <div id="modal-btns"></div>
+                <div id="modal-footer">
+                </div>
+            </div>
+        </div>
+    </template>
+
 
     <template id="game-over-template">
         <div class="game-over-overlay">
