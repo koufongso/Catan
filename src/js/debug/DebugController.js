@@ -90,13 +90,19 @@ export class DebugController {
                 }
 
                 if (diceValue === 7) {
-                    this.controller.activateRobber();
+                    this.controller.discardCardAndActivateRobber();
                 } else {
                     this.controller.distributeResourcesByRoll(diceValue);
                     this.renderer.renderPlayerAssets(this.gameContext.players[this.gameContext.currentPlayerIndex], this.gameContext.turnNumber);
                 }
                 this.debug.renderDebugHUD(this.gameContext, `Forced dice roll to ${diceValue}`);
             },
+
+            rob: (args) => {
+                const [tileId, targetPlayerIndex] = args;
+                this.controller.activateRobber();
+            },
+                
 
             /**
              * refresh the debug HUD

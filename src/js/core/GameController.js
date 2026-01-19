@@ -15,15 +15,20 @@ export const GameState = Object.freeze({
     PLACE_SETTLEMENT2: 'PLACE_SETTLEMENT2', // place second settlement and road
     PLACE_ROAD2: 'PLACE_ROAD2',
     ROLL: 'ROLL', // roll dice phase
+    
+    // sub-states for when 7 is rolled
     DISCARD: 'DISCARD', // discard resources if over 7 when 7 is rolled
     MOVE_ROBBER: 'MOVE_ROBBER', // move robber after 7 is rolled
     ROB_PLAYER: 'ROB_PLAYER', // rob a player after moving robber
+    
+    // sub-states for main game loop
     MAIN: 'MAIN', // main game loop: build, trade, end turn
     MAIN_BUILD_ROAD: 'MAIN_BUILD_ROAD', // main game loop: build road sub-state
     MAIN_BUILD_SETTLEMENT: 'MAIN_BUILD_SETTLEMENT', // main game loop: build settlement sub-state
     MAIN_BUILD_CITY: 'MAIN_BUILD_CITY', // main game loop: build city sub-state
     MAIN_BUY_DEV_CARD: 'MAIN_BUY_DEV_CARD', // main game loop: buy development card sub-state
-    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-
+    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-state
+
     END: 'END' // game has ended
 });
 
@@ -122,6 +127,9 @@ export class GameController {
             case GameState.DISCARD:
                 // handle discard events
                 this.handleStateDiscard(event);
+                break;
+            case GameState.MOVE_ROBBER:
+                this.handleStateMoveRobber(event);
                 break;
             case GameState.MAIN: // nested main states
                 this.handleStateMain(event);
@@ -369,7 +377,7 @@ export class GameController {
         // get all the tiles ids with the rolled number token
         if (rolledNumber === 7) {
             // check players that needs to discard cards
-            this.avtivateRobber();
+            this.discardCardAndActivateRobber();
         } else {
             this.distributeResourcesByRoll(rolledNumber);
             this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
@@ -760,7 +768,7 @@ export class GameController {
     distributeResourcesByRoll(rolledNumber) {
         // get all the tile ids with the rolled number token
         const gameMap = this.gameContext.gameMap;
-        const tileIds = gameMap.searchTileIdByNumberToken(rolledNumber);
+        const tileIds = gameMap.searchTileIdsByNumberToken(rolledNumber);
         tileIds.forEach(tileId => {
             const tile = gameMap.getTileById(tileId);
             // get all adjacent vertex coords
@@ -853,8 +861,12 @@ export class GameController {
         this.renderer.renderRoad(edgeId, player.color);
     }
 
-
-    activateRobber() {
+    /**
+     * One of the two will happen:
+     * Trigger discard card process if possible, transit to discard stage, OR
+     * When no one needs to discard, activate robber placement mode, transit to move robber stage
+     */
+    discardCardAndActivateRobber() {
         this.gameContext.playersToDiscard = this.getPlayersNeedsToDiscard();
         if (this.gameContext.playersToDiscard.length > 0) {
             // activate selection mode for discarding cards
@@ -863,10 +875,14 @@ export class GameController {
             this.updateDebugHUD();
         } else {
             // no one need to discard
-            this.renderer.activateMoveRobberMode(); // render to select where to move robber
-            this.gameContext.currentState = GameState.MOVE_ROBBER;
-            this.updateDebugHUD();
+            this.activateRobber();
         }
+    }
+
+    activateRobber() {
+        this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber()); // render to select where to move robber
+        this.gameContext.currentState = GameState.MOVE_ROBBER;
+        this.updateDebugHUD();
     }
 
     /**
@@ -933,11 +949,32 @@ export class GameController {
         } else {
             // no more players to discard, activate move robber mode
             this.renderer.deactivateDiscardSelectionMode();
-            this.renderer.activateRobberPlacementMode();
+            this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber());
             this.gameContext.currentState = GameState.MOVE_ROBBER;
             this.debug.renderDebugHUD(this.gameContext, `All players have discarded. Please move the robber.`);
 
         }
+    }
+
+
+    handleStateMoveRobber(event) {
+        if (event.type !== 'PLACE_ROBBER') {
+            return;
+        }
+
+        const robTileId = event.tileId;
+        // check if the tile is valid
+        if (!this.gameContext.gameMap.isRobableTile(robTileId)){
+            throw new Error(`Invalid robber placement tile: ${robTileId}`);
+        }
+
+        // update robber position on map
+        this.gameContext.gameMap.moveRobberToTile(robTileId);
+        this.renderer.renderRobber(robTileId);
+
+        console.log("TODO: render robber movement")
+
+        // TODO
     }
 }
 

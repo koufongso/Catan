@@ -245,11 +245,11 @@ export class GameMap {
         }
     }
 
-    getTileById(id){
+    getTileById(id) {
         return this.tiles.get(id);
     }
 
-    getTileByCoord(coord){
+    getTileByCoord(coord) {
         let id = HexUtils.coordToId(coord);
         return this.tiles.get(id);
     }
@@ -340,22 +340,100 @@ export class GameMap {
         }
     }
 
-    // return a list of tile ids that have the given resource type
-    searchTileIdByType(type) {
-        let results = [];
-        for (let [id, tile] of this.tiles) {
-            if (tile.terrainType === type) {
-                results.push(id);
-            }
-        }
-        return results;
+    /**
+     * Search for the tile id with the given resource type
+     * @param {*} resourceType 
+     * @returns an array of tile ids with the given resource type
+     */
+    searchTileIdsByResourceType(resourceType) {
+        return this.searchTileIdsByFilter((tile) => tile.resource === resourceType);
     }
 
-    // return a list of tile ids that have the given token number
-    searchTileIdByNumberToken(numberToken) {
+    /**
+     * Search for the tile coordinates with the given resource type 
+     * @param {*} resourceType 
+     * @returns an array of tile coordinates with the given resource type
+     */
+    searchTileCoordsByResourceType(resourceType) {
+        return this.searchTileCoordsByFilter((tile) => tile.resource === resourceType);
+    }
+
+    /**
+     * Search for the tile id with the given terrain type 
+     * @param {*} terrainType 
+     * @returns an array of tile ids with the given terrain type
+     */
+    searchTileIdsByTerrainType(terrainType) {
+        return this.searchTileIdsByFilter((tile) => tile.terrainType === terrainType);
+    }
+
+    /**
+     * Search for the tile coordinates with the given terrain type 
+     * @param {*} terrainType 
+     * @returns an array of tile coordinates with the given terrain type
+     */
+    searchTileCoordsByTerrainType(terrainType) {
+        return this.searchTileCoordsByFilter((tile) => tile.terrainType === terrainType);
+    }
+
+
+    /**
+     * Search for the tile id with the given number token
+     * @param {*} numberToken the number token to search for
+     * @returns an array of tile ids with the given number token
+     */
+    searchTileIdsByNumberToken(numberToken) {
+        return this.searchTileIdsByFilter((tile) => tile.numberToken === numberToken);
+    }
+
+    /**
+     * Search for the tile coordinates with the given number token
+     * @param {*} numberToken the number token to search for
+     * @returns an array of tile coordinates with the given number token
+     */
+    searchTileCoordsByNumberToken(numberToken) {
+        return this.searchTileCoordsByFilter((tile) => tile.numberToken === numberToken);
+    }
+
+    /**
+     * Search for the tile id where the robber is not located
+     * @returns an array of tile ids with the robber
+     */
+    searchTileIdsWithoutRobber() {
+        return this.searchTileIdsByFilter((tile) => !HexUtils.areCoordsEqual(tile.coord, this.robberCoord));
+    }
+
+    /**
+     * Search for the tile coordinates where the robber is not located
+     * @returns an array of tile coordinates with the robber
+     */
+    searchTileCoordsWithoutRobber() {
+        return this.searchTileCoordsByFilter((tile) => !HexUtils.areCoordsEqual(tile.coord, this.robberCoord));
+    }
+
+    /**
+     * Generic tile search by filter function, returns coordinates
+     * @param {*} filterFunc 
+     * @returns an array of tile coordinates that match the filter function
+     */
+    searchTileCoordsByFilter(filterFunc) {
+        let resultIds = this.searchTileIdsByFilter(filterFunc);
+        // convert ids to coords
+        let resultCoords = resultIds.map((id) => {
+            return HexUtils.idToCoord(id);
+        });
+        return resultCoords;
+    }
+
+    /**
+     * Generic tile search by filter function
+     * @param {*} filterFunc 
+     * @returns an array of tile ids that match the filter function
+     */
+    searchTileIdsByFilter(filterFunc) {
         let results = [];
         for (let [id, tile] of this.tiles) {
-            if (tile.numberToken === numberToken) {
+            if (filterFunc(tile)) {
                 results.push(id);
             }
         }
@@ -517,5 +595,18 @@ export class GameMap {
             results.push(tile.coord);
         }
         return results;
+    }
+
+    isRobableTile(tileId) {
+        if (this.tiles.has(tileId)) {
+            const tile = this.tiles.get(tileId);
+            // robable tiles are non-desert tiles
+            return !HexUtils.areCoordsEqual(tile.coord, this.robberCoord); // cannot rob the tile where the robber is located
+        }
+        return false; // tile does not exist
+    }
+
+    moveRobberToTile(tileId) {
+        this.robberCoord = tileId;
     }
 }

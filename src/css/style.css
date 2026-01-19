@@ -22,6 +22,18 @@ body {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
+.robbable-tile {
+    opacity: 0.5;
+    fill: black;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.robbable-tile:hover {
+    opacity: 0.5;
+    fill: red;
+}
+
 .forest {
     fill: #234719;
 }
@@ -53,7 +65,7 @@ body {
     stroke-width: 2px;
 }
 
-.token-circle{
+.token-circle {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
@@ -432,27 +444,31 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.85); /* Dim the background game */
+    background: rgba(0, 0, 0, 0.85);
+    /* Dim the background game */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000; /* Higher than debug HUD and Map */
-    backdrop-filter: blur(8px); /* Optional modern look */
+    z-index: 10000;
+    /* Higher than debug HUD and Map */
+    backdrop-filter: blur(8px);
+    /* Optional modern look */
 }
 
 .game-over-card {
-    background: #1e1e1e; /* Soft dark gray, easier than pure black */
+    background: #1e1e1e;
+    /* Soft dark gray, easier than pure black */
     color: #eeeeee;
     padding: 3rem;
     border-radius: 16px;
     text-align: center;
-    
+
     /* A very subtle, solid border */
-    border: 2px solid #444; 
-    
+    border: 2px solid #444;
+
     /* Large, soft shadow to make it feel like it's floating */
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    
+
     max-width: 450px;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -464,14 +480,16 @@ body {
 }
 
 .game-over-card p {
-    color: #bbb; /* Dimmer text for descriptions */
+    color: #bbb;
+    /* Dimmer text for descriptions */
     line-height: 1.6;
     margin-bottom: 2rem;
 }
 
 /* A simple, comfortable button */
 #play-again-btn {
-    background: #007bff; /* A standard, comfortable blue */
+    background: #007bff;
+    /* A standard, comfortable blue */
     color: white;
     border: none;
     padding: 12px 24px;
@@ -493,41 +511,46 @@ body {
 }
 
 
-.modal-overlay{
+.modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.85); /* Dim the background game */
+    background: rgba(0, 0, 0, 0.85);
+    /* Dim the background game */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000; /* Higher than debug HUD and Map */
-    backdrop-filter: blur(8px); /* Optional modern look */
+    z-index: 10000;
+    /* Higher than debug HUD and Map */
+    backdrop-filter: blur(8px);
+    /* Optional modern look */
     overflow-y: auto;
 }
 
 .modal-card {
-    background: #1e1e1e; /* Soft dark gray, easier than pure black */
+    background: #1e1e1e;
+    /* Soft dark gray, easier than pure black */
     color: #eeeeee;
     padding: 3rem;
     border-radius: 16px;
     text-align: center;
-    
+
     /* A very subtle, solid border */
-    border: 2px solid #444; 
-    
+    border: 2px solid #444;
+
     /* Large, soft shadow to make it feel like it's floating */
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    
+
     max-width: auto;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     overflow-y: auto;
 }
 
-.btn-primary{
-    background: #007bff; /* A standard, comfortable blue */ 
+.btn-primary {
+    background: #007bff;
+    /* A standard, comfortable blue */
     color: white;
     border: none;
     padding: 12px 24px;
@@ -536,8 +559,8 @@ body {
     cursor: pointer;
 }
 
-.btn-disabled{
-    background: #444; 
+.btn-disabled {
+    background: #444;
     color: #aaa;
     border: none;
     padding: 12px 24px;
@@ -550,16 +573,21 @@ body {
 /* ============================================================
  5. PLAYER HANDS & ASSETS
  ============================================================= */
-#player-hands-container{
+#player-hands-container {
     display: block;
-    justify-content: center; /* Keeps the cards centered in your hand */
-    align-items: flex-end;   /* Aligns cards to the bottom */
-    width: 1000px;           /* Set this to the maximum width of your hand area */
+    justify-content: center;
+    /* Keeps the cards centered in your hand */
+    align-items: flex-end;
+    /* Aligns cards to the bottom */
+    width: 1000px;
+    /* Set this to the maximum width of your hand area */
     height: 130px;
     padding: 20px;
-    border: 2px dashed rgba(255,255,255,0.2); /* Just to see the container */
-    
-    overflow: visible;  /* Allows cards to overflow if needed */
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    /* Just to see the container */
+
+    overflow: visible;
+    /* Allows cards to overflow if needed */
 }
 
 
@@ -571,23 +599,25 @@ body {
     display: inline-flex;
     flex-direction: column;
     flex-shrink: 0;
-    margin-left: -40px; /* Overlap effect */
-    
+    margin-left: -40px;
+    /* Overlap effect */
+
     /* 1. Setup the transition (how long the move takes) */
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    
+
     /* Original Shadow */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    cursor: pointer; /* Makes it feel interactive */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    /* Makes it feel interactive */
 }
 
 /* 2. The Hover State */
 .card-container:hover {
     /* 3. Move it up (negative Y) */
     transform: translateY(-10px);
-    
+
     /* 4. Make the shadow deeper to simulate height */
-    box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .card-image {
@@ -600,10 +630,11 @@ body {
     margin-left: 0;
 }
 
-.dev-card-locked{ /* Locked Dev Card Style */
+.dev-card-locked {
+    /* Locked Dev Card Style */
     filter: grayscale(1);
 }
 
-.discard-selected{
+.discard-selected {
     border: 4px solid #ff4444;
 }

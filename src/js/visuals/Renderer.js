@@ -26,10 +26,12 @@ export class Renderer {
     drawHex(tileLayer, tile) {
         const hexPoly = this.createPolygon(
             tile.coord,
-            tile.terrainType,
             tile.id,
             this.hexSize
         );
+        // set styling
+        hexPoly.setAttribute("fill", `url(#pattern-${tile.terrainType.toLowerCase()})`);
+        hexPoly.setAttribute("class", `hex-tile`);
         tileLayer.appendChild(hexPoly);
     }
 
@@ -253,8 +255,14 @@ export class Renderer {
     }
 
 
-
-    createPolygon(coord, type, id, hexSize = this.hexSize) {
+    /**
+     * Create a hex polygon SVG element (this will only set points and id, no styling)
+     * @param {*} coord 
+     * @param {*} id 
+     * @param {*} hexSize 
+     * @returns {SVGPolygonElement} the created polygon element
+     */
+    createPolygon(coord, id, hexSize = this.hexSize) {
         let SVG_NS = "http://www.w3.org/2000/svg";
         const poly = document.createElementNS(SVG_NS, "polygon");
         // calculate points based on axial coordinates
@@ -269,9 +277,7 @@ export class Renderer {
         }
         poly.setAttribute("points", points.join(" "));
 
-        // set class based on resource type for styling
-        poly.setAttribute("fill", `url(#pattern-${type.toLowerCase()})`);
-        poly.setAttribute("class", `hex-tile`);
+        // set id
         poly.dataset.id = id;
 
         return poly;
@@ -741,8 +747,31 @@ export class Renderer {
         }
     }
 
-    activateRobberPlacementMode(validTileCoords) {
+    activateRobberPlacementMode(robbableTileCoords) {
         console.log("TODO: Activating robber placement mode. Not implemented yet.");
+
+        // get the tile layer
+        const tileLayer = document.getElementById('tile-layer');
+        if (!tileLayer) return;
+
+        // group for easier cleanup later
+        const robberPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        robberPlacementGroup.id = 'robber-placement-group';
+        tileLayer.appendChild(robberPlacementGroup);
+
+        // create "virtual" hitboxes over the valid tiles and add event listeners
+        robbableTileCoords.forEach(hCoord => {
+            const tileId = HexUtils.coordToId(hCoord);
+            const hexHitbox = this.createPolygon(hCoord, tileId, this.hexSize);
+            hexHitbox.dataset.tileId = tileId;
+            hexHitbox.classList.add('robbable-tile'); // this should highlight the tile visually
+            robberPlacementGroup.appendChild(hexHitbox);
+
+            // add click event listener to the hitbox
+            hexHitbox.addEventListener('click', (event) => {
+                this.emitInputEvent('PLACE_ROBBER', { tileId: tileId });
+            });
+        });
     }
 
 }
