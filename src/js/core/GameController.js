@@ -223,7 +223,7 @@ export class GameController {
         if (this.renderer) {
             // render intial map
             const gameMap = this.gameContext.gameMap
-            this.renderer.renderMainUI(gameMap.terrains, gameMap.tradingPosts, gameMap.robberCoord);
+            this.renderer.renderMainUI(gameMap.tiles, gameMap.tradingPosts, gameMap.robberCoord);
 
             // "activate" vertex elements for settlement placement
             const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
@@ -366,7 +366,7 @@ export class GameController {
 
         // distribute resources based on roll
         const rolledNumber = rollResult.sum;
-        // get all the terrain ids with the rolled number token
+        // get all the tiles ids with the rolled number token
         if (rolledNumber === 7) {
             // check players that needs to discard cards
             this.avtivateRobber();
@@ -612,23 +612,24 @@ export class GameController {
         await this.gameContext.gameMap.loadMapFromJson('./src/assets/data/standard_map.json');
         // assign default resources and number tokens
         // 1. get target coords (all coords)
-        const allCoords = this.gameContext.gameMap.getAllTerrainCoords();
+        const allCoords = this.gameContext.gameMap.getAllTileCoords();
         this.gameContext.gameMap.assignTerrainTypesRandom(allCoords, { 'hill': 4, 'mountain': 3, 'pasture': 4, 'field': 4, 'forest': 3, 'desert': 1 });
 
-        // 2. get terrains that are not desert
+        // 2. get tiles that are not desert
         const productionCoords = [];
         allCoords.forEach(coord => {
-            const terrain = this.gameContext.gameMap.terrains.get(HexUtils.coordToId(coord));
-
-            if (terrain.type == 'desert') {
+            const tile = this.gameContext.gameMap.getTileByCoord(coord);
+            console.log("Tile at coord", coord, "is", tile);
+            if (tile.terrainType == 'desert') {
                 this.gameContext.gameMap.robberCoord = coord;
             } else {
                 // It's a resource-producing hex
                 productionCoords.push(coord);
             }
         });
-
-        this.gameContext.gameMap.assignTerrainNumberTokensRandom(productionCoords, NUMBER_TOKENS_DISTRIBUTION);
+        console.log("Production Coords:", productionCoords);
+        console.log("NUMBER_TOKENS_DISTRIBUTION:", NUMBER_TOKENS_DISTRIBUTION);
+        this.gameContext.gameMap.assignNumberTokensRandom(productionCoords, NUMBER_TOKENS_DISTRIBUTION);
     }
 
     isBankResourceAvailable(cost) {
@@ -757,20 +758,20 @@ export class GameController {
      * @param {*} rolledNumber 
      */
     distributeResourcesByRoll(rolledNumber) {
-        // get all the terrain ids with the rolled number token
+        // get all the tile ids with the rolled number token
         const gameMap = this.gameContext.gameMap;
-        const terrainIds = gameMap.searchTerrainIdByNumberToken(rolledNumber);
-        terrainIds.forEach(terrainId => {
-            const terrain = gameMap.terrains.get(terrainId);
+        const tileIds = gameMap.searchTileIdByNumberToken(rolledNumber);
+        tileIds.forEach(tileId => {
+            const tile = gameMap.getTileById(tileId);
             // get all adjacent vertex coords
-            const adjacentVertexCoords = HexUtils.getVerticesFromHex(terrain.coord);
+            const adjacentVertexCoords = HexUtils.getVerticesFromHex(tile.coord);
             adjacentVertexCoords.forEach(vCoord => {
                 const vertexId = HexUtils.coordToId(vCoord);
-                // check if there is a settlement at this vertex
+                // check if there is a settlement at this vertexs
                 if (gameMap.settlements.has(vertexId)) {
                     const settlement = gameMap.settlements.get(vertexId);
                     const ownerId = settlement.owner;
-                    const resourceType = terrain.resource;
+                    const resourceType = tile.resource;
                     const amount = (settlement.level === 1) ? 1 : 2; // settlement gives 1, city gives 2
                     // distribute resource to player with ownerId
                     this.distributeResourceToPlayer(ownerId, resourceType, amount);

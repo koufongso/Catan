@@ -1,4 +1,4 @@
-import { Terrain } from "./Terrain.js";
+import { Tile } from "./Tile.js";
 import { Road } from "./buildings/Road.js";
 import { Settlement } from "./buildings/Settlement.js";
 import { TradingPost } from "./buildings/TradingPost.js";
@@ -7,7 +7,7 @@ import { RNG } from "../utils/rng.js";
 
 
 export class GameMap {
-    // a map has three elements: terrains, roads, settlements
+    // a map has three elements: tiles, roads, settlements
     // we compute the connected components coordinates on run-time when needed
     // and query the interactable elements from these three maps
     constructor(rng) {
@@ -18,7 +18,7 @@ export class GameMap {
         this.rng = rng;                     // an instance of RNG
 
         // hex grid elements
-        this.terrains = new Map();          // regiester all (interactable) terrains/hex, others will be conceptual "empty" terrains
+        this.tiles = new Map();          // regiester all (interactable) tiles/hex, others will be conceptual "empty" tiles
         this.tradingPosts = new Map();      // register all trading posts on the map
 
         // vertex elements
@@ -27,7 +27,7 @@ export class GameMap {
         // edge elements
         this.roads = new Map();             // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
 
-        this.robberCoord = [0, 0, 0];       // the terrain coord where the robber is currently located
+        this.robberCoord = [0, 0, 0];       // the tile coord where the robber is currently located
     }
 
     // load the map from json file to initializes the interactable elements
@@ -38,14 +38,14 @@ export class GameMap {
             const data = await response.json();
             //console.log(data);
 
-            // parse terrains
-            // first check if range is defined, and generate terrains with default
-            if (data.terrains.range.q !== undefined && data.terrains.range.r !== undefined && data.terrains.range.s !== undefined) {
-                let qRange = data.terrains.range.q;
-                let rRange = data.terrains.range.r;
-                let sRange = data.terrains.range.s;
-                let default_terrain = data.terrains.defaults.type;
-                let default_numberToken = data.terrains.defaults.numberToken;
+            // parse tiles
+            // first check if range is defined, and generate tiles with default
+            if (data.tiles.range.q !== undefined && data.tiles.range.r !== undefined && data.tiles.range.s !== undefined) {
+                let qRange = data.tiles.range.q;
+                let rRange = data.tiles.range.r;
+                let sRange = data.tiles.range.s;
+                let default_terrain = data.tiles.defaults.terrainType;
+                let default_numberToken = data.tiles.defaults.numberToken;
 
                 // check validity of default resource and numberToken
                 if (typeof default_numberToken !== 'number' && default_numberToken !== null) {
@@ -57,16 +57,16 @@ export class GameMap {
                         for (let s = sRange[0]; s <= sRange[1]; s++) {
                             const hCoord = [q, r, s];
                             if (HexUtils.isValidHex(hCoord)) { // valid hex coordinate
-                                this.updateTerrainByCoord(hCoord, default_terrain, default_numberToken);
+                                this.updateTileByCoord(hCoord, default_terrain, default_numberToken);
                             }
                         }
                     }
                 }
             }
 
-            // then override with specific terrains
-            for (let terrainData of data.terrains.overrides) {
-                this.updateTerrainByCoord(terrainData.coord, terrainData.type, terrainData.numberToken);
+            // then override with specific tiles
+            for (let terrainData of data.tiles.overrides) {
+                this.updateTileByCoord(terrainData.coord, terrainData.type, terrainData.numberToken);
             }
 
             // parse tradingposts
@@ -81,9 +81,9 @@ export class GameMap {
     }
 
     convertMapToJson() {
-        // only need to save the overridden terrains, roads, and settlements
+        // only need to save the overridden tiles, roads, and settlements
         let data = {
-            terrains: {
+            tiles: {
                 overrides: []
             },
             roads: {
@@ -97,9 +97,9 @@ export class GameMap {
             }
         };
 
-        // save terrains
-        for (let [id, terrain] of this.terrains) {
-            data.terrains.overrides.push({ "coord": terrain.coord, "type": terrain.type, "numberToken": terrain.numberToken });
+        // save tiles
+        for (let [id, tile] of this.tiles) {
+            data.tiles.overrides.push({ "coord": tile.coord, "type": tile.type, "numberToken": tile.numberToken });
         }
         // save roads
         for (let [id, road] of this.roads) {
@@ -124,32 +124,32 @@ export class GameMap {
 
     }
 
-    // edit the terrain at coord, if type or numberToken is null, keep the original value
+    // edit the tile at coord, if type or numberToken is null, keep the original value
     // coord: [q,r,s]
     // type: 
-    updateTerrainByCoord(hCoord, type = null, numberToken = null) {
+    updateTileByCoord(hCoord, terrainType = null, numberToken = null) {
         // convert coord to id
         let id = HexUtils.coordToId(hCoord);
-        this.updateTerrainById(id, type, numberToken);
+        this.updateTileById(id, terrainType, numberToken);
     }
 
-    updateTerrainById(id, type = null, numberToken = null) {
-        if (this.terrains.has(id)) {
-            // edit existing terrain
-            let terrain = this.terrains.get(id);
-            if (type !== null) {
-                terrain.updateType(type);
+    updateTileById(id, terrainType = null, numberToken = null) {
+        if (this.tiles.has(id)) {
+            // edit existing tile
+            let tile = this.tiles.get(id);
+            if (terrainType !== null) {
+                tile.updateTerrainType(terrainType);
             }
             if (numberToken !== null) {
-                terrain.updateNumberToken(numberToken);
+                tile.updateNumberToken(numberToken);
             }
-            this.terrains.set(id, terrain);
+            this.tiles.set(id, tile);
         }
         else {
-            // add new terrain
+            // add new tile
             let coords = HexUtils.idToCoord(id);
-            let terrain = new Terrain(coords, type, numberToken);
-            this.terrains.set(id, terrain);
+            let tile = new Tile(coords, terrainType, numberToken);
+            this.tiles.set(id, tile);
         }
     }
 
@@ -159,7 +159,7 @@ export class GameMap {
     }
 
     removeTerrainById(id) {
-        this.terrains.delete(id);
+        this.tiles.delete(id);
     }
 
     // edit the road at 
@@ -245,19 +245,28 @@ export class GameMap {
         }
     }
 
+    getTileById(id){
+        return this.tiles.get(id);
+    }
+
+    getTileByCoord(coord){
+        let id = HexUtils.coordToId(coord);
+        return this.tiles.get(id);
+    }
+
     /* -------------------------------------------- Service Functions-------------------------------------------- */
 
     /**
      * Shuffles a distribution and applies it to the map.
-     * If a terrain doesn't exist at the target coordinate, it can be created.
-     * @param {Array} targetCoords - An array of hex coordinates where terrains should be assigned.
-     * @param {Object} attributeDist - An object mapping terrain attributes (type, numberToken) to their counts.
-     * @param {Object} attributeType - The type of attribute being assigned ('type' or 'numberToken').
+     * If a tile doesn't exist at the target coordinate, it can be created.
+     * @param {Array} targetCoords - An array of hex coordinates where tiles should be assigned.
+     * @param {Object} attributeDist - An object mapping tile attributes (terrainType, numberToken) to their counts.
+     * @param {Object} attributeType - The type of attribute being assigned ('terrainType' or 'numberToken').
      */
     assignTerrainAttributeRandom(targetCoords, attributeDist, attributeType) {
         // Sanity check for attributeType
-        if (attributeType !== 'type' && attributeType !== 'numberToken') {
-            throw new Error("attributeType must be either 'type' or 'numberToken'");
+        if (attributeType !== 'terrainType' && attributeType !== 'numberToken') {
+            throw new Error("attributeType must be either 'terrainType' or 'numberToken'");
         }
 
         // 1. Create the shuffled pool
@@ -273,46 +282,46 @@ export class GameMap {
 
         // shuffle the pool
         this.rng.shuffle(attributePool);
-
+        const assignTerrain = attributeType === 'terrainType';
         // 2. Apply as overrides
         targetCoords.forEach((coord, i) => {
             const id = HexUtils.coordToId(coord); // Assuming you have a helper for [q,r,s] -> "q,r,s"
-            const val = (attributeType === 'type' ? attributePool[i] : Number(attributePool[i]));
+            const val = (assignTerrain ? attributePool[i] : Number(attributePool[i]));
 
-            if (this.terrains.has(id)) {
+            if (this.tiles.has(id)) {
                 // Update existing
-                const terrain = this.terrains.get(id);
-                if (attributeType === 'type') {
-                    terrain.updateType(val);
+                const tile = this.tiles.get(id);
+                if (assignTerrain) {
+                    tile.updateTerrainType(val);
                 } else {
                     // convert val to number
-                    terrain.updateNumberToken(val);
+                    tile.updateNumberToken(val);
                 }
             } else {
-                // create new terrain
-                this.terrains.set(id, new Terrain({
+                // create new tile
+                this.tiles.set(id, new Tile({
                     coord: coord,
-                    type: attributeType === 'type' ? val : 'desert', // default to 'desert'
-                    numberToken: attributeType === 'numberToken' ? val : 0
+                    terrainType: assignTerrain ? val : 'desert', // default to 'desert'
+                    numberToken: !assignTerrain ? val : 0
                 }));
             }
         });
     }
 
     assignTerrainTypesRandom(targetCoords, typeDist) {
-        this.assignTerrainAttributeRandom(targetCoords, typeDist, 'type');
+        this.assignTerrainAttributeRandom(targetCoords, typeDist, 'terrainType');
     }
 
-    assignTerrainNumberTokensRandom(targetCoords, numberTokenDist) {
+    assignNumberTokensRandom(targetCoords, numberTokenDist) {
         this.assignTerrainAttributeRandom(targetCoords, numberTokenDist, 'numberToken');
     }
 
     swapTerrainById(idA, idB, swapResources = true, swapTokens = true) {
-        const tileA = this.terrains.get(idA);
-        const tileB = this.terrains.get(idB);
+        const tileA = this.tiles.get(idA);
+        const tileB = this.tiles.get(idB);
 
         if (!tileA || !tileB) {
-            console.warn(`Cannot swap: one or both terrains do not exist (${idA}, ${idB})`);
+            console.warn(`Cannot swap: one or both tiles do not exist (${idA}, ${idB})`);
             return;
         }
 
@@ -331,33 +340,34 @@ export class GameMap {
         }
     }
 
-    // return a list of terrain ids that have the given resource type
-    searchTerrainIdByType(type) {
+    // return a list of tile ids that have the given resource type
+    searchTileIdByType(type) {
         let results = [];
-        for (let [id, terrain] of this.terrains) {
-            if (terrain.type === type) {
+        for (let [id, tile] of this.tiles) {
+            if (tile.terrainType === type) {
                 results.push(id);
             }
         }
         return results;
     }
 
-    // return a list of terrain ids that have the given token number
-    searchTerrainIdByNumberToken(numberToken) {
+    // return a list of tile ids that have the given token number
+    searchTileIdByNumberToken(numberToken) {
         let results = [];
-        for (let [id, terrain] of this.terrains) {
-            if (terrain.numberToken === numberToken) {
+        for (let [id, tile] of this.tiles) {
+            if (tile.numberToken === numberToken) {
                 results.push(id);
             }
         }
         return results;
     }
 
-    // get all settlement spot defined by current terrains on the map
+
+    // get all settlement spot defined by current tiles on the map
     getAllSettlementCoords() {
         let results = new Map();
-        for (let [id, terrain] of this.terrains) {
-            let vCoordList = HexUtils.getVerticesFromHex(terrain.coord);
+        for (let [id, tile] of this.tiles) {
+            let vCoordList = HexUtils.getVerticesFromHex(tile.coord);
             for (let vCoord of vCoordList) {
                 results.set(HexUtils.coordToId(vCoord), vCoord);
             }
@@ -374,9 +384,9 @@ export class GameMap {
             // iterate through the hex coords and get their resources
             for (let hexCoord of adjacentHexCoords) {
                 let hexId = HexUtils.coordToId(hexCoord);
-                if (this.terrains.has(hexId)) {
-                    let terrain = this.terrains.get(hexId);
-                    resources.push(terrain.resource);
+                if (this.tiles.has(hexId)) {
+                    let tile = this.tiles.get(hexId);
+                    resources.push(tile.resource);
                 }
             }
         }
@@ -501,10 +511,10 @@ export class GameMap {
         return false;
     }
 
-    getAllTerrainCoords() {
+    getAllTileCoords() {
         let results = [];
-        for (let [id, terrain] of this.terrains) {
-            results.push(terrain.coord);
+        for (let [id, tile] of this.tiles) {
+            results.push(tile.coord);
         }
         return results;
     }

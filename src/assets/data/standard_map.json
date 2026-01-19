@@ -1,17 +1,17 @@
 {
-    "terrains": {
+    "tiles": {
         "range":{
             "q": [-2,2],
             "r": [-2,2],
             "s": [-2,2]
         },
         "defaults": {
-            "type":"desert",
+            "terrainType":"desert",
             "numberToken":null
         },
         "overrides":[
-            {"coord":[0,0,0],"type":"mountain","numberToken":1},
-            {"coord":[1,0,-1],"type":"forest","numberToken":2}
+            {"coord":[0,0,0],"terrainType":"mountain","numberToken":1},
+            {"coord":[1,0,-1],"terrainType":"forest","numberToken":2}
         ]
     },
     "roads": {

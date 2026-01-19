@@ -23,21 +23,21 @@ export class Renderer {
     }
 
 
-    drawHex(tileLayer, terrain) {
+    drawHex(tileLayer, tile) {
         const hexPoly = this.createPolygon(
-            terrain.coord,
-            terrain.type,
-            terrain.id,
+            tile.coord,
+            tile.terrainType,
+            tile.id,
             this.hexSize
         );
         tileLayer.appendChild(hexPoly);
     }
 
-    drawToken(layer, terrain) {
+    drawToken(layer, tile) {
         // skip if no token or token is 7 (robber)
-        if (terrain.numberToken === null || terrain.numberToken === 7) return;
+        if (tile.numberToken === null || tile.numberToken === 7) return;
 
-        const [x, y] = HexUtils.hexToPixel(terrain.coord, this.hexSize);
+        const [x, y] = HexUtils.hexToPixel(tile.coord, this.hexSize);
 
         // The White Circle
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -45,7 +45,7 @@ export class Renderer {
         circle.setAttribute("cy", y);
         circle.setAttribute("r", this.hexSize / 2 * 0.9);
         circle.setAttribute("class", `token-circle token-number`);
-        circle.setAttribute("fill", `url(#pattern-number-${terrain.numberToken})`);
+        circle.setAttribute("fill", `url(#pattern-number-${tile.numberToken})`);
 
         layer.appendChild(circle);
     }
@@ -132,7 +132,7 @@ export class Renderer {
         // create defs element
         let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
 
-        // pattern definitions for each terrain type
+        // pattern definitions for each tile type
         for (const [type, path] of Object.entries(TEXTURE_PATHS.TERRAINS)) {
             const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
             console.log("Creating pattern for:", type, path);
@@ -193,14 +193,14 @@ export class Renderer {
         layer.appendChild(defs);
     }
 
-    renderMainUI(terrains, tradingPosts, robberCoord) {
+    renderMainUI(tiles, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
 
         // set up defs for patterns
         this.setupPatterns(layers.defs);
 
-        // draw terrains
-        terrains.forEach(t => {
+        // draw tiles
+        tiles.forEach(t => {
             this.drawHex(layers.tiles, t);
             this.drawToken(layers.tiles, t);
         });

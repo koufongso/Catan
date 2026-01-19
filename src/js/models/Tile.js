@@ -2,15 +2,15 @@ import { HexUtils } from "../utils/hex-utils.js";
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 
-export class Terrain {
-    constructor(coord, type, numberToken) {
+export class Tile {
+    constructor(coord, terrainType, numberToken) {
         // hex coordinate check
         if (!HexUtils.isValidHex(coord)) {
             throw new Error("Invalid hex coordinate");
         }
 
         // terrain type check
-        const normalizedType = type.toLowerCase();
+        const normalizedType = terrainType.toLowerCase();
         if (!this.isValidTerrainType(normalizedType)) {
             throw new Error(`Invalid terrain type ${normalizedType}`);
         }
@@ -22,7 +22,7 @@ export class Terrain {
         
         this.coord = coord;                     //  hex coordinate
         this.id = HexUtils.coordToId(coord);    // Unique ID based on coordinate
-        this.type = normalizedType;                // e.g., "forest", "hill", etc.
+        this.terrainType = normalizedType;                // e.g., "forest", "hill", etc.
         this.resource = null;                   // Resource type produced by this terrain
         this.numberToken = numberToken;         // Number token on the terrain (if applicable)
 
@@ -35,14 +35,14 @@ export class Terrain {
     }
 
     // safe way to update terrain type
-    updateType(newType) {
+    updateTerrainType(newType) {
         // convert to lowercase
         const normalizedNewType = newType.toLowerCase();
 
         if (!this.isValidTerrainType(normalizedNewType)) {
             throw new Error(`Invalid terrain type ${normalizedNewType}`);
         }
-        this.type = normalizedNewType;
+        this.terrainType = normalizedNewType;
         this.assignResource();
     }
 
