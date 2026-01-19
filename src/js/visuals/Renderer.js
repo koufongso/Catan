@@ -328,7 +328,7 @@ export class Renderer {
         if (!interactionLayer) return;
 
         const setttlementPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        setttlementPlacementGroup.id = 'setttlement-placement-group';
+        setttlementPlacementGroup.id = 'settlement-placement-group';
         interactionLayer.appendChild(setttlementPlacementGroup);
         interactionLayer.classList.add('placement-mode');
 
@@ -365,15 +365,7 @@ export class Renderer {
         }
     }
 
-    deactivateSettlementPlacementMode() {
-        const setttlementPlacementGroup = document.getElementById('setttlement-placement-group');
-        if (!setttlementPlacementGroup) return;
-        
-        // clean up
-        setttlementPlacementGroup.onclick = null;
-        setttlementPlacementGroup.querySelectorAll('.vertex-settlement-available').forEach(spot => setttlementPlacementGroup.removeChild(spot));
-        setttlementPlacementGroup.remove(); // Remove the group itself
-    }
+
 
     renderSettlement(vertexId, color, level) {
         console.log(`Rendering settlement at ${vertexId} with color ${color} and level ${level}`);
@@ -446,15 +438,7 @@ export class Renderer {
         };
     }
 
-    deactivateRoadPlacementMode() {
-        const roadPlacementGroup = document.getElementById('road-placement-group');
-        if (!roadPlacementGroup) return;
 
-        // clean up
-        roadPlacementGroup.onclick = null;
-        roadPlacementGroup.querySelectorAll('.edge-road-available').forEach(spot => roadPlacementGroup.removeChild(spot));
-        roadPlacementGroup.remove(); // Remove the group itself
-    }
 
     // Helper to keep math clean
     getShortenedLine(x1, y1, x2, y2, ratio) {
@@ -520,15 +504,6 @@ export class Renderer {
         }
     }
 
-    deactivateDiceRollMode() {
-        const diceBtn = document.getElementById('dice-btn');
-        if (!diceBtn) {
-            console.error("Renderer: Dice button not found in HTML. Cannot deactivate dice roll mode.");
-            return;
-        }
-        diceBtn.classList.remove('btn-active');
-        diceBtn.onclick = null;
-    }
 
     activateActionBtnMode() {
         // build
@@ -738,20 +713,11 @@ export class Renderer {
         confirmBtn.onclick = () => {
             const selectedCardsArray = Array.from(modalBody.querySelectorAll('.discard-selected')).map(cardDiv => cardDiv.dataset.type);
             this.emitInputEvent('CONFIRM_DISCARD', { selectedCards: selectedCardsArray });
-            this.deactivateDiscardSelectionMode();
         };
         // append to main wrapper
         document.getElementById('main-wrapper').appendChild(clone);
     }
 
-
-    deactivateDiscardSelectionMode() {
-        // remove the modal from DOM
-        const modal = document.getElementById('discard-modal-overlay');
-        if (modal) {
-            modal.remove();
-        }
-    }
 
     activateRobberPlacementMode(robbableTileCoords) {
 
@@ -779,15 +745,6 @@ export class Renderer {
         });
     }
 
-    deactivateRobberPlacementMode() {
-        const robberPlacementGroup = document.getElementById('robber-placement-group');
-        if (!robberPlacementGroup) return;
-        
-        // clean up
-        robberPlacementGroup.onclick = null;
-        robberPlacementGroup.querySelectorAll('.robbable-tile').forEach(spot => robberPlacementGroup.removeChild(spot));
-        robberPlacementGroup.remove(); // Remove the group itself
-    }
 
     moveRobberToTile(tileCoord) {
 
@@ -870,14 +827,43 @@ export class Renderer {
         });
     }
 
-    deactivateRobSelectionMode() {
-        const robSelectionGroup = document.getElementById('rob-selection-group');
-        if (!robSelectionGroup) return;
 
+    // code to deactivate elements
+    /**
+     * Helper to remove an element by id
+     * @param {*} elementId 
+     * @returns 
+     */
+    removeElement(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
         // clean up
-        robSelectionGroup.onclick = null;
-        robSelectionGroup.querySelectorAll('.robbable-settlement').forEach(spot => robSelectionGroup.removeChild(spot));
-        robSelectionGroup.remove(); // Remove the group itself  
+        element.onclick = null;
+        element.remove();
+    }
+
+    deactivateSettlementPlacementMode() {
+        this.removeElement('settlement-placement-group');
+    }   
+
+    deactivateRobSelectionMode() {
+        this.removeElement('rob-selection-group');
+    }
+
+    deactivateRoadPlacementMode() {
+        this.removeElement('road-placement-group');
+    }
+
+    deactivateDiceRollMode() {
+        this.removeElement('dice-btn');
+    }
+
+    deactivateRobberPlacementMode() {
+        this.removeElement('robber-placement-group');
+    }
+
+    deactivateDiscardSelectionMode() {
+        this.removeElement('discard-modal-overlay');
     }
 
 }

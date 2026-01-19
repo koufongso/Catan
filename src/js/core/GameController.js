@@ -940,6 +940,8 @@ export class GameController {
         }
 
         // pass validation test,
+        this.renderer.deactivateDiscardSelectionMode();
+
         // actually discard the cards
         player.discardResources(discardCount);
 
