@@ -131,6 +131,9 @@ export class GameController {
             case GameState.MOVE_ROBBER:
                 this.handleStateMoveRobber(event);
                 break;
+            case GameState.ROB_PLAYER:
+                this.handleStateRobPlayer(event);
+                break;
             case GameState.MAIN: // nested main states
                 this.handleStateMain(event);
                 break;
@@ -981,6 +984,13 @@ export class GameController {
             this.gameContext.players[settlement.owner].getTotalResourceCount() > 0
         ); // only settlements owned by other players with resources
 
+        if (robableSettlements.length === 0) {
+            // no one to rob, rob process complete, transition to MAIN state
+            this.gameContext.currentState = GameState.MAIN;
+            this.debug.renderDebugHUD(this.gameContext, `Robber moved. No players to rob. Turn continues.`);
+            return;
+        }
+
         const robableSettlementsCoords = robableSettlements.map(settlement => settlement.coord);
         // activate rob selection mode
         this.renderer.activateRobSelectionMode(robableSettlementsCoords, HexUtils.idToCoord(robTileId));
@@ -989,21 +999,44 @@ export class GameController {
     }
 
 
-    handleRobPlayer(event) {
+    handleStateRobPlayer(event) {
         if (event.type !== 'ROB_PLAYER') {
             return;
         }
 
+        // targeted settlement and player
         const targetVertexId = event.vertexId;
-        // check if the settlement is valid to rob from
         const settlement = this.gameContext.gameMap.settlements.get(targetVertexId);
-        if (!settlement || settlement.owner === this.getCurrentPlayer().id) {
+        const targetPlayer = this.gameContext.players[settlement.owner];
+        const totalResourceCount = targetPlayer.getTotalResourceCount();
+
+        console.log("Rob target settlement:", settlement);
+        console.log("Rob target player:", targetPlayer);
+        console.log("Target player total resources:", totalResourceCount);
+
+        // check if the settlement is valid to rob from
+        if (!settlement || settlement.owner !== targetPlayer.id || totalResourceCount === 0) {
             throw new Error(`Invalid rob target settlement: ${targetVertexId}`);
         }
 
-        //TODO: 
         // deactivate rob selection mode
-        // implement actual rob logic (randomly steal a resource from the target player)
+        this.renderer.deactivateRobSelectionMode();
+
+        // steal a random resource from the target player
+        
+        // compute the resource index to steal
+        const randomIndex = this.rng.nextInt(0, totalResourceCount - 1); // generate a random index from 0 to  n-1
+        
+        const stolenResources = targetPlayer.removeResourceByIndicies([randomIndex]);
+        this.getCurrentPlayer().addResources(stolenResources);
+
+        // whole rob process complete, transition to MAIN state
+        this.gameContext.currentState = GameState.MAIN;
+
+        // render updated player assets
+        this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
+        this.debug.renderDebugHUD(this.gameContext, `Robbed Player ${targetPlayer.id} and stole ${Object.entries(stolenResources).map(([type, amount]) => `${amount} ${type}`).join(', ')}.`);
+
     }
 }
 

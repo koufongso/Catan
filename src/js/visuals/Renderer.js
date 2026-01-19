@@ -754,7 +754,6 @@ export class Renderer {
     }
 
     activateRobberPlacementMode(robbableTileCoords) {
-        console.log("TODO: Activating robber placement mode. Not implemented yet.");
 
         // get the tile layer
         const tileLayer = document.getElementById('interaction-layer');
@@ -791,7 +790,6 @@ export class Renderer {
     }
 
     moveRobberToTile(tileCoord) {
-        console.log("TODO: Moving robber to tile:", tileCoord);
 
         // animate the robber moving to the new tile
         const robberLayer = document.getElementById('robber-layer');
@@ -822,6 +820,13 @@ export class Renderer {
         }
         );
 
+        animation.onfinish = () => {
+            // ensure final position is set
+            circle.setAttribute('cx', newX);
+            circle.setAttribute('cy', newY);
+        }
+
+        // start the animation
         animation.play();
     }
 
@@ -840,7 +845,7 @@ export class Renderer {
         const robTileHex = this.createPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
         robTileHex.classList.add('robber-tile-mask');
         robSelectionGroup.appendChild(robTileHex);
-        
+
 
         // darw a "mask" over the valid settlements
         robableSettlementsCoords.forEach(vCoord => {
@@ -863,6 +868,16 @@ export class Renderer {
                 this.emitInputEvent('ROB_PLAYER', { vertexId: vertexId });
             });
         });
+    }
+
+    deactivateRobSelectionMode() {
+        const robSelectionGroup = document.getElementById('rob-selection-group');
+        if (!robSelectionGroup) return;
+
+        // clean up
+        robSelectionGroup.onclick = null;
+        robSelectionGroup.querySelectorAll('.robbable-settlement').forEach(spot => robSelectionGroup.removeChild(spot));
+        robSelectionGroup.remove(); // Remove the group itself  
     }
 
 }

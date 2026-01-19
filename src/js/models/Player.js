@@ -158,4 +158,50 @@ export class Player {
         vp += this.achievements.cheatVP;
         return vp;
     }
+
+    /**
+     * Remove resources by indicies from player's resource hand
+     * @param {Array} indicies - array of resource indicies to remove
+     * @return a object {resourceType: amount, ...} of removed resources
+     */
+    removeResourceByIndicies(indicies) {
+        // determine resources to remove
+        const resourceTypes = Object.keys(this.resources);
+        
+        // compute the bounary indicies for each resource type
+        // e.g., [0, 3, 5, 8, 10, 12] means:
+        // 0-2: type0, 3-4: type1, 5-7: type2, 8-9: type3, 10-11: type4
+        let boundaries = [];                 
+        let cumulative = 0;
+        let toRemove = {};
+        for (let type of resourceTypes) {
+            boundaries.push(cumulative);
+            cumulative += this.resources[type];
+            toRemove[type] = 0;
+        }
+        boundaries.push(cumulative); // add the total count as the final boundary
+
+        // remove resources by indicies
+        
+        for (let index of indicies) {
+            if (index < 0 || index >= cumulative) {
+                throw new Error(`Invalid resource index: ${index}`);
+            }
+            // find which resource type this index belongs to
+            let typeIndex = 0; // the resource type index this index belongs 
+            // e.g., if index=4 and boundaries=[0,3,5,8,10,12], typeIndex=1 (type1)
+            while (typeIndex < boundaries.length - 1 && index >= boundaries[typeIndex + 1]) {
+                typeIndex++;
+            }
+            const type = resourceTypes[typeIndex];
+            toRemove[type] ++;
+        }
+
+        // actually remove the resources
+        for (let [type, amount] of Object.entries(toRemove)) {
+            this.resources[type] -= amount;
+        }
+
+        return toRemove;
+    }
 }
