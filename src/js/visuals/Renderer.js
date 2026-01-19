@@ -99,10 +99,11 @@ export class Renderer {
 
         // Create a group to center the image/text easily
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("id", "robber-token");
         circle.setAttribute("cx", x);
         circle.setAttribute("cy", y);
         circle.setAttribute("r", this.hexSize / 2 * 0.9);
-        circle.setAttribute("class", "token-circle token-robber");
+        circle.setAttribute("class", "token-circle");
         circle.setAttribute("fill", `url(#pattern-robber)`);
         layer.appendChild(circle);
     }
@@ -323,10 +324,13 @@ export class Renderer {
     }
 
     activateSettlementPlacementMode(availableVertexCoords) {
-        const vertexLayer = document.getElementById('interaction-layer');
-        if (!vertexLayer) return;
+        const interactionLayer = document.getElementById('interaction-layer');
+        if (!interactionLayer) return;
 
-        vertexLayer.classList.add('placement-mode');
+        const setttlementPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        setttlementPlacementGroup.id = 'setttlement-placement-group';
+        interactionLayer.appendChild(setttlementPlacementGroup);
+        interactionLayer.classList.add('placement-mode');
 
         // 2. Draw ONLY the available spots passed from the controller
         availableVertexCoords.forEach(vCoord => {
@@ -340,12 +344,12 @@ export class Renderer {
             circle.setAttribute("class", "vertex-settlement-available hitbox");
             circle.dataset.id = vertexId; // Store ID for the delegation
 
-            vertexLayer.appendChild(circle);
+            setttlementPlacementGroup.appendChild(circle);
         });
 
         // 3. Single Event Listener (Event Delegation)
         // Remove existing listener first if necessary to prevent duplicates
-        vertexLayer.onclick = (event) => {
+        setttlementPlacementGroup.onclick = (event) => {
             const target = event.target;
             if (target.classList.contains('vertex-settlement-available')) {
                 const vertexId = target.dataset.id;
@@ -362,14 +366,13 @@ export class Renderer {
     }
 
     deactivateSettlementPlacementMode() {
-        const vertexLayer = document.getElementById('interaction-layer');
-        if (!vertexLayer) return;
+        const setttlementPlacementGroup = document.getElementById('setttlement-placement-group');
+        if (!setttlementPlacementGroup) return;
+        
         // clean up
-        console.log(vertexLayer)
-
-        vertexLayer.onclick = null;
-        vertexLayer.querySelectorAll('.vertex-settlement-available').forEach(spot => vertexLayer.removeChild(spot));
-        vertexLayer.classList.remove('placement-mode');
+        setttlementPlacementGroup.onclick = null;
+        setttlementPlacementGroup.querySelectorAll('.vertex-settlement-available').forEach(spot => setttlementPlacementGroup.removeChild(spot));
+        setttlementPlacementGroup.remove(); // Remove the group itself
     }
 
     renderSettlement(vertexId, color, level) {
@@ -383,7 +386,7 @@ export class Renderer {
 
         // create a circle element for the settlement
         const settlementCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        const vCoord = vertexId.split(",").map(Number);
+        const vCoord = HexUtils.idToCoord(vertexId);
         const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
         settlementCircle.setAttribute("cx", x);
         settlementCircle.setAttribute("cy", y);
@@ -400,10 +403,13 @@ export class Renderer {
      * @returns 
      */
     activateRoadPlacementMode(validEdgeCoords) {
-        const edgeLayer = document.getElementById('interaction-layer');
-        if (!edgeLayer) return;
+        const interactionLayer = document.getElementById('interaction-layer');
+        if (!interactionLayer) return;
 
-        edgeLayer.classList.add('placement-mode');
+        const roadPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        roadPlacementGroup.id = 'road-placement-group';
+        interactionLayer.appendChild(roadPlacementGroup);
+        interactionLayer.classList.add('placement-mode');
 
         validEdgeCoords.forEach(eCoord => {
             // Get the two vertex endpoints for this edge
@@ -428,11 +434,11 @@ export class Renderer {
             // Styling moved to CSS classes where possible
             edgeLine.style.strokeWidth = "12px"; // Slightly thicker for easier clicking
             edgeLine.style.stroke = "rgba(0, 255, 0, 0)"; // need this to show the hitbox
-            edgeLayer.appendChild(edgeLine);
+            roadPlacementGroup.appendChild(edgeLine);
         });
 
         // EVENT DELEGATION: One listener for all roads
-        edgeLayer.onclick = (event) => {
+        roadPlacementGroup.onclick = (event) => {
             const target = event.target;
             if (target.classList.contains('edge-road-available')) {
                 this.emitInputEvent('PLACE_ROAD', { edgeId: target.dataset.id });
@@ -441,14 +447,13 @@ export class Renderer {
     }
 
     deactivateRoadPlacementMode() {
-        const edgeLayer = document.getElementById('interaction-layer');
-        if (!edgeLayer) return;
+        const roadPlacementGroup = document.getElementById('road-placement-group');
+        if (!roadPlacementGroup) return;
 
         // clean up
-        console.log(edgeLayer)
-        edgeLayer.onclick = null;
-        edgeLayer.querySelectorAll('.edge-road-available').forEach(spot => edgeLayer.removeChild(spot));
-        edgeLayer.classList.remove('placement-mode');
+        roadPlacementGroup.onclick = null;
+        roadPlacementGroup.querySelectorAll('.edge-road-available').forEach(spot => roadPlacementGroup.removeChild(spot));
+        roadPlacementGroup.remove(); // Remove the group itself
     }
 
     // Helper to keep math clean
@@ -752,7 +757,7 @@ export class Renderer {
         console.log("TODO: Activating robber placement mode. Not implemented yet.");
 
         // get the tile layer
-        const tileLayer = document.getElementById('static-layer');
+        const tileLayer = document.getElementById('interaction-layer');
         if (!tileLayer) return;
 
         // group for easier cleanup later
@@ -771,6 +776,91 @@ export class Renderer {
             // add click event listener to the hitbox
             hexHitbox.addEventListener('click', (event) => {
                 this.emitInputEvent('PLACE_ROBBER', { tileId: tileId });
+            });
+        });
+    }
+
+    deactivateRobberPlacementMode() {
+        const robberPlacementGroup = document.getElementById('robber-placement-group');
+        if (!robberPlacementGroup) return;
+        
+        // clean up
+        robberPlacementGroup.onclick = null;
+        robberPlacementGroup.querySelectorAll('.robbable-tile').forEach(spot => robberPlacementGroup.removeChild(spot));
+        robberPlacementGroup.remove(); // Remove the group itself
+    }
+
+    moveRobberToTile(tileCoord) {
+        console.log("TODO: Moving robber to tile:", tileCoord);
+
+        // animate the robber moving to the new tile
+        const robberLayer = document.getElementById('robber-layer');
+        if (!robberLayer) {
+            throw new Error("Robber layer not found in SVG");
+        }
+        
+        const circle = robberLayer.querySelector('#robber-token');
+        
+        if (!circle) {
+            throw new Error("Robber token not found in SVG");
+        }
+
+        const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
+
+        const animation = circle.animate(
+        [
+            // Keyframes
+            { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
+            { cx: newX, cy: newY } // End point
+        ],
+        {
+            // Timing options
+            duration: 1000, // seconds
+            iterations: 1, // Run once
+            fill: 'both', // Keep the final state after animation
+            easing: 'ease-in-out'
+        }
+        );
+
+        animation.play();
+    }
+
+
+    activateRobSelectionMode(robableSettlementsCoords, robTileCoord) {
+        const interactionLayer = document.getElementById('interaction-layer');
+        if (!interactionLayer) return;
+
+        const robSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        robSelectionGroup.id = 'rob-selection-group';
+        interactionLayer.appendChild(robSelectionGroup);
+        interactionLayer.classList.add('placement-mode');
+
+        // draw a mask to hightlight the tile with robber
+        const [robTileX, robTileY] = HexUtils.hexToPixel(robTileCoord, this.hexSize);
+        const robTileHex = this.createPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
+        robTileHex.classList.add('robber-tile-mask');
+        robSelectionGroup.appendChild(robTileHex);
+        
+
+        // darw a "mask" over the valid settlements
+        robableSettlementsCoords.forEach(vCoord => {
+            const vertexId = HexUtils.coordToId(vCoord);
+            const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
+
+            const robableCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            robableCircle.setAttribute("cx", x);
+            robableCircle.setAttribute("cy", y);
+            robableCircle.setAttribute("r", 20);
+            robableCircle.classList.add("robbable-settlement");
+            robableCircle.dataset.id = vertexId;
+
+
+            robableCircle.dataset.vertexId = vertexId;
+            robSelectionGroup.appendChild(robableCircle);
+
+            // add click event listener to the hitbox
+            robableCircle.addEventListener('click', (event) => {
+                this.emitInputEvent('ROB_PLAYER', { vertexId: vertexId });
             });
         });
     }

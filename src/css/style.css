@@ -22,18 +22,6 @@ body {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
-.robbable-tile {
-    opacity: 0.5;
-    fill: black;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.robbable-tile:hover {
-    opacity: 0.5;
-    fill: red;
-}
-
 .forest {
     fill: #234719;
 }
@@ -164,6 +152,37 @@ body {
     filter: grayscale(1);
 }
 
+
+/* interaction overlay (rob, select)*/
+.robbable-tile {
+    opacity: 0.5;
+    fill: black;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.robbable-tile:hover {
+    opacity: 0.5;
+    fill: red;
+}
+
+.robber-tile-mask{
+    fill:red;
+    opacity:0.5;
+    cursor:default;
+}
+
+.robbable-settlement {
+    opacity: 0.5;
+    fill: black;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.robbable-settlement:hover {
+    opacity: 0.5;
+    fill: red;
+}   
 
 
 

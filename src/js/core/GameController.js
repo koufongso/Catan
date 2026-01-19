@@ -967,14 +967,43 @@ export class GameController {
         if (!this.gameContext.gameMap.isRobableTile(robTileId)){
             throw new Error(`Invalid robber placement tile: ${robTileId}`);
         }
+        // deactivate robber placement mode
+        this.renderer.deactivateRobberPlacementMode();
 
         // update robber position on map
         this.gameContext.gameMap.moveRobberToTile(robTileId);
-        this.renderer.renderRobber(robTileId);
+        this.renderer.moveRobberToTile(HexUtils.idToCoord(robTileId));
 
-        console.log("TODO: render robber movement")
+        // get player list adjacent to the robber tile to steal from
+        const adjacentSettlements = this.gameContext.gameMap.searchSettlementsByTileId(robTileId);
+        const robableSettlements = adjacentSettlements.filter(
+            settlement => settlement.owner !== this.getCurrentPlayer().id && 
+            this.gameContext.players[settlement.owner].getTotalResourceCount() > 0
+        ); // only settlements owned by other players with resources
 
-        // TODO
+        const robableSettlementsCoords = robableSettlements.map(settlement => settlement.coord);
+        // activate rob selection mode
+        this.renderer.activateRobSelectionMode(robableSettlementsCoords, HexUtils.idToCoord(robTileId));
+        this.gameContext.currentState = GameState.ROB_PLAYER;
+        this.debug.renderDebugHUD(this.gameContext, `Robber moved. Please select a player to rob.`);
+    }
+
+
+    handleRobPlayer(event) {
+        if (event.type !== 'ROB_PLAYER') {
+            return;
+        }
+
+        const targetVertexId = event.vertexId;
+        // check if the settlement is valid to rob from
+        const settlement = this.gameContext.gameMap.settlements.get(targetVertexId);
+        if (!settlement || settlement.owner === this.getCurrentPlayer().id) {
+            throw new Error(`Invalid rob target settlement: ${targetVertexId}`);
+        }
+
+        //TODO: 
+        // deactivate rob selection mode
+        // implement actual rob logic (randomly steal a resource from the target player)
     }
 }
 

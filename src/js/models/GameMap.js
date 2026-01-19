@@ -609,4 +609,45 @@ export class GameMap {
     moveRobberToTile(tileId) {
         this.robberCoord = tileId;
     }
+
+
+    /**
+     * Generic settlement search by filter function
+     * @param {*} filterFunc 
+     * @returns 
+     */
+    searchSettlementsByFilter(filterFunc) {
+        let results = [];
+        for (let settlement of this.settlements.values()) {
+            if (filterFunc(settlement)) {
+                results.push(settlement);
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Search for settlements adjacent to the given tile coordinate
+     * @param {*} tileCoord 
+     * @returns an array of settlements adjacent to the given tile coordinate
+     */
+    searchSettlementsByTileCoord(tileCoord) {
+        const targetVertexCoords = HexUtils.getVerticesFromHex(tileCoord);
+        return this.searchSettlementsByFilter((settlement) => {
+            for (let vCoord of targetVertexCoords) {
+                if (HexUtils.areCoordsEqual(vCoord, settlement.coord)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    searchSettlementsByTileId(tileId) {
+        const tileCoord = HexUtils.idToCoord(tileId);
+        return this.searchSettlementsByTileCoord(tileCoord);
+    }
+
+
+
 }

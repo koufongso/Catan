@@ -64,6 +64,6 @@ export class Tile {
             [TERRAIN_TYPES.HILL]: RESOURCE_TYPES.BRICK,
             [TERRAIN_TYPES.DESERT]: null
         };
-        this.resource = map[this.type];
+        this.resource = map[this.terrainType];
     }
 }
