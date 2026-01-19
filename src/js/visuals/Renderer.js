@@ -116,9 +116,10 @@ export class Renderer {
         // Group the layers into a clean object
         const layers = {
             defs: clone.getElementById('defs-layer'),
-            tiles: clone.getElementById('tile-layer'),
-            vertices: clone.getElementById('vertex-layer'),
-            edges: clone.getElementById('edge-layer')
+            static: clone.getElementById('static-layer'),
+            settlement: clone.getElementById('settlement-layer'),
+            road: clone.getElementById('road-layer'),
+            robber: clone.getElementById('robber-layer')
         };
 
         return { clone, layers };
@@ -203,17 +204,17 @@ export class Renderer {
 
         // draw tiles
         tiles.forEach(t => {
-            this.drawHex(layers.tiles, t);
-            this.drawToken(layers.tiles, t);
+            this.drawHex(layers.static, t);
+            this.drawToken(layers.static, t);
         });
 
         // draw trading posts
         tradingPosts.forEach(tp => {
-            this.drawTradingPost(layers.tiles, tp);
+            this.drawTradingPost(layers.static, tp);
         });
 
         // draw robber
-        this.drawRobber(layers.tiles, robberCoord);
+        this.drawRobber(layers.robber, robberCoord);
 
         // add action buttons event listeners
         const diceBtn = clone.getElementById('dice-btn');
@@ -322,7 +323,7 @@ export class Renderer {
     }
 
     activateSettlementPlacementMode(availableVertexCoords) {
-        const vertexLayer = document.getElementById('vertex-layer');
+        const vertexLayer = document.getElementById('interaction-layer');
         if (!vertexLayer) return;
 
         vertexLayer.classList.add('placement-mode');
@@ -361,7 +362,7 @@ export class Renderer {
     }
 
     deactivateSettlementPlacementMode() {
-        const vertexLayer = document.getElementById('vertex-layer');
+        const vertexLayer = document.getElementById('interaction-layer');
         if (!vertexLayer) return;
         // clean up
         console.log(vertexLayer)
@@ -374,7 +375,7 @@ export class Renderer {
     renderSettlement(vertexId, color, level) {
         console.log(`Rendering settlement at ${vertexId} with color ${color} and level ${level}`);
         // render a settlement at the given vertexId with the given color and level
-        const vertexLayer = document.getElementById('vertex-layer');
+        const vertexLayer = document.getElementById('settlement-layer');
         if (!vertexLayer) {
             console.error("Renderer: Vertex layer not found in SVG. Cannot render settlement.");
             return;
@@ -399,7 +400,7 @@ export class Renderer {
      * @returns 
      */
     activateRoadPlacementMode(validEdgeCoords) {
-        const edgeLayer = document.getElementById('edge-layer');
+        const edgeLayer = document.getElementById('interaction-layer');
         if (!edgeLayer) return;
 
         edgeLayer.classList.add('placement-mode');
@@ -440,7 +441,7 @@ export class Renderer {
     }
 
     deactivateRoadPlacementMode() {
-        const edgeLayer = document.getElementById('edge-layer');
+        const edgeLayer = document.getElementById('interaction-layer');
         if (!edgeLayer) return;
 
         // clean up
@@ -466,7 +467,7 @@ export class Renderer {
 
     renderRoad(edgeId, color) {
         // render a road at the given edgeId with the given color
-        const edgeLayer = document.getElementById('edge-layer');
+        const edgeLayer = document.getElementById('road-layer');
         if (!edgeLayer) {
             console.error("Renderer: Edge layer not found in SVG. Cannot render road.");
             return;
@@ -751,7 +752,7 @@ export class Renderer {
         console.log("TODO: Activating robber placement mode. Not implemented yet.");
 
         // get the tile layer
-        const tileLayer = document.getElementById('tile-layer');
+        const tileLayer = document.getElementById('static-layer');
         if (!tileLayer) return;
 
         // group for easier cleanup later
