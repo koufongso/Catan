@@ -79,7 +79,6 @@ export class Renderer {
 
     drawRobber(layer, robberTileCoord) {
         if (!robberTileCoord) return;
-        console.log("Drawing robber at:", robberTileCoord);
         const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
         const circle = this.createHtmlCircleElement(x, y, this.hexSize / 2 * 0.9, ["token-circle"], "robber-token");
         circle.setAttribute("fill", `url(#pattern-robber)`);
@@ -117,7 +116,6 @@ export class Renderer {
         // pattern definitions for each tile type
         for (const [type, path] of Object.entries(TEXTURE_PATHS.TERRAINS)) {
             const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
-            console.log("Creating pattern for:", type, path);
             pattern.setAttribute("id", `pattern-${type.toLowerCase()}`);
             pattern.setAttribute("patternContentUnits", "objectBoundingBox");
             pattern.setAttribute("width", "1");
@@ -144,7 +142,7 @@ export class Renderer {
 
         const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
         image.setAttributeNS("http://www.w3.org/1999/xlink", "href", TEXTURE_PATHS.TOKENS.ROBBER);
-        
+
         image.setAttribute("x", "0");
         image.setAttribute("y", "0");
         image.setAttribute("width", "1");
@@ -314,7 +312,7 @@ export class Renderer {
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-            const circle = this.createHtmlCircleElement(x,y,10,["vertex-settlement-available", "hitbox"]);
+            const circle = this.createHtmlCircleElement(x, y, 10, ["vertex-settlement-available", "hitbox"]);
             circle.dataset.id = vertexId; // Store ID for the delegation
             setttlementPlacementGroup.appendChild(circle);
         });
@@ -340,7 +338,6 @@ export class Renderer {
 
 
     renderSettlement(vertexId, color, level) {
-        console.log(`Rendering settlement at ${vertexId} with color ${color} and level ${level}`);
         // render a settlement at the given vertexId with the given color and level
         const vertexLayer = document.getElementById('settlement-layer');
         if (!vertexLayer) {
@@ -427,8 +424,6 @@ export class Renderer {
         const roadLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
         const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.hexSize);
         const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.hexSize);
-        console.log("vertex0:", vCoord0, x0, y0);
-        console.log("vertex1:", vCoord1, x1, y1);
         const dir = [x1 - x0, y1 - y0];
         const len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
         const shorten_ratio = 0.2;
@@ -527,7 +522,7 @@ export class Renderer {
      * @param {*} onCardClick callback when a card is clicked (optional)
      */
     __renderPlayerResources(player, container, onCardClick = null) {
-                const resources = player.getResources();
+        const resources = player.getResources();
         container.innerHTML = ''; // clear existing content
 
         // resource resources
@@ -559,7 +554,6 @@ export class Renderer {
         });
 
         // dev cards
-        console.log("Rendering dev cards:", devCards);
         devCards.forEach(card => {
             if (card.isPlayed()) {
                 return; // skip played cards
@@ -601,7 +595,6 @@ export class Renderer {
         img.src = TEXTURE_PATHS.CARDS[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
         cardDiv.classList.add('dev-card');
-        console.log("current turn number:", currentTurnNumber, "dev card:", devCard);
         if (devCard.isLocked(currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
         }
@@ -629,7 +622,7 @@ export class Renderer {
 
         const modelTitle = modalCard.querySelector('#modal-title')
         modelTitle.textContent = `${player.name}: Select ${numCardsToDiscard} Cards to Discard (0/${numCardsToDiscard})`;
-        
+
         // add confirm button (disable when not enough cards selected, enable when enough)
         const btns = clone.querySelector('#modal-btns');
         const confirmBtn = document.createElement('button');
@@ -639,7 +632,7 @@ export class Renderer {
         btns.appendChild(confirmBtn);
 
         // render player's resource cards into the modal body
-        const modalBody  = modalCard.querySelector('#modal-body');
+        const modalBody = modalCard.querySelector('#modal-body');
         this.__renderPlayerResources(player, modalBody, (clickedType, cardDiv) => {
             // card clicked, first check how many are selected
             const selectedCards = modalBody.querySelectorAll('.discard-selected');
@@ -710,9 +703,9 @@ export class Renderer {
         if (!robberLayer) {
             throw new Error("Robber layer not found in SVG");
         }
-        
+
         const circle = robberLayer.querySelector('#robber-token');
-        
+
         if (!circle) {
             throw new Error("Robber token not found in SVG");
         }
@@ -720,18 +713,18 @@ export class Renderer {
         const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
 
         const animation = circle.animate(
-        [
-            // Keyframes
-            { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
-            { cx: newX, cy: newY } // End point
-        ],
-        {
-            // Timing options
-            duration: 1000, // seconds
-            iterations: 1, // Run once
-            fill: 'both', // Keep the final state after animation
-            easing: 'ease-in-out'
-        }
+            [
+                // Keyframes
+                { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
+                { cx: newX, cy: newY } // End point
+            ],
+            {
+                // Timing options
+                duration: 1000, // seconds
+                iterations: 1, // Run once
+                fill: 'both', // Keep the final state after animation
+                easing: 'ease-in-out'
+            }
         );
 
         animation.onfinish = () => {
@@ -794,7 +787,7 @@ export class Renderer {
 
     deactivateSettlementPlacementMode() {
         this.removeElement('settlement-placement-group');
-    }   
+    }
 
     deactivateRobSelectionMode() {
         this.removeElement('rob-selection-group');
@@ -839,7 +832,7 @@ export class Renderer {
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("x1", x1);
         line.setAttribute("y1", y1);
-        line.setAttribute("x2", x2);    
+        line.setAttribute("x2", x2);
         line.setAttribute("y2", y2);
 
         className.forEach(cls => {

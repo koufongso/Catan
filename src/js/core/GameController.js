@@ -15,12 +15,12 @@ export const GameState = Object.freeze({
     PLACE_SETTLEMENT2: 'PLACE_SETTLEMENT2', // place second settlement and road
     PLACE_ROAD2: 'PLACE_ROAD2',
     ROLL: 'ROLL', // roll dice phase
-    
+
     // sub-states for when 7 is rolled
     DISCARD: 'DISCARD', // discard resources if over 7 when 7 is rolled
     MOVE_ROBBER: 'MOVE_ROBBER', // move robber after 7 is rolled
     ROB_PLAYER: 'ROB_PLAYER', // rob a player after moving robber
-    
+
     // sub-states for main game loop
     MAIN: 'MAIN', // main game loop: build, trade, end turn
     MAIN_BUILD_ROAD: 'MAIN_BUILD_ROAD', // main game loop: build road sub-state
@@ -61,7 +61,8 @@ export class GameController {
             lastSettlementPlaced: null, // track last settlement coord placed for resource distribution
             devCardDeck: new DevCardDeck(this.rng),
             bankResources: this.bankResources,
-            playersToDiscard: [] // players that need to discard when 7 is rolled
+            playersToDiscard: [], // players that need to discard when 7 is rolled
+            lastRoll: null // last dice roll result
         }
 
         this.bankResources.clear();
@@ -78,13 +79,6 @@ export class GameController {
         this.debug = debug;
     }
 
-    updateDebugHUD() {
-        if (this.debug) {
-            this.debug.renderDebugHUD(this.gameContext);
-        } else {
-            console.warn("Debug not attached. Cannot update debug HUD.");
-        }
-    }
 
     // Simple log to console
     renderDebugHUDLog(message) {
@@ -208,9 +202,6 @@ export class GameController {
             return;
         }
 
-        // debug: print event
-        console.log("Game Setup Event:", event);
-
         // set up players
         let gameContext = this.gameContext;
         gameContext.humanPlayers = event.humanPlayers;
@@ -245,8 +236,7 @@ export class GameController {
         }
 
         // update debug HUD
-        this.updateDebugHUD();
-        this.renderDebugHUDLog("Game started. Please place your first settlement.");
+        this.debug.renderDebugHUD(this.gameContext);
     }
 
     async handleStatePlaceSettlement1(event) {
@@ -272,8 +262,7 @@ export class GameController {
         // compute all valid road spots based on last settlement placed
         const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null);
         this.activateRoadPlacementMode(availableEdgeIds);
-        this.updateDebugHUD();
-        this.renderDebugHUDLog(`Settlement placed at vertex ${event.vertexId}. Please place your first road.`);
+        this.debug.renderDebugHUD(this.gameContext);
     }
 
     async handleStatePlaceRoad1(event) {
@@ -300,8 +289,7 @@ export class GameController {
 
         const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
         this.activateSettlementPlacementMode(availableVertexIds);
-        this.updateDebugHUD();
-        this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 1.`);
+        this.debug.renderDebugHUD(this.gameContext);
     }
 
     handleStatePlaceSettlement2(event) {
@@ -323,8 +311,7 @@ export class GameController {
         const avaibleRoads = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null); // connected to last settlement placed
 
         this.activateRoadPlacementMode(avaibleRoads);
-        this.updateDebugHUD();
-        this.renderDebugHUDLog(`Second settlement placed at vertex ${vertexId}. Next player place road 2.`);
+        this.debug.renderDebugHUD(this.gameContext);
     }
 
     handleStatePlaceRoad2(event) {
@@ -341,7 +328,6 @@ export class GameController {
 
         // add adjacnet resources to player for second settlement
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
-        console.log("Distributing initial resources for second settlement:", adjacentResources);
         adjacentResources.forEach(RESOURCE_TYPES => {
             currentPlayer.addResources({ [RESOURCE_TYPES]: 1 });
             this.addBankResource({ [RESOURCE_TYPES]: -1 });
@@ -353,16 +339,14 @@ export class GameController {
             // if fisrt player, game setup is complete, move to ROLL state
             this.gameContext.currentState = GameState.ROLL;
             // prompt first player to roll dice
-            this.updateDebugHUD();
-            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Setup complete.`);
+            this.debug.renderDebugHUD(this.gameContext);
         } else {
             // else move to previous player and PLACE_SETTLEMENT2 state
             this.prevPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
             const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
             this.activateSettlementPlacementMode(availableVertexIds);
-            this.updateDebugHUD();
-            this.renderDebugHUDLog(`Road placed at edge ${event.edgeId}. Next player place settlement 2.`);
+            this.debug.renderDebugHUD(this.gameContext);
         }
     }
 
@@ -386,7 +370,7 @@ export class GameController {
             this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
             // transition to MAIN state
             this.gameContext.currentState = GameState.MAIN;
-            this.updateDebugHUD();
+            this.debug.renderDebugHUD(this.gameContext);
         }
 
 
@@ -461,7 +445,6 @@ export class GameController {
                 availableRoads = availableRoads.concat(availableECoords);
             });
         });
-        console.log("Player owned roads:", availableRoads);
 
         // activate road placement mode based on all settlement coords
         this.activateRoadPlacementMode(availableRoads, currentPlayer.id);
@@ -608,9 +591,8 @@ export class GameController {
             currentPlayer.addDevCard(devCard);
 
             this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
-            this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
-
             this.gameContext.currentState = GameState.MAIN;
+            this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
 
         } else if (event.type === 'CANCEL_ACTION') {
             this.gameContext.currentState = GameState.MAIN;
@@ -630,7 +612,6 @@ export class GameController {
         const productionCoords = [];
         allCoords.forEach(coord => {
             const tile = this.gameContext.gameMap.getTileByCoord(coord);
-            console.log("Tile at coord", coord, "is", tile);
             if (tile.terrainType == 'desert') {
                 this.gameContext.gameMap.robberCoord = coord;
             } else {
@@ -638,8 +619,6 @@ export class GameController {
                 productionCoords.push(coord);
             }
         });
-        console.log("Production Coords:", productionCoords);
-        console.log("NUMBER_TOKENS_DISTRIBUTION:", NUMBER_TOKENS_DISTRIBUTION);
         this.gameContext.gameMap.assignNumberTokensRandom(productionCoords, NUMBER_TOKENS_DISTRIBUTION);
     }
 
@@ -875,7 +854,7 @@ export class GameController {
             // activate selection mode for discarding cards
             this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
             this.gameContext.currentState = GameState.DISCARD; // wait for players to discard
-            this.updateDebugHUD();
+            this.debug.renderDebugHUD(this.gameContext);
         } else {
             // no one need to discard
             this.activateRobber();
@@ -885,7 +864,7 @@ export class GameController {
     activateRobber() {
         this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber()); // render to select where to move robber
         this.gameContext.currentState = GameState.MOVE_ROBBER;
-        this.updateDebugHUD();
+        this.debug.renderDebugHUD(this.gameContext);
     }
 
     /**
@@ -907,7 +886,7 @@ export class GameController {
         if (event.type !== 'CONFIRM_DISCARD') {
             return;
         }
-        
+
         // discard logic
         const player = this.gameContext.playersToDiscard[0];
 
@@ -969,7 +948,7 @@ export class GameController {
 
         const robTileId = event.tileId;
         // check if the tile is valid
-        if (!this.gameContext.gameMap.isRobableTile(robTileId)){
+        if (!this.gameContext.gameMap.isRobableTile(robTileId)) {
             throw new Error(`Invalid robber placement tile: ${robTileId}`);
         }
         // deactivate robber placement mode
@@ -982,8 +961,8 @@ export class GameController {
         // get player list adjacent to the robber tile to steal from
         const adjacentSettlements = this.gameContext.gameMap.searchSettlementsByTileId(robTileId);
         const robableSettlements = adjacentSettlements.filter(
-            settlement => settlement.owner !== this.getCurrentPlayer().id && 
-            this.gameContext.players[settlement.owner].getTotalResourceCount() > 0
+            settlement => settlement.owner !== this.getCurrentPlayer().id &&
+                this.gameContext.players[settlement.owner].getTotalResourceCount() > 0
         ); // only settlements owned by other players with resources
 
         if (robableSettlements.length === 0) {
@@ -1012,10 +991,6 @@ export class GameController {
         const targetPlayer = this.gameContext.players[settlement.owner];
         const totalResourceCount = targetPlayer.getTotalResourceCount();
 
-        console.log("Rob target settlement:", settlement);
-        console.log("Rob target player:", targetPlayer);
-        console.log("Target player total resources:", totalResourceCount);
-
         // check if the settlement is valid to rob from
         if (!settlement || settlement.owner !== targetPlayer.id || totalResourceCount === 0) {
             throw new Error(`Invalid rob target settlement: ${targetVertexId}`);
@@ -1025,10 +1000,10 @@ export class GameController {
         this.renderer.deactivateRobSelectionMode();
 
         // steal a random resource from the target player
-        
+
         // compute the resource index to steal
         const randomIndex = this.rng.nextInt(0, totalResourceCount - 1); // generate a random index from 0 to  n-1
-        
+
         const stolenResources = targetPlayer.removeResourceByIndicies([randomIndex]);
         this.getCurrentPlayer().addResources(stolenResources);
 

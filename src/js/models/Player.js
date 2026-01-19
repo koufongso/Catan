@@ -46,13 +46,10 @@ export class Player {
     // add resource count (can be negative, which means removing resources)
     addResources(resources) {
         for (let [type, amount] of Object.entries(resources)) {
-            console.log(`Player ${this.name} (${this.id}) resource change: ${type} ${amount}`);
-            console.log("Before:", this.resources);
             if (this.resources[type] !== undefined) {
                 // Prevents resources from dropping below zero
                 this.resources[type] = Math.max(0, this.resources[type] + amount);
             }
-            console.log("After:", this.resources);
         }
     }
 

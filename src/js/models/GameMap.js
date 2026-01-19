@@ -36,7 +36,6 @@ export class GameMap {
         try {
             const response = await fetch(path); // Path to your file
             const data = await response.json();
-            //console.log(data);
 
             // parse tiles
             // first check if range is defined, and generate tiles with default
@@ -115,9 +114,6 @@ export class GameMap {
         }
 
         let json_str = JSON.stringify(data, null, 2); // pretty print with 2 spaces indentation
-
-        // console.log("Map saved to JSON:");
-        // console.log(json_str);
 
         // download the json file
         return json_str;
