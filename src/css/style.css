@@ -57,6 +57,10 @@ body {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
+.edge-road-available{
+    stroke: rgba(0, 255, 0, 0.0);
+    stroke-width: 12px;
+}
 
 .hitbox {
     fill: transparent;

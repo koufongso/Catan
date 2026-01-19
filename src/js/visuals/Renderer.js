@@ -38,17 +38,9 @@ export class Renderer {
     drawToken(layer, tile) {
         // skip if no token or token is 7 (robber)
         if (tile.numberToken === null || tile.numberToken === 7) return;
-
         const [x, y] = HexUtils.hexToPixel(tile.coord, this.hexSize);
-
-        // The White Circle
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", x);
-        circle.setAttribute("cy", y);
-        circle.setAttribute("r", this.hexSize / 2 * 0.9);
-        circle.setAttribute("class", `token-circle token-number`);
+        const circle = this.createHtmlCircleElement(x, y, this.hexSize / 2 * 0.9, ["token-circle", "token-number"]);
         circle.setAttribute("fill", `url(#pattern-number-${tile.numberToken})`);
-
         layer.appendChild(circle);
     }
 
@@ -62,19 +54,12 @@ export class Renderer {
             const angle = RAD60 * index + RAD30;
             const x = this.hexSize * Math.cos(angle) + x0;
             const y = -this.hexSize * Math.sin(angle) + y0;
-
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-
             // Shorten line for better aesthetics
             const shortenRatio = 0.5;
             const xStart = x0 + (x - x0) * shortenRatio;
             const yStart = y0 + (y - y0) * shortenRatio;
 
-            line.setAttribute("x1", xStart);
-            line.setAttribute("y1", yStart);
-            line.setAttribute("x2", x);
-            line.setAttribute("y2", y);
-            line.setAttribute("class", "trading-post-line");
+            const line = this.createHtmlLineElement(xStart, yStart, x, y, ["trading-post-line"]);
             layer.appendChild(line);
         });
 
@@ -96,14 +81,7 @@ export class Renderer {
         if (!robberTileCoord) return;
         console.log("Drawing robber at:", robberTileCoord);
         const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
-
-        // Create a group to center the image/text easily
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("id", "robber-token");
-        circle.setAttribute("cx", x);
-        circle.setAttribute("cy", y);
-        circle.setAttribute("r", this.hexSize / 2 * 0.9);
-        circle.setAttribute("class", "token-circle");
+        const circle = this.createHtmlCircleElement(x, y, this.hexSize / 2 * 0.9, ["token-circle"], "robber-token");
         circle.setAttribute("fill", `url(#pattern-robber)`);
         layer.appendChild(circle);
     }
@@ -336,14 +314,8 @@ export class Renderer {
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-
-            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            circle.setAttribute("cx", x);
-            circle.setAttribute("cy", y);
-            circle.setAttribute("r", 10);
-            circle.setAttribute("class", "vertex-settlement-available hitbox");
+            const circle = this.createHtmlCircleElement(x,y,10,["vertex-settlement-available", "hitbox"]);
             circle.dataset.id = vertexId; // Store ID for the delegation
-
             setttlementPlacementGroup.appendChild(circle);
         });
 
@@ -377,15 +349,11 @@ export class Renderer {
         }
 
         // create a circle element for the settlement
-        const settlementCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         const vCoord = HexUtils.idToCoord(vertexId);
         const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-        settlementCircle.setAttribute("cx", x);
-        settlementCircle.setAttribute("cy", y);
-        settlementCircle.setAttribute("r", level === 1 ? 12 : 18);
+        const settlementCircle = this.createHtmlCircleElement(x, y, level === 1 ? 12 : 18, level === 1 ? ["settlement"] : ["city"]);
         settlementCircle.setAttribute("fill", color);
         settlementCircle.dataset.id = vertexId;
-        settlementCircle.setAttribute("class", level === 1 ? "settlement" : "city");
         vertexLayer.appendChild(settlementCircle);
     }
 
@@ -410,22 +378,11 @@ export class Renderer {
             const [x1, y1] = HexUtils.vertexToPixel(v1Coord, this.hexSize);
             const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.hexSize);
 
-            const edgeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-
             // Use your shortening logic for a better look
             const shortened = this.getShortenedLine(x1, y1, x2, y2, 0.2);
-
-            edgeLine.setAttribute("x1", shortened.x1);
-            edgeLine.setAttribute("y1", shortened.y1);
-            edgeLine.setAttribute("x2", shortened.x2);
-            edgeLine.setAttribute("y2", shortened.y2);
-
-            edgeLine.setAttribute("class", "edge-road-available hitbox");
+            const edgeLine = this.createHtmlLineElement(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["edge-road-available", "hitbox"]);
             edgeLine.dataset.id = edgeId;
 
-            // Styling moved to CSS classes where possible
-            edgeLine.style.strokeWidth = "12px"; // Slightly thicker for easier clicking
-            edgeLine.style.stroke = "rgba(0, 255, 0, 0)"; // need this to show the hitbox
             roadPlacementGroup.appendChild(edgeLine);
         });
 
@@ -809,14 +766,7 @@ export class Renderer {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
 
-            const robableCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            robableCircle.setAttribute("cx", x);
-            robableCircle.setAttribute("cy", y);
-            robableCircle.setAttribute("r", 20);
-            robableCircle.classList.add("robbable-settlement");
-            robableCircle.dataset.id = vertexId;
-
-
+            const robableCircle = this.createHtmlCircleElement(x, y, 20, ["robbable-settlement"]);
             robableCircle.dataset.vertexId = vertexId;
             robSelectionGroup.appendChild(robableCircle);
 
@@ -864,6 +814,42 @@ export class Renderer {
 
     deactivateDiscardSelectionMode() {
         this.removeElement('discard-modal-overlay');
+    }
+
+
+    // code to create circle elements
+    createHtmlCircleElement(cx, cy, r, className = [], id = null) {
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", cx);
+        circle.setAttribute("cy", cy);
+        circle.setAttribute("r", r);
+
+        className.forEach(cls => {
+            circle.classList.add(cls);
+        });
+
+        if (id) {
+            circle.id = id;
+        }
+        return circle;
+    }
+
+    // code to create line elements
+    createHtmlLineElement(x1, y1, x2, y2, className = [], id = null) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);    
+        line.setAttribute("y2", y2);
+
+        className.forEach(cls => {
+            line.classList.add(cls);
+        });
+
+        if (id) {
+            line.id = id;
+        }
+        return line;
     }
 
 }
