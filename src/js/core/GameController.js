@@ -5,7 +5,8 @@ import { Dice } from './Dice.js';
 import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
 import { COSTS, INITIAL_BANK_RESOURCES, PLAYER_NAMES, PLAYER_COLORS, NUMBER_TOKENS_DISTRIBUTION } from '../constants/GameConstants.js';
-import { DevCardDeck } from '../models/DevCard.js';
+import { DevCardDeck } from '../models/devCards/DevCardDeck.js';
+import { PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -27,7 +28,6 @@ export const GameState = Object.freeze({
     MAIN_BUILD_SETTLEMENT: 'MAIN_BUILD_SETTLEMENT', // main game loop: build settlement sub-state
     MAIN_BUILD_CITY: 'MAIN_BUILD_CITY', // main game loop: build city sub-state
     MAIN_BUY_DEV_CARD: 'MAIN_BUY_DEV_CARD', // main game loop: buy development card sub-state
-    MAIN_PLAY_DEV_CARD: 'MAIN_PLAY_DEV_CARD', // main game loop: play development card sub-state
 
     END: 'END' // game has ended
 });
@@ -47,22 +47,25 @@ export class GameController {
     resetGame() {
         // reset game context
         this.gameContext = {
-            gameMap: new GameMap(this.rng),
-            players: [], // circular array of Player instances
-            currentPlayerIndex: 0, // track whose turn it is
-            totalPlayers: 0,
-            humanPlayers: 0,
-            aiPlayers: 0,
-            turnNumber: 0,
-            seed: this.seed,
-            rng: this.rng,
-            dice: new Dice(this.rng),
-            currentState: GameState.SETUP,
-            lastSettlementPlaced: null, // track last settlement coord placed for resource distribution
-            devCardDeck: new DevCardDeck(this.rng),
-            bankResources: this.bankResources,
-            playersToDiscard: [], // players that need to discard when 7 is rolled
-            lastRoll: null // last dice roll result
+            gameMap: new GameMap(this.rng),         // instance of GameMap
+            players: [],                            // array of Player instances
+            currentPlayerIndex: 0,                  // track current player (index in players array) (int)
+            totalPlayers: 0,                        // total number of players (int)
+            humanPlayers: 0,                        // number of human players (int)         
+            aiPlayers: 0,                           // number of AI players (int)
+            turnNumber: 0,                          // current turn number (starts at 0)
+            seed: this.seed,                        // seed for rng (number)
+            rng: this.rng,                          // rng instance
+            dice: new Dice(this.rng),               // dice instance
+            currentState: GameState.SETUP,          // current game state (from GameState enum) 
+            lastSettlementPlaced: null,             // track last settlement coord placed for resource distribution (string id of `q,r,s`)
+            devCardDeck: new DevCardDeck(this.rng), // development card deck (instance of DevCardDeck)
+            bankResources: this.bankResources,      // map of RESOURCE_TYPES to amount
+            playersToDiscard: [],                   // players that need to discard hands (player instances)
+            lastRoll: null,                         // last dice roll result (number)
+            playerWithLongestRoad: null,            // player id (number)
+            playerWithLargestArmy: null,             // player id (number)
+            returnToStateAfterRob: null             // state to return to after robber process (GameState enum)
         }
 
         this.bankResources.clear();
@@ -351,29 +354,42 @@ export class GameController {
     }
 
     async handleStateRoll(event) {
-        if (event.type !== 'ROLL_DICE') {
-            return;
+        if (event.type === 'ROLL_DICE') {
+            // roll dice and update game state
+            const rollResult = this.gameContext.dice.roll(2);
+            this.gameContext.lastRoll = rollResult;
+
+            // distribute resources based on roll
+            const rolledNumber = rollResult.sum;
+            // get all the tiles ids with the rolled number token
+            if (rolledNumber === 7) {
+                // check players that needs to discard cards
+                this.discardCardAndActivateRobber();
+            } else {
+                this.distributeResourcesByRoll(rolledNumber);
+                this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
+                // transition to MAIN state
+                this.gameContext.currentState = GameState.MAIN;
+                this.debug.renderDebugHUD(this.gameContext);
+            }
+        }else if (event.type === 'PLAY_DEV_CARD') {
+            // handle play development card event
+            this.handlePlayDevCard(event);
         }
+    }
 
-        // roll dice and update game state
-        const rollResult = this.gameContext.dice.roll(2);
-        this.gameContext.lastRoll = rollResult;
+    handlePlayDevCard(event){
+        const currentPlayer = this.getCurrentPlayer();
+        const devCardType = event.devCardType;
 
-        // distribute resources based on roll
-        const rolledNumber = rollResult.sum;
-        // get all the tiles ids with the rolled number token
-        if (rolledNumber === 7) {
-            // check players that needs to discard cards
-            this.discardCardAndActivateRobber();
+        // check if player has the dev card and can play it
+        // must be one of the playable types (not victory point), and player own the card and is playable
+        const devCard = currentPlayer.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
+        if (devCard) {
+            devCard.activate(this);
         } else {
-            this.distributeResourcesByRoll(rolledNumber);
-            this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
-            // transition to MAIN state
-            this.gameContext.currentState = GameState.MAIN;
-            this.debug.renderDebugHUD(this.gameContext);
+            this.debug.renderDebugHUD(this.gameContext, `Invalid development card play attempt: ${devCardType}`);
         }
-
-
     }
 
 
@@ -399,7 +415,7 @@ export class GameController {
                 this.__handleEventBuyDevCard(event);
                 break;
             case 'PLAY_DEV_CARD':
-                // TODO: handle play development card
+                this.handlePlayDevCard(event);
                 break;
             case 'TRADE':
                 // TODO: handle trade
@@ -857,11 +873,16 @@ export class GameController {
             this.debug.renderDebugHUD(this.gameContext);
         } else {
             // no one need to discard
-            this.activateRobber();
+            this.activateRobber(GameState.MAIN); // this is after finish rolling dice, therefore return to MAIN state
         }
     }
 
-    activateRobber() {
+    /**
+     * Start the robber placement -> move robber process -> steal routine, this eventually will transit to returnToState state
+     * @param {*} returnToState state to return to after robber process is complete
+     */
+    activateRobber(returnToState) {
+        this.gameContext.returnToStateAfterRob = returnToState; // store the state to return to after robber process
         this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber()); // render to select where to move robber
         this.gameContext.currentState = GameState.MOVE_ROBBER;
         this.debug.renderDebugHUD(this.gameContext);
@@ -955,8 +976,9 @@ export class GameController {
         this.renderer.deactivateRobberPlacementMode();
 
         // update robber position on map
-        this.gameContext.gameMap.moveRobberToTile(robTileId);
-        this.renderer.moveRobberToTile(HexUtils.idToCoord(robTileId));
+        const robTileCoord = HexUtils.idToCoord(robTileId);
+        this.gameContext.gameMap.moveRobberToTile(robTileCoord);
+        this.renderer.moveRobberToTile(robTileCoord);
 
         // get player list adjacent to the robber tile to steal from
         const adjacentSettlements = this.gameContext.gameMap.searchSettlementsByTileId(robTileId);
@@ -1008,14 +1030,39 @@ export class GameController {
         this.getCurrentPlayer().addResources(stolenResources);
 
         // whole rob process complete, transition to MAIN state
-        this.gameContext.currentState = GameState.MAIN;
+        this.gameContext.currentState = this.gameContext.returnToStateAfterRob;
+        this.gameContext.returnToStateAfterRob = null; // reset return state
 
         // render updated player assets
         this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
         this.debug.renderDebugHUD(this.gameContext, `Robbed Player ${targetPlayer.id} and stole ${Object.entries(stolenResources).map(([type, amount]) => `${amount} ${type}`).join(', ')}.`);
 
     }
+
+    updateLargestArmy() {
+        this.gameContext.players.forEach(player => {
+            const armySize = player.achievements.knightPlayed;
+            if (armySize >= 3) {
+                if (!this.gameContext.playerWithLargestArmy || this.gameContext.players[this.gameContext.playerWithLargestArmy].achievements.knightPlayed < armySize) {
+                    // no current largest army holder or current player has larger army than existing holder
+                    this.gameContext.playerWithLargestArmy = player.id;
+                    this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} now has the Largest Army with ${armySize} knights played.`);
+                }
+            }
+        });
+    }
+
+
+    updateLongestRoad() {
+        this.gameContext.players.forEach(player => {
+            const longestRoadLength = player.calculateLongestRoad(this.gameContext.gameMap);
+            if (longestRoadLength >= 5) {
+                if (!this.gameContext.playerWithLongestRoad || this.gameContext.players[this.gameContext.playerWithLongestRoad].calculateLongestRoad(this.gameContext.gameMap) < longestRoadLength) {
+                    // no current longest road holder or current player has longer road than existing holder
+                    this.gameContext.playerWithLongestRoad = player.id;
+                    this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} now has the Longest Road with ${longestRoadLength} segments.`);
+                }
+            }
+        });
+    }
 }
-
-
-

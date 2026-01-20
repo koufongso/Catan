@@ -189,6 +189,23 @@ body {
 }   
 
 
+/* for development card action menu */
+.card-popover {
+    position: fixed;
+    z-index: 1000;
+    background: white;
+    width: 120px;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    font-family: sans-serif;
+}
+.popover-row { padding: 10px; cursor: pointer; text-align: center; }
+.popover-row:hover { background: #f0f0f0; }
+.popover-row.action { color: green; border-bottom: 1px solid #eee; }
+.popover-row.cancel { color: red; }
+
+
 
 /* ============================================================
  3. DEBUG DASHBOARD

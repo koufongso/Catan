@@ -596,14 +596,13 @@ export class GameMap {
     isRobableTile(tileId) {
         if (this.tiles.has(tileId)) {
             const tile = this.tiles.get(tileId);
-            // robable tiles are non-desert tiles
             return !HexUtils.areCoordsEqual(tile.coord, this.robberCoord); // cannot rob the tile where the robber is located
         }
         return false; // tile does not exist
     }
 
-    moveRobberToTile(tileId) {
-        this.robberCoord = tileId;
+    moveRobberToTile(tileCoord) {
+        this.robberCoord = tileCoord;
     }
 
 

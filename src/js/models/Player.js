@@ -1,4 +1,5 @@
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
+import {PLAYER_ASSET_LIMITS} from '../constants/GameConstants.js';
 
 export class Player {
     constructor(id, name, color, type) {
@@ -6,6 +7,9 @@ export class Player {
         this.name = name;
         this.color = color;
         this.type = type;
+        this.roadsLeft = PLAYER_ASSET_LIMITS.roads;
+        this.settlementsLeft = PLAYER_ASSET_LIMITS.settlements;
+        this.citiesLeft = PLAYER_ASSET_LIMITS.cities;
 
         // resource inventory
         this.resources = {
@@ -53,14 +57,15 @@ export class Player {
         }
     }
 
-
     // add a settlement object to player's list
     addSettlement(settlement) {
+        this.settlementsLeft--;
         this.settlements.add(settlement);
     }
 
     // add a road object to player's list
     addRoad(road) {
+        this.roadsLeft--;
         this.roads.add(road);
     }
 
@@ -82,8 +87,6 @@ export class Player {
             throw new Error("Invalid settlement level filter");
         }
     }
-
-
 
     getRoads() {
         return Array.from(this.roads);

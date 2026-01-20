@@ -1,4 +1,6 @@
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
+import { DevCard } from "../models/devCards/DevCard.js";
+import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
@@ -8,6 +10,21 @@ export class DebugController {
         this.debug = gameController.debug; // reference to the debug dashboard
         this.renderer = gameController.renderer; // reference to the renderer
 
+        this.CHEAT_CARD_MAP = {
+            "kt": DEV_CARD_TYPES.KNIGHT,
+            "knight": DEV_CARD_TYPES.KNIGHT,
+
+            "rb": DEV_CARD_TYPES.ROAD_BUILDING,
+            "br": DEV_CARD_TYPES.ROAD_BUILDING,
+
+            "vp": DEV_CARD_TYPES.VICTORY_POINT,
+
+            "mn": DEV_CARD_TYPES.MONOPOLY,
+            "mono": DEV_CARD_TYPES.MONOPOLY,
+
+            "yp": DEV_CARD_TYPES.YEAR_OF_PLENTY,
+            "yop": DEV_CARD_TYPES.YEAR_OF_PLENTY
+        };
 
         // cheat commands
         this.commands = {
@@ -22,7 +39,7 @@ export class DebugController {
                 const player = this.gameContext.players[playerIndex];
                 player.addResources({ [type]: parseInt(qty) });
                 this.debug.renderDebugHUD(this.gameContext, `Added ${qty} ${type} to Player ${playerIndex}`);
-                
+
                 if (playerIndex === this.gameContext.currentPlayerIndex) {
                     this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
                 }
@@ -64,11 +81,11 @@ export class DebugController {
                 if (!this.isValidPlayerIndex(playerIndex)) {
                     this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
                     return;
-                }   
+                }
                 const player = this.gameContext.players[playerIndex];
                 player.achievements.cheatVP += parseInt(amount);
                 this.debug.renderDebugHUD(this.gameContext, `Added ${amount} cheat VP to Player ${playerIndex}`);
-                
+
                 if (playerIndex === this.gameContext.currentPlayerIndex) {
                     this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
                 }
@@ -102,7 +119,44 @@ export class DebugController {
                 const [tileId, targetPlayerIndex] = args;
                 this.controller.activateRobber();
             },
-                
+
+            /**
+             * directly add a development card to a player, or to the current player if none specified
+             * dev <cardType> <amount> [playerIndex]
+             * @param {*} args casrdType kt, vp, rb, mono, yop
+             * @returns 
+             */
+            dev: (args) => {
+                const [cardType, amount, pIdx] = args;
+                const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
+
+                // cehck card type
+                const resolvedCardType = this.CHEAT_CARD_MAP[cardType.toLowerCase()];
+                if (!resolvedCardType) {
+                    this.debug.renderDebugHUD(this.gameContext, `Unknown card code: "${cardType}". Try: kt, rb, mn, vp, yop`);
+                    return;
+                }
+
+                // check player 
+                if (!this.isValidPlayerIndex(playerIndex)) {
+                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
+                    return;
+                }
+
+                const amountInt = parseInt(amount);
+                if (isNaN(amountInt) || amountInt <= 0) {
+                    this.debug.renderDebugHUD(this.gameContext, `Invalid amount: "${amount}". Must be a positive integer.`);
+                    return;
+                }
+
+                // cheat add dev card
+                const player = this.gameContext.players[playerIndex];
+                for (let i = 0; i < amountInt; i++) {
+                    player.addDevCard(new DevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
+                }
+                this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // re-render assets
+                this.debug.renderDebugHUD(this.gameContext, `Gave ${amountInt} dev card "${resolvedCardType}" to Player ${playerIndex}`);
+            },
 
             /**
              * refresh the debug HUD

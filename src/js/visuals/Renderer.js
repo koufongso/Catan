@@ -3,6 +3,7 @@ import { HexUtils } from "../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 import { Player } from "../models/Player.js";
+import {PLAYERABLDE_DEVCARDS} from "../constants/DevCardTypes.js";
 
 
 // constants for hex geometry
@@ -595,8 +596,49 @@ export class Renderer {
         img.src = TEXTURE_PATHS.CARDS[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
         cardDiv.classList.add('dev-card');
+        cardDiv.dataset.type = devCard.type;
+
+        // check if the card is locked (bought this turn)
         if (devCard.isLocked(currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
+        }else if (!devCard.isPlayed() && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
+            // card can be played, pop up action menu on click
+
+            cardDiv.classList.add('dev-card-playable');
+            cardDiv.onclick = (event) => {
+                // 1. remove existing menu if any
+                this.removeElement('card-action-menu');
+                // 2. create new menu on click
+                const actionMenuTemplate = document.getElementById('card-action-menu-template');
+                if (!actionMenuTemplate) {
+                    console.error("Card action menu template not found in DOM");
+                    return;
+                }
+
+                const actionMenuClone = actionMenuTemplate.content.cloneNode(true);
+                const actionMenu = actionMenuClone.querySelector('.card-popover');
+                actionMenu.id = 'card-action-menu';
+                document.body.appendChild(actionMenu);
+
+                // position the menu near the clicked point
+                const clientX = event.clientX
+                const clientY = event.clientY;
+                const rect = actionMenu.getBoundingClientRect();
+                actionMenu.style.left = `${clientX}px`;
+                actionMenu.style.top = `${clientY}px`;
+
+                // attach event listeners to menu buttons
+                const playBtn = actionMenu.querySelector('#play-dev-card-btn');
+                playBtn.onclick = () => {
+                    this.emitInputEvent('PLAY_DEV_CARD', { devCardType: devCard.type });
+                    actionMenu.remove();
+                };
+
+                const cancelBtn = actionMenu.querySelector('#cancel-dev-card-btn');
+                cancelBtn.onclick = () => {
+                    actionMenu.remove();
+                };
+            }
         }
 
         return clone;

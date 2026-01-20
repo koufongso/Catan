@@ -38,6 +38,13 @@ export const INITIAL_BANK_RESOURCES = {
     [RESOURCE_TYPES.LUMBER]: 19,
 };
 
+// player maximum roads, settlements, and cities
+export const PLAYER_ASSET_LIMITS = {
+    roads: 15,
+    settlements: 5,
+    cities: 4
+};
+
 export const TEXTURE_PATHS = {
     TERRAINS: {
         [TERRAIN_TYPES.FOREST]: '/src/assets/images/terrains/forest.png',       // Wood
