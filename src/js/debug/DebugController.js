@@ -107,7 +107,7 @@ export class DebugController {
                 }
 
                 if (diceValue === 7) {
-                    this.controller.discardCardAndActivateRobber();
+                    this.controller.discardCardAndActivateRobber(this.gameContext.currentState); // this will not change state after robber
                 } else {
                     this.controller.distributeResourcesByRoll(diceValue);
                     this.renderer.renderPlayerAssets(this.gameContext.players[this.gameContext.currentPlayerIndex], this.gameContext.turnNumber);
@@ -117,7 +117,7 @@ export class DebugController {
 
             rob: (args) => {
                 const [tileId, targetPlayerIndex] = args;
-                this.controller.activateRobber();
+                this.controller.activateRobber(this.gameContext.currentState); // this will not change state after robber
             },
 
             /**

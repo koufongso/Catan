@@ -65,7 +65,7 @@ export class GameController {
             lastRoll: null,                         // last dice roll result (number)
             playerWithLongestRoad: null,            // player id (number)
             playerWithLargestArmy: null,             // player id (number)
-            returnToStateAfterRob: null             // state to return to after robber process (GameState enum)
+            stateAfterRob: null             // state to return to after robber process (GameState enum)
         }
 
         this.bankResources.clear();
@@ -364,7 +364,7 @@ export class GameController {
             // get all the tiles ids with the rolled number token
             if (rolledNumber === 7) {
                 // check players that needs to discard cards
-                this.discardCardAndActivateRobber();
+                this.discardCardAndActivateRobber(GameState.MAIN);
             } else {
                 this.distributeResourcesByRoll(rolledNumber);
                 this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
@@ -372,13 +372,13 @@ export class GameController {
                 this.gameContext.currentState = GameState.MAIN;
                 this.debug.renderDebugHUD(this.gameContext);
             }
-        }else if (event.type === 'PLAY_DEV_CARD') {
+        } else if (event.type === 'PLAY_DEV_CARD') {
             // handle play development card event
             this.handlePlayDevCard(event);
         }
     }
 
-    handlePlayDevCard(event){
+    handlePlayDevCard(event) {
         const currentPlayer = this.getCurrentPlayer();
         const devCardType = event.devCardType;
 
@@ -492,7 +492,7 @@ export class GameController {
     __handleEventBuyDevCard(event) {
         this.gameContext.currentState = GameState.MAIN_BUY_DEV_CARD;
         // TODO: let rendere prompt to confirm purchase
-        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card'});
+        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card' });
         this.debug.renderDebugHUD(this.gameContext, `Buying development card. Please confirm purchase.`);
     }
 
@@ -864,25 +864,26 @@ export class GameController {
      * Trigger discard card process if possible, transit to discard stage, OR
      * When no one needs to discard, activate robber placement mode, transit to move robber stage
      */
-    discardCardAndActivateRobber() {
+    discardCardAndActivateRobber(stateAfterRob) {
+        this.gameContext.stateAfterRob = stateAfterRob; // store the state to return to after robber process
         this.gameContext.playersToDiscard = this.getPlayersNeedsToDiscard();
         if (this.gameContext.playersToDiscard.length > 0) {
             // activate selection mode for discarding cards
-            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
             this.gameContext.currentState = GameState.DISCARD; // wait for players to discard
+            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
             this.debug.renderDebugHUD(this.gameContext);
         } else {
             // no one need to discard
-            this.activateRobber(GameState.MAIN); // this is after finish rolling dice, therefore return to MAIN state
+            this.activateRobber(stateAfterRob); // this is after finish rolling dice, therefore return to the given state
         }
     }
 
     /**
      * Start the robber placement -> move robber process -> steal routine, this eventually will transit to returnToState state
-     * @param {*} returnToState state to return to after robber process is complete
+     * @param {*} stateAfterRob state to return to after robber process is complete
      */
-    activateRobber(returnToState) {
-        this.gameContext.returnToStateAfterRob = returnToState; // store the state to return to after robber process
+    activateRobber(stateAfterRob) {
+        this.gameContext.stateAfterRob = stateAfterRob; // store the state to return to after robber process
         this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber()); // render to select where to move robber
         this.gameContext.currentState = GameState.MOVE_ROBBER;
         this.debug.renderDebugHUD(this.gameContext);
@@ -954,8 +955,8 @@ export class GameController {
         } else {
             // no more players to discard, activate move robber mode
             this.renderer.deactivateDiscardSelectionMode();
-            this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber());
             this.gameContext.currentState = GameState.MOVE_ROBBER;
+            this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber());
             this.debug.renderDebugHUD(this.gameContext, `All players have discarded. Please move the robber.`);
 
         }
@@ -989,7 +990,8 @@ export class GameController {
 
         if (robableSettlements.length === 0) {
             // no one to rob, rob process complete, transition to MAIN state
-            this.gameContext.currentState = GameState.MAIN;
+            this.gameContext.currentState = this.gameContext.stateAfterRob;
+            this.gameContext.stateAfterRob = null; // reset return state
             this.debug.renderDebugHUD(this.gameContext, `Robber moved. No players to rob. Turn continues.`);
             return;
         }
@@ -1030,8 +1032,8 @@ export class GameController {
         this.getCurrentPlayer().addResources(stolenResources);
 
         // whole rob process complete, transition to MAIN state
-        this.gameContext.currentState = this.gameContext.returnToStateAfterRob;
-        this.gameContext.returnToStateAfterRob = null; // reset return state
+        this.gameContext.currentState = this.gameContext.stateAfterRob;
+        this.gameContext.stateAfterRob = null; // reset return state
 
         // render updated player assets
         this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
