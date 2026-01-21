@@ -58,17 +58,23 @@ body {
 }
 
 .edge-road-available{
-    stroke: rgba(0, 255, 0, 0.0);
+    stroke: rgba(0, 255, 0, 1.0);
     stroke-width: 12px;
 }
 
 .hitbox {
-    fill: transparent;
+    fill:  rgba(0, 255, 0, 1.0);;
     cursor: pointer;
 }
 
 .vertex-slot:hover {
     fill: rgba(255, 255, 255, 0.5);
+}
+
+
+.road{
+    stroke-width: 8px;
+    stroke-linecap: round;
 }
 
 .built-settlement,

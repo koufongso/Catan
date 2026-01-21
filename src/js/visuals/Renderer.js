@@ -3,7 +3,7 @@ import { HexUtils } from "../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 import { Player } from "../models/Player.js";
-import {PLAYERABLDE_DEVCARDS} from "../constants/DevCardTypes.js";
+import { PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
 
 
 // constants for hex geometry
@@ -202,22 +202,22 @@ export class Renderer {
 
         const buildRoadBtn = clone.getElementById('build-road-btn');
         buildRoadBtn.onclick = () => {
-            this.emitInputEvent('BUILD_ROAD', {});
+            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'ROAD' });
         }
 
         const buildSettlementBtn = clone.getElementById('build-settlement-btn');
         buildSettlementBtn.onclick = () => {
-            this.emitInputEvent('BUILD_SETTLEMENT', {});
+            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'SETTLEMENT' });
         }
 
         const buildCityBtn = clone.getElementById('build-city-btn');
         buildCityBtn.onclick = () => {
-            this.emitInputEvent('BUILD_CITY', {});
+            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'CITY' });
         }
 
         const buyDevCardBtn = clone.getElementById('buy-dev-card-btn');
         buyDevCardBtn.onclick = () => {
-            this.emitInputEvent('BUY_DEV_CARD', {});
+            this.activateBuyDevCardConfirmationUI();
         }
 
         const endTurnBtn = clone.getElementById('end-turn-btn');
@@ -300,12 +300,28 @@ export class Renderer {
         document.body.appendChild(clone);
     }
 
-    activateSettlementPlacementMode(availableVertexCoords) {
-        const interactionLayer = document.getElementById('interaction-layer');
+
+    highlightValidSpots(coords, type) {
+        switch (type) {
+            case 'SETTLEMENT':
+            case 'CITY':
+                this.activateSettlementPlacementMode(coords, type);
+                break;
+            case 'ROAD':
+                this.activateRoadPlacementMode(coords);
+                break;
+
+            default:
+                console.warn(`Unknown highlight type: ${type}`);
+        }
+    }
+
+    activateSettlementPlacementMode(availableVertexCoords, type) {
+        const interactionLayer = this.clearElementById('interaction-layer');
         if (!interactionLayer) return;
 
         const setttlementPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        setttlementPlacementGroup.id = 'settlement-placement-group';
+        setttlementPlacementGroup.id = `${type}-placement-group`;
         interactionLayer.appendChild(setttlementPlacementGroup);
         interactionLayer.classList.add('placement-mode');
 
@@ -313,7 +329,7 @@ export class Renderer {
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-            const circle = this.createHtmlCircleElement(x, y, 10, ["vertex-settlement-available", "hitbox"]);
+            const circle = this.createHtmlCircleElement(x, y, 10, [`vertex-${type}-available`, 'hitbox']);
             circle.dataset.id = vertexId; // Store ID for the delegation
             setttlementPlacementGroup.appendChild(circle);
         });
@@ -322,9 +338,10 @@ export class Renderer {
         // Remove existing listener first if necessary to prevent duplicates
         setttlementPlacementGroup.onclick = (event) => {
             const target = event.target;
-            if (target.classList.contains('vertex-settlement-available')) {
+            if (target.classList.contains(`vertex-${type}-available`)) {
+                this.removeElementById(`${type}-placement-group`);
                 const vertexId = target.dataset.id;
-                this.emitInputEvent('PLACE_SETTLEMENT', { vertexId });
+                this.emitInputEvent(`BUILD_${type.toUpperCase()}`, { vertexId: vertexId });
             }
         };
     }
@@ -361,7 +378,7 @@ export class Renderer {
      * @returns 
      */
     activateRoadPlacementMode(validEdgeCoords) {
-        const interactionLayer = document.getElementById('interaction-layer');
+        const interactionLayer = this.clearElementById('interaction-layer');
         if (!interactionLayer) return;
 
         const roadPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -388,7 +405,9 @@ export class Renderer {
         roadPlacementGroup.onclick = (event) => {
             const target = event.target;
             if (target.classList.contains('edge-road-available')) {
-                this.emitInputEvent('PLACE_ROAD', { edgeId: target.dataset.id });
+                this.removeElementById('road-placement-group');
+                const roadId = target.dataset.id;
+                this.emitInputEvent('BUILD_ROAD', { edgeId: roadId });
             }
         };
     }
@@ -409,39 +428,27 @@ export class Renderer {
         };
     }
 
-    renderRoad(edgeId, color) {
-        // render a road at the given edgeId with the given color
-        const edgeLayer = document.getElementById('road-layer');
-        if (!edgeLayer) {
-            console.error("Renderer: Edge layer not found in SVG. Cannot render road.");
+    renderRoad(roadCoord, color) {
+        // render a road at the given edgeCoord with the given color
+        const roadLayer = document.getElementById('road-layer');
+        if (!roadLayer) {
+            console.error("Renderer: Road layer not found in SVG. Cannot render road.");
             return;
         }
 
-        // get the two vertex coordinates from edgeId
-        const eCoord = HexUtils.idToCoord(edgeId);
-        const [vCoord0, vCoord1] = HexUtils.getVerticesFromEdge(eCoord);
+        // get the two vertex coordinates from edgeCoord
+        const [vCoord1, vCoord2] = HexUtils.getVerticesFromEdge(roadCoord);
+        const roadId = HexUtils.coordToId(roadCoord);
 
         // create a line element for the road
-        const roadLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        const [x0, y0] = HexUtils.vertexToPixel(vCoord0, this.hexSize);
         const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.hexSize);
-        const dir = [x1 - x0, y1 - y0];
-        const len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-        const shorten_ratio = 0.2;
-        const x0_short = x0 + dir[0] * (shorten_ratio * this.hexSize / len);
-        const y0_short = y0 + dir[1] * (shorten_ratio * this.hexSize / len);
-        const x1_short = x1 - dir[0] * (shorten_ratio * this.hexSize / len);
-        const y1_short = y1 - dir[1] * (shorten_ratio * this.hexSize / len);
-        roadLine.setAttribute("x1", x0_short);
-        roadLine.setAttribute("y1", y0_short);
-        roadLine.setAttribute("x2", x1_short);
-        roadLine.setAttribute("y2", y1_short);
-        roadLine.setAttribute("class", "road");
-        roadLine.setAttribute("data-id", edgeId);
-        roadLine.style.strokeWidth = "8px";
+        const [x2, y2] = HexUtils.vertexToPixel(vCoord2, this.hexSize);
+
+        const shortened = this.getShortenedLine(x1, y1, x2, y2, 0.2);
+        const roadLine = this.createHtmlLineElement(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["road", `road-${roadId}`]);
+        roadLine.dataset.id = roadId;
         roadLine.style.stroke = `${color}`;
-        roadLine.dataset.id = edgeId;
-        edgeLayer.appendChild(roadLine);
+        roadLayer.appendChild(roadLine);
     }
 
 
@@ -463,6 +470,12 @@ export class Renderer {
         const actionBtn = document.getElementById('action-btn');
     }
 
+    activateBuyDevCardConfirmationUI() {
+        this.activateActionConfirmationUI({
+            title: 'Buy Development Card',
+            message: 'Are you sure you want to buy a Development Card for 1 Wheat, 1 Sheep, and 1 Ore?'
+        }, 'BUY_DEV_CARD');
+    }
 
     /**
      * Display a confirmation modal for actions that require user confirmation,
@@ -471,46 +484,46 @@ export class Renderer {
      * @param {string} title - title of the confirmation modal
      * @param {string} message - message of the confirmation modal 
      */
-    activateActionConfirmationUI({ title, message }) {
-        const temp = document.getElementById('universal-modal-template');
-        const clone = temp.content.cloneNode(true);
-
-        // 1. Inject the text
-        if (title !== undefined){
-            clone.getElementById('modal-title').textContent = title;
-        }
-
-        if (message !== undefined)
+    activateActionConfirmationUI({ title, message }, confirm_event_name) {
         {
-            clone.getElementById('modal-body').textContent = message;
+            const temp = document.getElementById('universal-modal-template');
+            const clone = temp.content.cloneNode(true);
+
+            // 1. Inject the text
+            if (title !== undefined) {
+                clone.getElementById('modal-title').textContent = title;
+            }
+
+            if (message !== undefined) {
+                clone.getElementById('modal-body').textContent = message;
+            }
+
+            const overlay = clone.querySelector('.modal-overlay');
+            overlay.id = 'action-confirmation-modal-overlay';
+
+            // 2. Add two buttons
+            const btnsContainer = clone.getElementById('modal-btns');
+            const confirmBtn = this.createHtmlButtonElement('Confirm', ['btn-primary'], 'action-confirm-btn');
+            const cancelBtn = this.createHtmlButtonElement('Cancel', ['btn-cancel'], 'action-cancel-btn');
+
+            btnsContainer.appendChild(confirmBtn);
+            btnsContainer.appendChild(cancelBtn);
+
+            // 3. Attach Listeners
+            confirmBtn.onclick = () => {
+                this.deactivateActionConfirmationUI();
+                this.emitInputEvent(confirm_event_name);
+            };
+
+            cancelBtn.onclick = () => {
+                this.deactivateActionConfirmationUI();
+            };
+
+            document.body.appendChild(clone);
         }
-
-        const overlay = clone.querySelector('.modal-overlay');
-        overlay.id = 'action-confirmation-modal-overlay';
-
-        // 2. Add two buttons
-        const btnsContainer = clone.getElementById('modal-btns');
-        const confirmBtn = this.createHtmlButtonElement('Confirm', ['btn-primary'], 'action-confirm-btn');
-        const cancelBtn = this.createHtmlButtonElement('Cancel', ['btn-cancel'], 'action-cancel-btn');
-
-        btnsContainer.appendChild(confirmBtn);
-        btnsContainer.appendChild(cancelBtn);
-
-        // 3. Attach Listeners
-        confirmBtn.onclick = () => {
-            this.deactivateActionConfirmationUI();
-            this.emitInputEvent('CONFIRM_ACTION', {});
-        };
-
-        cancelBtn.onclick = () => {
-            this.deactivateActionConfirmationUI();
-            this.emitInputEvent('CANCEL_ACTION', {});
-        };
-
-        document.body.appendChild(clone);
     }
 
-    deactivateActionConfirmationUI(){
+    deactivateActionConfirmationUI() {
         this.removeElementById('action-confirmation-modal-overlay');
     }
 
@@ -619,7 +632,7 @@ export class Renderer {
         // check if the card is locked (bought this turn)
         if (devCard.isLocked(currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
-        }else if (!devCard.isPlayed() && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
+        } else if (!devCard.isPlayed() && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
             // card can be played, pop up action menu on click
 
             cardDiv.classList.add('dev-card-playable');
@@ -807,7 +820,7 @@ export class Renderer {
         interactionLayer.appendChild(robSelectionGroup);
         interactionLayer.classList.add('placement-mode');
 
-        // draw a mask to hightlight the tile with robber
+        // draw a mask to highlight the tile with robber
         const [robTileX, robTileY] = HexUtils.hexToPixel(robTileCoord, this.hexSize);
         const robTileHex = this.createPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
         robTileHex.classList.add('robber-tile-mask');
@@ -830,7 +843,6 @@ export class Renderer {
         });
     }
 
-
     // code to deactivate elements
     /**
      * Helper to remove an element by id
@@ -843,6 +855,14 @@ export class Renderer {
         // clean up
         element.onclick = null;
         element.remove();
+    }
+
+    clearElementById(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        element.onclick = null;
+        element.innerHTML = '';
+        return element;
     }
 
     deactivateSettlementPlacementMode() {

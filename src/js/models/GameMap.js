@@ -470,7 +470,7 @@ export class GameMap {
     /**
      * Get a list of unoccupied settlement spots (vertex coordinates) on the map, if owner is given, only return spots connected to owner's road
      * @param {*} owner 
-     * @returns 
+     * @returns an array of vertex coordinates
      */
     getValidSettlementSpots(owner = null) {
         let results = [];

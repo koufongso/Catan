@@ -24,10 +24,6 @@ export const GameState = Object.freeze({
 
     // sub-states for main game loop
     MAIN: 'MAIN', // main game loop: build, trade, end turn
-    MAIN_BUILD_ROAD: 'MAIN_BUILD_ROAD', // main game loop: build road sub-state
-    MAIN_BUILD_SETTLEMENT: 'MAIN_BUILD_SETTLEMENT', // main game loop: build settlement sub-state
-    MAIN_BUILD_CITY: 'MAIN_BUILD_CITY', // main game loop: build city sub-state
-    MAIN_BUY_DEV_CARD: 'MAIN_BUY_DEV_CARD', // main game loop: buy development card sub-state
 
     END: 'END' // game has ended
 });
@@ -134,21 +130,6 @@ export class GameController {
             case GameState.MAIN: // nested main states
                 this.handleStateMain(event);
                 break;
-            case GameState.MAIN_BUILD_ROAD:
-                // handle main build road events
-                this.handleStateMainBuildRoad(event);
-                break;
-            case GameState.MAIN_BUILD_SETTLEMENT:
-                this.handleStateMainBuildSettlement(event);
-                break;
-            case GameState.MAIN_BUILD_CITY:
-                this.handleStateMainBuildCity(event);
-                break;
-            case GameState.MAIN_BUY_DEV_CARD:
-                this.handleStateMainBuyDevCard(event);
-                break;
-            case GameState.MAIN_PLAY_DEV_CARD:
-                break;
             case GameState.END:
                 // handle end game events
                 await this.handleStateEnd(event);
@@ -225,60 +206,63 @@ export class GameController {
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
         // render the initial map and prompt to place first settlement
-        if (this.renderer) {
-            // render intial map
-            const gameMap = this.gameContext.gameMap
-            this.renderer.renderMainUI(gameMap.tiles, gameMap.tradingPosts, gameMap.robberCoord);
+        // render intial map
+        const gameMap = this.gameContext.gameMap
+        this.renderer.renderMainUI(gameMap.tiles, gameMap.tradingPosts, gameMap.robberCoord);
 
-            // "activate" vertex elements for settlement placement
-            const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
-            this.activateSettlementPlacementMode(availableVertexIds);
+        // "activate" vertex elements for settlement placement
+        const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
+        this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
 
-        } else {
-            console.warn("Renderer not attached. Cannot render game map.");
-        }
 
         // update debug HUD
         this.debug.renderDebugHUD(this.gameContext);
     }
 
     async handleStatePlaceSettlement1(event) {
-        if (event.type !== 'PLACE_SETTLEMENT') {
+        if (event.type !== 'BUILD_SETTLEMENT') {
             return;
         }
 
         // place settlement logic here
-        // deactivate settlement placement mode
-        this.renderer.deactivateSettlementPlacementMode();
 
         // add settlement to map
-        const vCoord = HexUtils.idToCoord(event.vertexId);
-        const vertexId = event.vertexId;
+        const settlementCoord = HexUtils.idToCoord(event.vertexId);
+        const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
 
-        this.addSettlementToPlayerAndRender(vertexId, currentPlayer);
-
-
-        // render updated settlement on map
-
+        if(!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
+            this.debug.renderDebugHUD(this.gameContext, "Failed to build settlement.");
+            throw new Error("Failed to build 1st settlement.");
+        }
+        
+        this.renderer.renderSettlement(settlementId, currentPlayer.color, 1);
         this.gameContext.currentState = GameState.PLACE_ROAD1;
+
         // compute all valid road spots based on last settlement placed
-        const availableEdgeIds = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null);
-        this.activateRoadPlacementMode(availableEdgeIds);
+        const availableRoadCoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(settlementCoord, null);
+        this.renderer.highlightValidSpots(availableRoadCoords, 'ROAD');
+        this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
         this.debug.renderDebugHUD(this.gameContext);
     }
 
     async handleStatePlaceRoad1(event) {
-        if (event.type !== 'PLACE_ROAD') {
+        if (event.type !== 'BUILD_ROAD') {
             return;
         }
         // place road logic here
-        // deactivate road placement mode
-        this.renderer.deactivateRoadPlacementMode();
 
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
-        this.addRoadToPlayerAndRender(event.edgeId, currentPlayer, 'INITIAL');
+        const roadId = event.edgeId;
+        const roadCoord = HexUtils.idToCoord(roadId);
+
+        if(!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+            this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
+            throw new Error("Failed to build 1st road.");
+        }
+
+        this.renderer.renderRoad(roadCoord, currentPlayer.color);
 
         // check if current player is last player
         if (this.gameContext.currentPlayerIndex === this.gameContext.totalPlayers - 1) {
@@ -290,44 +274,52 @@ export class GameController {
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
         }
 
-        const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
-        this.activateSettlementPlacementMode(availableVertexIds);
+        const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
+        this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
         this.debug.renderDebugHUD(this.gameContext);
     }
 
     handleStatePlaceSettlement2(event) {
-        if (event.type !== 'PLACE_SETTLEMENT') {
+        if (event.type !== 'BUILD_SETTLEMENT') {
             return;
         }
 
-        this.deactivateSettlementPlacementMode();
-
         // add settlement to map
-        const vCoord = HexUtils.idToCoord(event.vertexId);
-        const vertexId = event.vertexId;
+        const settlementCoord = HexUtils.idToCoord(event.vertexId);
+        const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
-        this.addSettlementToPlayerAndRender(vertexId, currentPlayer);
 
+        if(!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
+            this.debug.renderDebugHUD(this.gameContext, "Failed to build 2nd settlement.");
+            throw new Error("Failed to build 2nd settlement.");
+        }
+
+        this.renderer.renderSettlement(settlementId, currentPlayer.color, 1);
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        const avaibleRoads = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, null); // connected to last settlement placed
-
-        this.activateRoadPlacementMode(avaibleRoads);
+        const availableRoadCoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(settlementCoord, null); // connected to last settlement placed
+        this.renderer.highlightValidSpots(availableRoadCoords, 'ROAD');
         this.debug.renderDebugHUD(this.gameContext);
     }
 
     handleStatePlaceRoad2(event) {
-        if (event.type !== 'PLACE_ROAD') {
+        if (event.type !== 'BUILD_ROAD') {
             return;
         }
         // place road logic here
-        // deactivate road placement mode
-        this.renderer.deactivateRoadPlacementMode();
 
         // add road to map and register its ownership
         const currentPlayer = this.getCurrentPlayer();
-        this.addRoadToPlayerAndRender(event.edgeId, currentPlayer, 'INITIAL');
+        const roadId = event.edgeId;
+        const roadCoord = HexUtils.idToCoord(roadId);
+
+        if(!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+            this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
+            throw new Error("Failed to build 2nd road.");
+        }
+
+        this.renderer.renderRoad(roadCoord, currentPlayer.color);
 
         // add adjacnet resources to player for second settlement
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
@@ -347,8 +339,8 @@ export class GameController {
             // else move to previous player and PLACE_SETTLEMENT2 state
             this.prevPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
-            const availableVertexIds = this.gameContext.gameMap.getValidSettlementSpots();
-            this.activateSettlementPlacementMode(availableVertexIds);
+            const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
+            this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
             this.debug.renderDebugHUD(this.gameContext);
         }
     }
@@ -374,21 +366,7 @@ export class GameController {
             }
         } else if (event.type === 'PLAY_DEV_CARD') {
             // handle play development card event
-            this.handlePlayDevCard(event);
-        }
-    }
-
-    handlePlayDevCard(event) {
-        const currentPlayer = this.getCurrentPlayer();
-        const devCardType = event.devCardType;
-
-        // check if player has the dev card and can play it
-        // must be one of the playable types (not victory point), and player own the card and is playable
-        const devCard = currentPlayer.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
-        if (devCard) {
-            devCard.activate(this);
-        } else {
-            this.debug.renderDebugHUD(this.gameContext, `Invalid development card play attempt: ${devCardType}`);
+            this.handleEventPlayDevCard(event);
         }
     }
 
@@ -399,26 +377,32 @@ export class GameController {
             case 'END_TURN':
                 this.__handleEventEnd(event);
                 break;
+            case 'QUERY_VALID_SPOTS':
+                // user request to query valid spots for building road/settlement, this will trigger renderer to highlight valid spots (for human player)
+                const validSpots = this.queryValidSpots(this.gameContext.currentPlayerIndex, event.queryType);
+                this.renderer.highlightValidSpots(validSpots, event.queryType);
+                break;
             case 'BUILD_ROAD':
-                this.__handleEventBuildRoad(event);
+                // user request to build settlement with
+                this.handleEventBuildRoad(event);
                 break;
             case 'BUILD_SETTLEMENT':
-                // TODO: handle build settlement
-                this.__handleEventBuildSettlement(event);
+                // user request to build settlement with
+                this.handleEventBuildSettlement(event);
                 break;
             case 'BUILD_CITY':
-                // TODO: handle build city
-                this.__handleEventBuildCity(event);
+                this.handleEventBuildCity(event);
                 break;
             case 'BUY_DEV_CARD':
                 // TODO: handle buy development card
-                this.__handleEventBuyDevCard(event);
+                this.handleEventBuyDevCard(event);
                 break;
             case 'PLAY_DEV_CARD':
-                this.handlePlayDevCard(event);
+                this.handleEventActivateDevCard(event);
                 break;
             case 'TRADE':
                 // TODO: handle trade
+                console.log("Trade event received, action not implemented yet:", event);
                 break;
 
             default:
@@ -426,6 +410,79 @@ export class GameController {
                 return;
         }
     }
+
+    isValidPlayerId(playerId) {
+        return (playerId >= 0 && playerId < this.gameContext.totalPlayers);
+    }
+
+
+    /**
+     * Find valid spots for building road/settlement/city for a given player
+     * @param {*} playerId 
+     * @param {*} queryType 
+     * @returns an array of coords
+     */
+    queryValidSpots(playerId, queryType) {
+        // check if playerId is valid
+        if (!this.isValidPlayerId(playerId)) {
+            throw new Error(`Invalid player ID: ${playerId}`);
+        }
+
+        const player = this.gameContext.players[playerId];
+        switch (queryType) {
+            case 'ROAD':
+                // compute all valid road spots based on player's owned roads
+                return this.queryValidRoadSpots(player);
+            case 'SETTLEMENT':
+                // compute all valid settlement spots based on player's owned roads
+                return this.queryValidSettlementSpots(player);
+            case 'CITY':
+                // compute all valid city upgrade spots based on player's owned settlements
+                return this.queryValidCitySpots(player);
+            default:
+                throw new Error(`Invalid query type: ${queryType}`);
+        }
+    }
+
+    /**
+     * Find all valid road spots for the player to build road
+     * @param {*} player 
+     */
+    queryValidRoadSpots(player) {
+        const playerRoads = player.getRoads();
+        const playerRoadCoords = playerRoads.map(road => road.coord);
+
+        // compute all valid road spots based on player's owned roads
+        let availableRoads = [];
+        playerRoadCoords.forEach(eCoord => {
+            HexUtils.getVerticesFromEdge(eCoord).forEach(vCoord => {
+                const availableECoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, player.id);
+                availableRoads = availableRoads.concat(availableECoords);
+            });
+        });
+        return availableRoads;
+    }
+
+    /**
+     * Find all valid settlement spots for the player to build settlement
+     * @param {*} player 
+     * @returns an array of vertex coords
+     */
+    queryValidSettlementSpots(player) {
+        return this.gameContext.gameMap.getValidSettlementSpots(player.id); // onyl spots connected to player's roads
+    }
+
+    /**
+     * Find all valid city upgrade spots for the player to build city
+     * @param {*} player 
+     * @returns an array of vertex coords
+     */
+    queryValidCitySpots(player) {
+        const playerSettlements = player.getSettlements(1); // get level 1 settlements only
+        const playerSettlementCoords = playerSettlements.map(settlement => settlement.coord);
+        return playerSettlementCoords;
+    }
+
 
     __handleEventEnd(event) {
         const winner = this.checkWinCondition();
@@ -444,176 +501,166 @@ export class GameController {
         }
     }
 
-    __handleEventBuildRoad(event) {
-        // build road logic
-        this.gameContext.currentState = GameState.MAIN_BUILD_ROAD;
-
-        // get current player
-        const currentPlayer = this.getCurrentPlayer();
-        const playerRoads = currentPlayer.getRoads();
-        const playerRoadCoords = playerRoads.map(road => road.coord);
-
-        // compute all valid road spots based on player's owned roads
-        let availableRoads = [];
-        playerRoadCoords.forEach(eCoord => {
-            HexUtils.getVerticesFromEdge(eCoord).forEach(vCoord => {
-                const availableECoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, currentPlayer.id);
-                availableRoads = availableRoads.concat(availableECoords);
-            });
-        });
-
-        // activate road placement mode based on all settlement coords
-        this.activateRoadPlacementMode(availableRoads, currentPlayer.id);
-        this.debug.renderDebugHUD(this.gameContext, `Building road. Please place your road.`);
+    handleEventBuildRoad(event) {
+        const player = this.getCurrentPlayer();
+        if(this.buildRoad(event.edgeId, player, "MAIN")) {
+            this.renderer.renderRoad(HexUtils.idToCoord(event.edgeId), player.color);
+            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
+        }
     }
 
-    __handleEventBuildSettlement(event) {
-        this.gameContext.currentState = GameState.MAIN_BUILD_SETTLEMENT;
+    buildRoad(roadId, player, phase) {
+        if (phase !== 'INITIAL' && phase !== 'MAIN') {
+            throw new Error(`Invalid phase: ${phase}`);
+        }
 
-        // get current player's owned roads
-        const currentPlayer = this.getCurrentPlayer();
-        // compute all valid settlement spots based on player's owned roads
-        const availableSettlements = this.gameContext.gameMap.getValidSettlementSpots(currentPlayer.id);
-        this.activateSettlementPlacementMode(availableSettlements, 1);
-        this.debug.renderDebugHUD(this.gameContext, `Building settlement. Please place your settlement.`);
-    }
+        // add road to map and render
+        const roadCoord = HexUtils.idToCoord(roadId);
 
-    __handleEventBuildCity(event) {
-        this.gameContext.currentState = GameState.MAIN_BUILD_CITY;
-
-        // get the current player's owned settlements
-        const currentPlayer = this.getCurrentPlayer();
-        const playerSettlements = currentPlayer.getSettlements(1); // get level 1 settlements only
-        const playerSettlementCoords = playerSettlements.map(settlement => settlement.coord);
-        this.activateSettlementPlacementMode(playerSettlementCoords, 2);
-        this.debug.renderDebugHUD(this.gameContext, `Building city. Please place your city.`);
-    }
-
-    __handleEventBuyDevCard(event) {
-        this.gameContext.currentState = GameState.MAIN_BUY_DEV_CARD;
-        // TODO: let rendere prompt to confirm purchase
-        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card' });
-        this.debug.renderDebugHUD(this.gameContext, `Buying development card. Please confirm purchase.`);
-    }
-
-    handleStateMainBuildRoad(event) {
-        if (event.type == 'PLACE_ROAD') {
-            // place road logic
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateRoadPlacementMode();
-
-            const roadId = event.edgeId;
-            const currentPlayer = this.getCurrentPlayer();
+        if (phase === 'INITIAL') {
+            // during initial placement, free roads
+            // check if the road is connected to the last settlement placed
+            if (!this.gameContext.gameMap.isRoadSpotValid(roadCoord, null) && !this.gameContext.gameMap.isRoadConnectedToSettlement(roadCoord, this.gameContext.lastSettlementPlaced, player.id)) {
+                throw new Error(`Invalid road spot: ${roadCoord}`);
+            }
+        } else if (phase === 'MAIN') {
             // check if player can afford road
-            if (!currentPlayer.canAfford(COSTS.road)) {
-                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a road.`);
-                return;
+            if (!player.canAfford(COSTS.road)) {
+                this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a road.`);
+                return false;
             }
-
-            // successfully placed road
-            // deduct road cost from player and bank
-            currentPlayer.addResources(COSTS.road);
+            player.addResources(COSTS.road);
             this.addBankResourceFromCost(COSTS.road);
-            // add road to map and render
-            this.addRoadToPlayerAndRender(roadId, currentPlayer, 'MAIN');
+            if (!this.gameContext.gameMap.isRoadSpotValid(roadCoord, player.id)) { // check owner for normal placement (either connected to own settlement or road)
+                throw new Error(`Invalid road spot: ${roadCoord}`);
+            }
+        }
 
-            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
-            this.debug.renderDebugHUD(this.gameContext, `Road placed.`);
-        } else if (event.type === 'CANCEL_ACTION') {
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateRoadPlacementMode();
-            this.debug.renderDebugHUD(this.gameContext, `Road building cancelled.`);
+        // add road to map
+        this.gameContext.gameMap.updateRoadById(roadId, player.id);
+        player.addRoad(this.gameContext.gameMap.roads.get(roadId));
+        return true;
+    }
+
+    handleEventBuildSettlement(event) {
+        const player = this.getCurrentPlayer();
+        if (this.buildSettlement(event.vertexId, player, "MAIN")) {
+            this.renderer.renderSettlement(event.vertexId, player.color, 1);
+            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
+            this.debug.renderDebugHUD(this.gameContext);
         }
     }
 
-    handleStateMainBuildSettlement(event) {
-        if (event.type == 'PLACE_SETTLEMENT') {
+    buildSettlement(settlementId, player, phase) {
+        if (phase !== 'INITIAL' && phase !== 'MAIN') {
+            throw new Error(`Invalid phase: ${phase}`);
+        }
+
+        const settlementCoord = HexUtils.idToCoord(settlementId);
+
+        // check if settlement spot is valid
+        if (!this.gameContext.gameMap.isSettlementSpotValid(settlementCoord)) { // no owner check for initial placement
+            throw new Error(`Invalid settlement spot: ${settlementCoord}`);
+        }
+
+         if (phase === 'MAIN') {
             // place settlement logic
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateSettlementPlacementMode();
-
-            const settlementId = event.vertexId;
-            const currentPlayer = this.getCurrentPlayer();
-
             // check if player can afford settlement
-            if (!currentPlayer.canAfford(COSTS.settlement)) {
-                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a settlement.`);
-                return;
+            if (!player.canAfford(COSTS.settlement)) {
+                this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a settlement.`);
+                return false;
             }
-
             // deduct settlement cost from player and bank
-            currentPlayer.addResources(COSTS.settlement);
+            player.addResources(COSTS.settlement);
             this.addBankResourceFromCost(COSTS.settlement);
-            // add settlement to map and render
-            this.addSettlementToPlayerAndRender(settlementId, currentPlayer);
-            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
-            this.debug.renderDebugHUD(this.gameContext, `Settlement placed.`);
+        }
 
-        } else if (event.type === 'CANCEL_ACTION') {
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateSettlementPlacementMode();
-            this.debug.renderDebugHUD(this.gameContext, `Settlement building cancelled.`);
+        // add settlement to map
+        this.gameContext.gameMap.updateSettlementById(settlementId, player.id, 1);
+        player.addSettlement(this.gameContext.gameMap.settlements.get(settlementId));
+        this.gameContext.lastSettlementPlaced = settlementId;
+        return true;
+    }
+
+    handleEventBuildCity(event) {
+        const player = this.getCurrentPlayer();
+        const cityId = event.vertexId;
+        if(this.buildCity(cityId, player)) {
+            this.renderer.renderSettlement(cityId, player.color, 2);
+            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
+            this.debug.renderDebugHUD(this.gameContext);
         }
     }
 
+    buildCity(cityId, player) {
+        // check if city upgrade spot is valid
+        const cityCoord = HexUtils.idToCoord(cityId);
+        const settlement = this.gameContext.gameMap.settlements.get(cityId);
+        if (!settlement || settlement.owner !== player.id || settlement.level !== 1) {
+            throw new Error(`Invalid city upgrade spot: ${cityCoord}`);
+        }
 
-    handleStateMainBuildCity(event) {
-        if (event.type == 'PLACE_SETTLEMENT') { // this might seem odd but we are reusing the settlement placement for city placement click event
-            // place city logic
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateSettlementPlacementMode();
+        // check if player can afford city
+        if (!player.canAfford(COSTS.city)) {
+            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a city.`);
+            return false;
+        }
 
-            const cityId = event.vertexId;
-            const currentPlayer = this.getCurrentPlayer();
-            // check if player can afford city
-            if (!currentPlayer.canAfford(COSTS.city)) {
-                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to build a city.`);
-                return;
-            }
+        // deduct city cost from player and bank
+        player.addResources(COSTS.city);
+        this.addBankResourceFromCost(COSTS.city);
 
-            // deduct city cost from player and bank
-            currentPlayer.addResources(COSTS.city);
-            this.addBankResourceFromCost(COSTS.city);
-            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
+        // update city
+        settlement.upgrade();
+        return true;
+    }
 
-            // add city to map and render
-            this.addCityToPlayerAndRender(cityId, currentPlayer);
-            this.debug.renderDebugHUD(this.gameContext, `City placed.`);
-
-        } else if (event.type === 'CANCEL_ACTION') {
-            this.gameContext.currentState = GameState.MAIN;
-            this.deactivateSettlementPlacementMode();
-            this.debug.renderDebugHUD(this.gameContext, `City building cancelled.`);
+    handleEventBuyDevCard(event) {
+        const player = this.getCurrentPlayer();
+        if(this.buyDevCard(player)) {
+            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
         }
     }
 
-
-    handleStateMainBuyDevCard(event) {
-        if (event.type === 'CONFIRM_ACTION') {
-            // check if player can afford dev card
-            const currentPlayer = this.getCurrentPlayer();
-            if (!currentPlayer.canAfford(COSTS.devCard)) {
-                this.gameContext.currentState = GameState.MAIN;
-                this.debug.renderDebugHUD(this.gameContext, `Player ${currentPlayer.id} cannot afford to buy a development card.`);
-                return;
-            }
-
-            // deduct dev card cost from player and bank
-            currentPlayer.addResources(COSTS.devCard);
-            this.addBankResourceFromCost(COSTS.devCard);
-
-            // add dev card to player and render
-            const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
-            currentPlayer.addDevCard(devCard);
-
-            this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
+    buyDevCard(player) {
+        // check if player can afford dev card
+        if (!player.canAfford(COSTS.devCard)) {
             this.gameContext.currentState = GameState.MAIN;
-            this.debug.renderDebugHUD(this.gameContext, `Development card purchased.`);
-
-        } else if (event.type === 'CANCEL_ACTION') {
-            this.gameContext.currentState = GameState.MAIN;
-            this.debug.renderDebugHUD(this.gameContext, `Development card purchase cancelled.`);
+            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to buy a development card.`);
+            return false;
         }
+
+        // deduct dev card cost from player and bank
+        player.addResources(COSTS.devCard);
+        this.addBankResourceFromCost(COSTS.devCard);
+
+        // add dev card to player and render
+        const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
+        player.addDevCard(devCard);
+        return true;
+    }
+
+    handleEventActivateDevCard(event) {
+        const currentPlayer = this.getCurrentPlayer();
+        const devCardType = event.devCardType;
+        this.activateDevCard(currentPlayer, devCardType);
+    }
+
+    activateDevCard(player, devCardType) {
+        // check if player has the dev card and can play it
+        // must be one of the playable types (not victory point), and player own the card and is playable
+        const devCard = player.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
+        if (devCard) {
+            devCard.activate(this);
+        } else {
+            this.debug.renderDebugHUD(this.gameContext, `Invalid development card play attempt: ${devCardType}`);
+        }
+    }
+
+    handleEventPlayDevCard(event) {
+        const currentPlayer = this.getCurrentPlayer();
+        const devCardType = event.devCardType;
+        this.activateDevCard(currentPlayer, devCardType);
     }
 
     async generateDefaultMap() {
@@ -707,54 +754,12 @@ export class GameController {
         this.gameContext.turnNumber++;
     }
 
-    activateSettlementPlacementMode(vCoord) {
-        if (this.renderer) {
-            // compute all valid settlement spots
-            this.renderer.activateSettlementPlacementMode(vCoord);
-        } else {
-            console.warn("Renderer not attached. Cannot activate settlement placement mode.");
-        }
-    }
-
-    deactivateSettlementPlacementMode() {
-        if (this.renderer) {
-            this.renderer.deactivateSettlementPlacementMode();
-        } else {
-            console.warn("Renderer not attached. Cannot deactivate settlement placement mode.");
-        }
-    }
-
-    // Activate road placement mode based on a given edge coordinate list
-    activateRoadPlacementMode(eCoordList) {
-        if (this.renderer) {
-            this.renderer.activateRoadPlacementMode(eCoordList);
-        } else {
-            console.warn("Renderer not attached. Cannot activate road placement mode.");
-        }
-    }
-
-    deactivateRoadPlacementMode() {
-        if (this.renderer) {
-            this.renderer.deactivateRoadPlacementMode();
-        } else {
-            console.warn("Renderer not attached. Cannot deactivate road placement mode.");
-        }
-    }
-
 
     activateDiceRollMode() {
         if (this.renderer) {
             this.renderer.activateDiceRollMode();
         } else {
             console.warn("Renderer not attached. Cannot activate dice roll mode.");
-        }
-    }
-
-    deactivateDiceRollMode() {
-        if (this.renderer) {
-            this.renderer.deactivateDiceRollMode();
-        } else {
-            console.warn("Renderer not attached. Cannot deactivate dice roll mode.");
         }
     }
 
@@ -797,67 +802,6 @@ export class GameController {
         }
     }
 
-    // activate all action buttons 
-    activateActionBtnMode(actionType) {
-        if (this.renderer) {
-            this.renderer.activateActionBtnMode(actionType);
-        } else {
-            console.warn("Renderer not attached. Cannot activate action button mode.");
-        }
-    }
-
-
-    addSettlementToPlayerAndRender(vertexId, player) {
-        // double check if the spot is valid in case of cheating
-        const vCoord = HexUtils.idToCoord(vertexId);
-        if (!this.gameContext.gameMap.isSettlementSpotValid(vCoord)) { // no owner check for initial placement
-            throw new Error(`Invalid settlement spot: ${vCoord}`);
-        }
-
-        // add settlement to map
-        this.gameContext.gameMap.updateSettlementById(vertexId, player.id, 1);
-        player.addSettlement(this.gameContext.gameMap.settlements.get(vertexId));
-        this.gameContext.lastSettlementPlaced = vertexId;
-
-        this.renderer.renderSettlement(vertexId, player.color, 1);
-    }
-
-    addCityToPlayerAndRender(vertexId, player) {
-        // double check if city upgrade is valid in case of cheating
-        const settlement = this.gameContext.gameMap.settlements.get(vertexId);
-        if (!settlement || settlement.owner !== player.id || settlement.level !== 1) {
-            throw new Error(`Invalid city upgrade spot: ${vertexId}`);
-        }
-
-        // update city to map
-        settlement.upgrade();
-
-        // render city
-        this.renderer.renderSettlement(vertexId, player.color, 2);
-    }
-
-    addRoadToPlayerAndRender(edgeId, player, phase = 'MAIN') {
-        // double check if the spot is valid in case of cheating
-        const eCoord = HexUtils.idToCoord(edgeId);
-
-        if (phase === 'INITIAL') {
-            // during initial placement, check if the road is connected to the last settlement placed
-            if (!this.gameContext.gameMap.isRoadSpotValid(eCoord, null) && !this.gameContext.gameMap.isRoadConnectedToSettlement(eCoord, this.gameContext.lastSettlementPlaced, player.id)) {
-                throw new Error(`Invalid road spot: ${eCoord}`);
-            }
-        } else {
-            if (!this.gameContext.gameMap.isRoadSpotValid(eCoord, player.id)) { // check owner for normal placement (either connected to own settlement or road)
-                throw new Error(`Invalid road spot: ${eCoord}`);
-            }
-        }
-
-        // add road to map
-        this.gameContext.gameMap.updateRoadById(edgeId, player.id);
-        player.addRoad(this.gameContext.gameMap.roads.get(edgeId));
-
-        // render road
-        this.renderer.renderRoad(edgeId, player.color);
-    }
 
     /**
      * One of the two will happen:
