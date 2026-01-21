@@ -472,28 +472,46 @@ export class Renderer {
      * @param {string} message - message of the confirmation modal 
      */
     activateActionConfirmationUI({ title, message }) {
-        const temp = document.getElementById('action-confirm-template');
+        const temp = document.getElementById('universal-modal-template');
         const clone = temp.content.cloneNode(true);
 
         // 1. Inject the text
-        clone.getElementById('confirm-title').textContent = title;
-        clone.getElementById('confirm-message').textContent = message;
+        if (title !== undefined){
+            clone.getElementById('modal-title').textContent = title;
+        }
 
-        // 2. Wrap the element so we can remove it later
-        const overlay = clone.getElementById('confirm-modal');
+        if (message !== undefined)
+        {
+            clone.getElementById('modal-body').textContent = message;
+        }
+
+        const overlay = clone.querySelector('.modal-overlay');
+        overlay.id = 'action-confirmation-modal-overlay';
+
+        // 2. Add two buttons
+        const btnsContainer = clone.getElementById('modal-btns');
+        const confirmBtn = this.createHtmlButtonElement('Confirm', ['btn-primary'], 'action-confirm-btn');
+        const cancelBtn = this.createHtmlButtonElement('Cancel', ['btn-cancel'], 'action-cancel-btn');
+
+        btnsContainer.appendChild(confirmBtn);
+        btnsContainer.appendChild(cancelBtn);
 
         // 3. Attach Listeners
-        clone.getElementById('action-confirm-btn').onclick = () => {
-            overlay.remove();
+        confirmBtn.onclick = () => {
+            this.deactivateActionConfirmationUI();
             this.emitInputEvent('CONFIRM_ACTION', {});
         };
 
-        clone.getElementById('action-cancel-btn').onclick = () => {
-            overlay.remove();
+        cancelBtn.onclick = () => {
+            this.deactivateActionConfirmationUI();
             this.emitInputEvent('CANCEL_ACTION', {});
         };
 
         document.body.appendChild(clone);
+    }
+
+    deactivateActionConfirmationUI(){
+        this.removeElementById('action-confirmation-modal-overlay');
     }
 
 
@@ -607,7 +625,7 @@ export class Renderer {
             cardDiv.classList.add('dev-card-playable');
             cardDiv.onclick = (event) => {
                 // 1. remove existing menu if any
-                this.removeElement('card-action-menu');
+                this.removeElementById('card-action-menu');
                 // 2. create new menu on click
                 const actionMenuTemplate = document.getElementById('card-action-menu-template');
                 if (!actionMenuTemplate) {
@@ -819,7 +837,7 @@ export class Renderer {
      * @param {*} elementId 
      * @returns 
      */
-    removeElement(elementId) {
+    removeElementById(elementId) {
         const element = document.getElementById(elementId);
         if (!element) return;
         // clean up
@@ -828,27 +846,27 @@ export class Renderer {
     }
 
     deactivateSettlementPlacementMode() {
-        this.removeElement('settlement-placement-group');
+        this.removeElementById('settlement-placement-group');
     }
 
     deactivateRobSelectionMode() {
-        this.removeElement('rob-selection-group');
+        this.removeElementById('rob-selection-group');
     }
 
     deactivateRoadPlacementMode() {
-        this.removeElement('road-placement-group');
+        this.removeElementById('road-placement-group');
     }
 
     deactivateDiceRollMode() {
-        this.removeElement('dice-btn');
+        this.removeElementById('dice-btn');
     }
 
     deactivateRobberPlacementMode() {
-        this.removeElement('robber-placement-group');
+        this.removeElementById('robber-placement-group');
     }
 
     deactivateDiscardSelectionMode() {
-        this.removeElement('discard-modal-overlay');
+        this.removeElementById('discard-modal-overlay');
     }
 
 
@@ -885,6 +903,18 @@ export class Renderer {
             line.id = id;
         }
         return line;
+    }
+
+    createHtmlButtonElement(text, className = [], id = null) {
+        const button = document.createElement("button");
+        button.textContent = text;
+        className.forEach(cls => {
+            button.classList.add(cls);
+        });
+        if (id) {
+            button.id = id;
+        }
+        return button;
     }
 
 }

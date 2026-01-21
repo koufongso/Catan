@@ -588,6 +588,14 @@ body {
     overflow-y: auto;
 }
 
+.modal-card p{
+    color: #bbb;
+    /* Dimmer text for descriptions */
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
 .btn-primary {
     background: #007bff;
     /* A standard, comfortable blue */
@@ -597,6 +605,7 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
+    margin:10px;
 }
 
 .btn-disabled {
@@ -607,6 +616,19 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: not-allowed;
+    margin:10px;
+}
+
+.btn-cancel {
+    background: #ff4444;
+    /* A standard, comfortable red */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin:10px;
 }
 
 

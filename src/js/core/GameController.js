@@ -492,7 +492,7 @@ export class GameController {
     __handleEventBuyDevCard(event) {
         this.gameContext.currentState = GameState.MAIN_BUY_DEV_CARD;
         // TODO: let rendere prompt to confirm purchase
-        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card', message: 'Are you sure?' });
+        this.renderer.activateActionConfirmationUI({ title: 'Buy a Development Card'});
         this.debug.renderDebugHUD(this.gameContext, `Buying development card. Please confirm purchase.`);
     }
 
