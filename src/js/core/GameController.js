@@ -6,7 +6,8 @@ import { RNG } from '../utils/rng.js';
 import { HexUtils } from '../utils/hex-utils.js';
 import { COSTS, INITIAL_BANK_RESOURCES, PLAYER_NAMES, PLAYER_COLORS, NUMBER_TOKENS_DISTRIBUTION } from '../constants/GameConstants.js';
 import { DevCardDeck } from '../models/devCards/DevCardDeck.js';
-import { PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.js';
+import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.js';
+import { DevCardEffects } from '../models/devCards/DevCardActions.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -231,11 +232,11 @@ export class GameController {
         const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
 
-        if(!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
+        if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build settlement.");
             throw new Error("Failed to build 1st settlement.");
         }
-        
+
         this.renderer.renderSettlement(settlementId, currentPlayer.color, 1);
         this.gameContext.currentState = GameState.PLACE_ROAD1;
 
@@ -257,7 +258,7 @@ export class GameController {
         const roadId = event.edgeId;
         const roadCoord = HexUtils.idToCoord(roadId);
 
-        if(!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+        if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
             throw new Error("Failed to build 1st road.");
         }
@@ -289,7 +290,7 @@ export class GameController {
         const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
 
-        if(!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
+        if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build 2nd settlement.");
             throw new Error("Failed to build 2nd settlement.");
         }
@@ -314,7 +315,7 @@ export class GameController {
         const roadId = event.edgeId;
         const roadCoord = HexUtils.idToCoord(roadId);
 
-        if(!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+        if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
             throw new Error("Failed to build 2nd road.");
         }
@@ -364,9 +365,12 @@ export class GameController {
                 this.gameContext.currentState = GameState.MAIN;
                 this.debug.renderDebugHUD(this.gameContext);
             }
-        } else if (event.type === 'PLAY_DEV_CARD') {
+        } else if (event.type === 'ACTIVATE_KNIGHT' ||
+            event.type === 'ACTIVATE_YEAR_OF_PLENTY' ||
+            event.type === 'ACTIVATE_MONOPOLY' ||
+            event.type === 'ACTIVATE_ROAD_BUILDING') {
             // handle play development card event
-            this.handleEventPlayDevCard(event);
+            this.handleEventActivateDevCard(event);
         }
     }
 
@@ -397,7 +401,10 @@ export class GameController {
                 // TODO: handle buy development card
                 this.handleEventBuyDevCard(event);
                 break;
-            case 'PLAY_DEV_CARD':
+            case 'ACTIVATE_KNIGHT':
+            case 'ACTIVATE_YEAR_OF_PLENTY':
+            case 'ACTIVATE_MONOPOLY':
+            case 'ACTIVATE_ROAD_BUILDING':
                 this.handleEventActivateDevCard(event);
                 break;
             case 'TRADE':
@@ -503,7 +510,7 @@ export class GameController {
 
     handleEventBuildRoad(event) {
         const player = this.getCurrentPlayer();
-        if(this.buildRoad(event.edgeId, player, "MAIN")) {
+        if (this.buildRoad(event.edgeId, player, "MAIN")) {
             this.renderer.renderRoad(HexUtils.idToCoord(event.edgeId), player.color);
             this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
         }
@@ -563,7 +570,7 @@ export class GameController {
             throw new Error(`Invalid settlement spot: ${settlementCoord}`);
         }
 
-         if (phase === 'MAIN') {
+        if (phase === 'MAIN') {
             // place settlement logic
             // check if player can afford settlement
             if (!player.canAfford(COSTS.settlement)) {
@@ -585,7 +592,7 @@ export class GameController {
     handleEventBuildCity(event) {
         const player = this.getCurrentPlayer();
         const cityId = event.vertexId;
-        if(this.buildCity(cityId, player)) {
+        if (this.buildCity(cityId, player)) {
             this.renderer.renderSettlement(cityId, player.color, 2);
             this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
             this.debug.renderDebugHUD(this.gameContext);
@@ -617,7 +624,7 @@ export class GameController {
 
     handleEventBuyDevCard(event) {
         const player = this.getCurrentPlayer();
-        if(this.buyDevCard(player)) {
+        if (this.buyDevCard(player)) {
             this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
         }
     }
@@ -640,27 +647,34 @@ export class GameController {
         return true;
     }
 
+
+    getDevCard(player, devCardType) {
+        const devCard = player.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
+        if (!devCard) {
+            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} does not have a playable ${devCardType} card.`);
+            throw new Error(`Player ${player.id} does not have a playable ${devCardType} card.`);
+        }
+        return devCard;
+    }
+
     handleEventActivateDevCard(event) {
         const currentPlayer = this.getCurrentPlayer();
-        const devCardType = event.devCardType;
-        this.activateDevCard(currentPlayer, devCardType);
-    }
 
-    activateDevCard(player, devCardType) {
-        // check if player has the dev card and can play it
-        // must be one of the playable types (not victory point), and player own the card and is playable
-        const devCard = player.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
-        if (devCard) {
-            devCard.activate(this);
-        } else {
-            this.debug.renderDebugHUD(this.gameContext, `Invalid development card play attempt: ${devCardType}`);
+        switch (event.type) {
+            case 'ACTIVATE_KNIGHT':
+                this.getDevCard(currentPlayer, DEV_CARD_TYPES.KNIGHT).activate(this);
+                break;
+            case 'ACTIVATE_YEAR_OF_PLENTY':
+                console.log("Activating Year of Plenty with selected cards:", event.selectedCards);
+                this.getDevCard(currentPlayer, DEV_CARD_TYPES.YEAR_OF_PLENTY).activate(this, event.selectedCards);
+                this.renderer.deactivateResourceSelectionMode(currentPlayer, this.gameContext.turnNumber);
+                this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
+                this.debug.renderDebugHUD(this.gameContext);
+                break;
+            default:
+                throw new Error(`Invalid dev card activation event type: ${event.type}`);
         }
-    }
 
-    handleEventPlayDevCard(event) {
-        const currentPlayer = this.getCurrentPlayer();
-        const devCardType = event.devCardType;
-        this.activateDevCard(currentPlayer, devCardType);
     }
 
     async generateDefaultMap() {
@@ -814,7 +828,9 @@ export class GameController {
         if (this.gameContext.playersToDiscard.length > 0) {
             // activate selection mode for discarding cards
             this.gameContext.currentState = GameState.DISCARD; // wait for players to discard
-            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
+            const playerToDiscard = this.gameContext.playersToDiscard[0];
+            const numberToDiscard = Math.floor(playerToDiscard.getTotalResourceCount() / 2);
+            this.renderer.activateDiscardSelectionMode(playerToDiscard.getResources(), numberToDiscard, playerToDiscard.id);
             this.debug.renderDebugHUD(this.gameContext);
         } else {
             // no one need to discard
@@ -895,7 +911,9 @@ export class GameController {
 
         // if there are more players to discard, activate selection mode for next player
         if (this.gameContext.playersToDiscard.length > 0) {
-            this.renderer.activateDiscardSelectionMode(this.gameContext.playersToDiscard[0]);
+            const playerToDiscard = this.gameContext.playersToDiscard[0];
+            const numberToDiscard = Math.floor(playerToDiscard.getTotalResourceCount() / 2);
+            this.renderer.activateDiscardSelectionMode(playerToDiscard.getResources(), numberToDiscard, playerToDiscard.id);
         } else {
             // no more players to discard, activate move robber mode
             this.renderer.deactivateDiscardSelectionMode();

@@ -57,13 +57,14 @@ body {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
-.edge-road-available{
+.edge-road-available {
     stroke: rgba(0, 255, 0, 1.0);
     stroke-width: 12px;
 }
 
 .hitbox {
-    fill:  rgba(0, 255, 0, 1.0);;
+    fill: rgba(0, 255, 0, 1.0);
+    ;
     cursor: pointer;
 }
 
@@ -72,7 +73,7 @@ body {
 }
 
 
-.road{
+.road {
     stroke-width: 8px;
     stroke-linecap: round;
 }
@@ -176,10 +177,10 @@ body {
     fill: red;
 }
 
-.robber-tile-mask{
-    fill:red;
-    opacity:0.5;
-    cursor:default;
+.robber-tile-mask {
+    fill: red;
+    opacity: 0.5;
+    cursor: default;
 }
 
 .robbable-settlement {
@@ -192,7 +193,7 @@ body {
 .robbable-settlement:hover {
     opacity: 0.5;
     fill: red;
-}   
+}
 
 
 /* for development card action menu */
@@ -202,14 +203,29 @@ body {
     background: white;
     width: 120px;
     border: 1px solid #ccc;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     font-family: sans-serif;
 }
-.popover-row { padding: 10px; cursor: pointer; text-align: center; }
-.popover-row:hover { background: #f0f0f0; }
-.popover-row.action { color: green; border-bottom: 1px solid #eee; }
-.popover-row.cancel { color: red; }
+
+.popover-row {
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.popover-row:hover {
+    background: #f0f0f0;
+}
+
+.popover-row.action {
+    color: green;
+    border-bottom: 1px solid #eee;
+}
+
+.popover-row.cancel {
+    color: red;
+}
 
 
 
@@ -594,7 +610,7 @@ body {
     overflow-y: auto;
 }
 
-.modal-card p{
+.modal-card p {
     color: #bbb;
     /* Dimmer text for descriptions */
     line-height: 1.6;
@@ -611,7 +627,7 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    margin:10px;
+    margin: 10px;
 }
 
 .btn-disabled {
@@ -622,7 +638,7 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: not-allowed;
-    margin:10px;
+    margin: 10px;
 }
 
 .btn-cancel {
@@ -634,7 +650,7 @@ body {
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    margin:10px;
+    margin: 10px;
 }
 
 
@@ -703,6 +719,6 @@ body {
     filter: grayscale(1);
 }
 
-.discard-selected {
-    border: 4px solid #ff4444;
+.card-selected {
+    outline: 4px solid red;
 }

@@ -3,7 +3,7 @@ import { HexUtils } from "../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 import { Player } from "../models/Player.js";
-import { PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
+import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
 
 
 // constants for hex geometry
@@ -544,7 +544,7 @@ export class Renderer {
      */
     renderPlayerResourceCards(player) {
         const resourcesContainer = document.getElementById('player-hands-resources-container');
-        this.__renderPlayerResources(player, resourcesContainer);
+        this.__renderResources(player.getResources(), resourcesContainer);
     }
 
     /**
@@ -553,8 +553,7 @@ export class Renderer {
      * @param {*} container the target container to render into
      * @param {*} onCardClick callback when a card is clicked (optional)
      */
-    __renderPlayerResources(player, container, onCardClick = null) {
-        const resources = player.getResources();
+    __renderResources(resources, container, onCardClick = null) {
         container.innerHTML = ''; // clear existing content
 
         // resource resources
@@ -660,10 +659,23 @@ export class Renderer {
 
                 // attach event listeners to menu buttons
                 const playBtn = actionMenu.querySelector('#play-dev-card-btn');
-                playBtn.onclick = () => {
-                    this.emitInputEvent('PLAY_DEV_CARD', { devCardType: devCard.type });
-                    actionMenu.remove();
-                };
+
+                switch (devCard.type) {
+                    case DEV_CARD_TYPES.KNIGHT:
+                        playBtn.onclick = () => {
+                            this.emitInputEvent('ACTIVATE_KNIGHT');
+                            actionMenu.remove();
+                        };
+                        break;
+                    case DEV_CARD_TYPES.YEAR_OF_PLENTY:
+                        playBtn.onclick = () => {
+                            this.activateYearOfPlentyResourceSelection();
+                            actionMenu.remove();
+                        }
+                        break;
+                    default:
+                        throw new Error(`Unhandled playable dev card type: ${devCard.type}`);
+                }
 
                 const cancelBtn = actionMenu.querySelector('#cancel-dev-card-btn');
                 cancelBtn.onclick = () => {
@@ -675,11 +687,39 @@ export class Renderer {
         return clone;
     }
 
+    activateYearOfPlentyResourceSelection() {
+        this.activateResourcesSelectionMode(
+            {
+                [RESOURCE_TYPES.BRICK]: 1,
+                [RESOURCE_TYPES.ORE]: 1,
+                [RESOURCE_TYPES.WOOL]: 1,
+                [RESOURCE_TYPES.WHEAT]: 1,
+                [RESOURCE_TYPES.LUMBER]: 1
+            },
+            2,
+            'Select 2 Resources for Year of Plenty',
+            'ACTIVATE_YEAR_OF_PLENTY'
+        );
+    }
+
+    activateDiscardSelectionMode(resources, numToDiscard, playerId = null) {
+        this.activateResourcesSelectionMode(
+            resources,
+            numToDiscard,
+            playerId ? `Player ${playerId} Select Resources to Discard` : `Select Resources to Discard`,
+            "CONFIRM_DISCARD"
+        );
+    }
+
+    deactivateDiscardSelectionMode() {
+        this.removeElementById('resource-selection-modal-overlay');
+    }
+
     /**
      * Let the player select cards to discard
      * @param {*} player 
      */
-    activateDiscardSelectionMode(player) {
+    activateResourcesSelectionMode(resources, numToSelect, msg, confirmEventName) {
         // render text (not implemented yet)
         // TODO: prompt/notify the player to discard cards
 
@@ -689,40 +729,40 @@ export class Renderer {
         const clone = modalWindowTemplate.content.cloneNode(true);
 
         const overlay = clone.querySelector('.modal-overlay');
-        overlay.id = 'discard-modal-overlay';
+        overlay.id = 'resource-selection-modal-overlay';
         const modalCard = clone.querySelector('.modal-card');
-        const numCardsToDiscard = Math.floor(player.getTotalResourceCount() / 2);
+        const numCardsToSelect = numToSelect;
 
         const modelTitle = modalCard.querySelector('#modal-title')
-        modelTitle.textContent = `${player.name}: Select ${numCardsToDiscard} Cards to Discard (0/${numCardsToDiscard})`;
+        modelTitle.textContent = `${msg} (0/${numCardsToSelect})`;
 
         // add confirm button (disable when not enough cards selected, enable when enough)
         const btns = clone.querySelector('#modal-btns');
         const confirmBtn = document.createElement('button');
-        confirmBtn.textContent = 'Confirm Discard';
+        confirmBtn.textContent = 'Confirm Selection';
         confirmBtn.classList.add('btn-disabled');
         confirmBtn.disabled = true; // initially disabled
         btns.appendChild(confirmBtn);
 
         // render player's resource cards into the modal body
         const modalBody = modalCard.querySelector('#modal-body');
-        this.__renderPlayerResources(player, modalBody, (clickedType, cardDiv) => {
+        this.__renderResources(resources, modalBody, (clickedType, cardDiv) => {
             // card clicked, first check how many are selected
-            const selectedCards = modalBody.querySelectorAll('.discard-selected');
-            if (selectedCards.length >= numCardsToDiscard && !cardDiv.classList.contains('discard-selected')) {
+            const selectedCards = modalBody.querySelectorAll('.card-selected');
+            if (selectedCards.length >= numCardsToSelect && !cardDiv.classList.contains('card-selected')) {
                 // already selected enough and trying to select more (is not selected yet)
                 return;
             }
 
             // can be selected/deselected
-            cardDiv.classList.toggle('discard-selected');
+            cardDiv.classList.toggle('card-selected');
 
             // update the title with current count
-            const newSelectedCards = modalBody.querySelectorAll('.discard-selected');
-            modelTitle.textContent = `${player.name}:Select ${numCardsToDiscard} Cards to Discard (${newSelectedCards.length}/${numCardsToDiscard})`;
+            const newSelectedCards = modalBody.querySelectorAll('.card-selected');
+            modelTitle.textContent = `${msg} (${newSelectedCards.length}/${numCardsToSelect})`;
 
             // update the confirm button state
-            confirmBtn.disabled = newSelectedCards.length < numCardsToDiscard;
+            confirmBtn.disabled = newSelectedCards.length < numCardsToSelect;
             if (confirmBtn.disabled) {
                 confirmBtn.classList.add('btn-disabled');
                 confirmBtn.classList.remove('btn-primary');
@@ -734,8 +774,8 @@ export class Renderer {
 
         // send all selected cards when confirm is clicked
         confirmBtn.onclick = () => {
-            const selectedCardsArray = Array.from(modalBody.querySelectorAll('.discard-selected')).map(cardDiv => cardDiv.dataset.type);
-            this.emitInputEvent('CONFIRM_DISCARD', { selectedCards: selectedCardsArray });
+            const selectedCardsArray = Array.from(modalBody.querySelectorAll('.card-selected')).map(cardDiv => cardDiv.dataset.type);
+            this.emitInputEvent(confirmEventName, { selectedCards: selectedCardsArray });
         };
         // append to main wrapper
         document.getElementById('main-wrapper').appendChild(clone);
@@ -885,8 +925,8 @@ export class Renderer {
         this.removeElementById('robber-placement-group');
     }
 
-    deactivateDiscardSelectionMode() {
-        this.removeElementById('discard-modal-overlay');
+    deactivateResourceSelectionMode() {
+        this.removeElementById('resource-selection-modal-overlay');
     }
 
 

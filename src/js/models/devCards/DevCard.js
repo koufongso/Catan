@@ -40,8 +40,8 @@ export class DevCard {
         return this.played;
     }
 
-    activate(gameController) {
-        DevCardEffects[this.type](gameController);
+    activate(gameController, ...args) {
+        DevCardEffects[this.type](gameController, ...args);
         this.markAsPlayed();
     }
 }
