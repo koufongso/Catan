@@ -284,6 +284,11 @@ export class Renderer {
                 seed: Date.now()
             });
 
+            if (!res.result) {
+                console.error("Renderer: Failed to start game:", res.error_message);
+                return;
+            }
+
             // render the main UI with the received data
             this.renderMainUI(res.map.tiles, res.map.tradingPosts, res.state.robberCoord);
 
@@ -291,19 +296,31 @@ export class Renderer {
             this.renderPlayerAssets(res.state.players[res.state.currentPlayerIndex], res.state.turnNumber);
 
             // render interaction hints
-            switch (res.interaction.action) {
-                case 'PLACE_INIT_SETTLEMENT1':
-                    this.highlightValidSpots(res.interaction.data.validSettlementCoords, 'SETTLEMENT');
-                    break;
-                default:
-                    console.warn(`Unknown interaction action: ${res.interaction.action}`);
-            }
+            this.renderInteractionHints(res.interaction);
+            
         }
 
         // clear existing content and add the clone to main wrapper
         let wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = '';
         wrapper.appendChild(clone);
+    }
+
+    renderInteractionHints(interaction) {
+        if (!interaction) return;
+        switch (interaction.action) {
+            case 'HIGHLIGHT_SETTLEMENT_SPOTS':
+                this.highlightValidSpots(interaction.data.validSettlementCoords, 'SETTLEMENT');
+                break;
+            case 'HIGHLIGHT_CITY_SPOTS':
+                this.highlightValidSpots(interaction.data.validCityCoords, 'CITY');
+                break;
+            case 'HIGHLIGHT_ROAD_SPOTS':
+                this.highlightValidSpots(interaction.data.validRoadCoords, 'ROAD');
+                break
+            default:
+                console.warn(`Unknown interaction action: ${interaction.action}`);
+        }
     }
 
     renderGameOver(winners) {
@@ -353,21 +370,30 @@ export class Renderer {
 
         // 3. Single Event Listener (Event Delegation)
         // Remove existing listener first if necessary to prevent duplicates
-        setttlementPlacementGroup.onclick = (event) => {
+        setttlementPlacementGroup.onclick = async (event) => {
             const target = event.target;
             if (target.classList.contains(`vertex-${type}-available`)) {
                 this.removeElementById(`${type}-placement-group`);
                 const vertexId = target.dataset.id;
-                this.emitInputEvent(`BUILD_${type.toUpperCase()}`, { vertexId: vertexId });
+
+                const res = await this.controller.inputEvent({
+                    type: `BUILD_${type.toUpperCase()}`,
+                    vertexId: vertexId
+                });
+
+                if (!res.result) {
+                    console.error("Renderer: Failed to build settlement:", res.error_message);
+                }
+
+                // render the new settlement/city
+                const settlementId = res.settlementId;
+                const color = res.playerColor;
+                this.renderSettlement(settlementId, color, type === 'SETTLEMENT' ? 1 : 2);
+
+                // highlight road placement
+                this.renderInteractionHints(res.interaction);
             }
         };
-    }
-
-    // Helper to clean up the controller calls
-    emitInputEvent(type, data) {
-        if (this.controller) {
-            this.controller.inputEvent({ type, ...data });
-        }
     }
 
 
@@ -419,12 +445,27 @@ export class Renderer {
         });
 
         // EVENT DELEGATION: One listener for all roads
-        roadPlacementGroup.onclick = (event) => {
+        roadPlacementGroup.onclick = async (event) => {
             const target = event.target;
             if (target.classList.contains('edge-road-available')) {
                 this.removeElementById('road-placement-group');
-                const roadId = target.dataset.id;
-                this.emitInputEvent('BUILD_ROAD', { edgeId: roadId });
+                const res = await this.controller.inputEvent({
+                    type: 'BUILD_ROAD',
+                    edgeId: target.dataset.id
+                });
+
+                if (!res.result) {
+                    console.error("Renderer: Failed to build road:", res.error_message);
+                    return;
+                }
+
+                // render the new road
+                const roadId = res.roadId;
+                const color = res.playerColor;
+                this.renderRoad(HexUtils.idToCoord(roadId), color);
+
+                // proceed to next interaction (initial settlement  placement 2)
+                this.renderInteractionHints(res.interaction);
             }
         };
     }

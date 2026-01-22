@@ -206,6 +206,16 @@ export class Player {
         return toRemove;
     }
 
+    getSettlementVerticesIdSet(){
+        const vertexSet = new Set();
+        for (let settlement of this.settlements) {
+            const vertexId = HexUtils.coordToId(settlement.coord);
+            vertexSet.add(vertexId);
+        }
+        return vertexSet;
+    }
+
+
     /**
      * Get a Set of vertex IDs connected to player's roads
      * @returns {Set} - A set of vertex IDs

@@ -93,31 +93,22 @@ export class GameController {
         switch (this.gameContext.currentState) {
             case GameState.SETUP:
                 // handle setup events
-                return await this.handleStateSetup(event);s
-            case GameState.INIT:
-                // handle init events
-                await this.handleStateInit(event);
-                break;
+                return await this.handleStateSetup(event);
             case GameState.PLACE_SETTLEMENT1:
                 // handle first settlement placement events
-                await this.handleStatePlaceSettlement1(event);
-                break;
+                return await this.handleStatePlaceSettlement1(event);
             case GameState.PLACE_ROAD1:
                 // handle first road placement events
-                await this.handleStatePlaceRoad1(event);
-                break;
+                return await this.handleStatePlaceRoad1(event);
             case GameState.PLACE_SETTLEMENT2:
                 // handle second settlement placement events
-                await this.handleStatePlaceSettlement2(event);
-                break;
+                return await this.handleStatePlaceSettlement2(event);
             case GameState.PLACE_ROAD2:
                 // handle second road placement events
-                await this.handleStatePlaceRoad2(event);
-                break;
+                return await this.handleStatePlaceRoad2(event);
             case GameState.ROLL:
                 // handle roll events
-                await this.handleStateRoll(event);
-                break;
+                return await this.handleStateRoll(event); s
             case GameState.DISCARD:
                 // handle discard events
                 this.handleStateDiscard(event);
@@ -210,6 +201,7 @@ export class GameController {
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
         return {
+            result: true, // indicate success
             map: {
                 tiles: this.gameContext.gameMap.tiles,
                 tradingPosts: this.gameContext.gameMap.tradingPosts,
@@ -219,14 +211,14 @@ export class GameController {
                 robberCoord: this.gameContext.gameMap.getRobberCoord(),
                 roads: this.gameContext.gameMap.getRoads(),
                 settlements: this.gameContext.gameMap.getSettlements(),
-                players: this.gameContext.players,                 
+                players: this.gameContext.players,
                 currentPlayerIndex: this.gameContext.currentPlayerIndex,
                 turnNumber: this.gameContext.turnNumber
             },
 
             interaction: {
-                action: 'PLACE_INIT_SETTLEMENT1',
-                data:{
+                action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                data: {
                     validSettlementCoords: validSettlementCoords
                 }
             }
@@ -245,19 +237,30 @@ export class GameController {
         const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
 
+        // try to build settlement
         if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
-            this.debug.renderDebugHUD(this.gameContext, "Failed to build settlement.");
-            throw new Error("Failed to build 1st settlement.");
+            return {
+                result: false,
+                error_message: "Failed to build 1st settlement."
+            }
         }
 
-        this.renderer.renderSettlement(settlementId, currentPlayer.color, 1);
         this.gameContext.currentState = GameState.PLACE_ROAD1;
 
         // compute all valid road spots based on last settlement placed
-        const availableRoadCoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(settlementCoord, null);
-        this.renderer.highlightValidSpots(availableRoadCoords, 'ROAD');
-        this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
-        this.debug.renderDebugHUD(this.gameContext);
+        const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
+        console.log("Available road coords after 1st settlement:", availableRoadCoords);
+        return {
+            result: true,
+            settlementId: settlementId,
+            playerColor: currentPlayer.color,
+            interaction: {
+                action: 'HIGHLIGHT_ROAD_SPOTS',
+                data: {
+                    validRoadCoords: availableRoadCoords
+                }
+            }
+        };
     }
 
     async handleStatePlaceRoad1(event) {
@@ -269,14 +272,15 @@ export class GameController {
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
         const roadId = event.edgeId;
-        const roadCoord = HexUtils.idToCoord(roadId);
 
         if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
-            throw new Error("Failed to build 1st road.");
+            return {
+                result: false,
+                error_message: "Failed to build 1st road."
+            };
         }
 
-        this.renderer.renderRoad(roadCoord, currentPlayer.color);
 
         // check if current player is last player
         if (this.gameContext.currentPlayerIndex === this.gameContext.totalPlayers - 1) {
@@ -288,9 +292,20 @@ export class GameController {
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
         }
 
-        const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
-        this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
-        this.debug.renderDebugHUD(this.gameContext);
+        const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
+        console.log("Available settlement coords after 1st road:", availableSettlementCoords);
+        return {
+            result: true,
+            roadId: roadId,
+            playerColor: currentPlayer.color,
+            interaction: {
+                action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                data: {
+                    validSettlementCoords: availableSettlementCoords
+                }
+            }
+        };
+
     }
 
     handleStatePlaceSettlement2(event) {
@@ -305,16 +320,26 @@ export class GameController {
 
         if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build 2nd settlement.");
-            throw new Error("Failed to build 2nd settlement.");
+            return {
+                error: "Failed to build 2nd settlement."
+            };
         }
-
-        this.renderer.renderSettlement(settlementId, currentPlayer.color, 1);
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        const availableRoadCoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(settlementCoord, null); // connected to last settlement placed
-        this.renderer.highlightValidSpots(availableRoadCoords, 'ROAD');
-        this.debug.renderDebugHUD(this.gameContext);
+        const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
+
+        return {
+            result: true,
+            settlementId: settlementId,
+            playerColor: currentPlayer.color,
+            interaction: {
+                action: 'HIGHLIGHT_ROAD_SPOTS',
+                data: {
+                    validRoadCoords: availableRoadCoords
+                }
+            }
+        };
     }
 
     handleStatePlaceRoad2(event) {
@@ -326,14 +351,12 @@ export class GameController {
         // add road to map and register its ownership
         const currentPlayer = this.getCurrentPlayer();
         const roadId = event.edgeId;
-        const roadCoord = HexUtils.idToCoord(roadId);
 
         if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
             this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
             throw new Error("Failed to build 2nd road.");
         }
 
-        this.renderer.renderRoad(roadCoord, currentPlayer.color);
 
         // add adjacnet resources to player for second settlement
         const adjacentResources = this.gameContext.gameMap.getResourcesAdjacentToSettlement(this.gameContext.lastSettlementPlaced);
@@ -341,21 +364,32 @@ export class GameController {
             currentPlayer.addResources({ [RESOURCE_TYPES]: 1 });
             this.addBankResource({ [RESOURCE_TYPES]: -1 });
         });
-        this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
 
         // check if current player is the first player
         if (this.gameContext.currentPlayerIndex === 0) {
             // if fisrt player, game setup is complete, move to ROLL state
             this.gameContext.currentState = GameState.ROLL;
-            // prompt first player to roll dice
-            this.debug.renderDebugHUD(this.gameContext);
+            return {
+                result: true,
+                roadId: roadId,
+                playerColor: currentPlayer.color,
+            }
         } else {
             // else move to previous player and PLACE_SETTLEMENT2 state
             this.prevPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
-            const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
-            this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
-            this.debug.renderDebugHUD(this.gameContext);
+            const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
+            return {
+                result: true,
+                roadId: roadId,
+                playerColor: currentPlayer.color,
+                interaction: {
+                    action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                    data: {
+                        validSettlementCoords: availableSettlementCoords
+                    }
+                }
+            }
         }
     }
 

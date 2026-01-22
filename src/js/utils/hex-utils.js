@@ -345,6 +345,44 @@ export const HexUtils = Object.freeze({
         }
     },
 
+    /**
+     * Get the six edge coordinates from a hex coordinate
+     * @param {*} hCoord 
+     * @returns an array of six edge coordinates
+     */
+    getEdgesFromHex(hCoord) {
+        // input valid check
+        if (!this.isValidHex(hCoord)) {
+            throw new Error("Invalid hex coordinate");
+        }
+
+        // given a hex coordinate (q,r,s), return the six edge coordinates that form this hex
+        let q = hCoord[0];
+        let r = hCoord[1];
+        let s = hCoord[2];
+
+        const qa = 2*q-1;
+        const qb = 2*q;
+        const qc = 2*q+1;
+
+        const ra = 2*r-1;
+        const rb = 2*r;
+        const rc = 2*r+1;
+
+        const sa = 2*s-1;
+        const sb = 2*s;
+        const sc = 2*s+1;
+
+        return [
+            [qc,ra,sb],
+            [qc,rb,sa],
+            [qb,rc,sa],
+            [qa,rc,sb],
+            [qa,rb,sc],
+            [qb,ra,sc]
+        ];
+    },
+
     /*--------------------- conversion operations ----------------------------- */
     /**
      * Convert a Set of coord ids to an array of coords

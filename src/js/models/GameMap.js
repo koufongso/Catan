@@ -28,6 +28,12 @@ export class GameMap {
         this.roads = new Map();             // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
 
         this.robberCoord = [0, 0, 0];       // the tile coord where the robber is currently located
+
+        // map "boundary" info, save for quick access
+        this.allVertexIdSet = null;     // a set of all vertex coordinates on the map
+        this.allEdgeIdSet = null;       // a set of all edge coordinates on the map
+
+        this.initialized = false;
     }
 
     // load the map from json file to initializes the interactable elements
@@ -73,6 +79,10 @@ export class GameMap {
                 this.updateTradingPostByCoord(tpData.coord, tpData.indexList, tpData.tradeList);
             }
 
+            this.allVertexIdSet = this.getAllVertexIdSet();
+            this.allEdgeIdSet = this.getAllEdgeIdSet();
+
+            this.initialized = true;
 
         } catch (error) {
             console.error('Error loading JSON:', error);
@@ -439,9 +449,14 @@ export class GameMap {
 
     /**
      * Get all the vertex coordinates on the map (based on existing tiles)
-     * @returns {Map<string, Array>} - A map of vertex IDs to vertex coordinates
+     * Note: this should be static after map initialization
+     * @returns {Set} - A set of vertex IDs
      */
     getAllVertexIdSet() {
+        if (this.allVertexIdSet !== null) {
+            return this.allVertexIdSet;
+        }
+
         let results = new Set();
         for (let [tileId, tile] of this.tiles) {
             let vCoordList = HexUtils.getVerticesFromHex(tile.coord);
@@ -449,6 +464,7 @@ export class GameMap {
                 results.add(HexUtils.coordToId(vCoord));
             }
         }
+        this.allVertexIdSet = results;
         return results;
     }
 
@@ -460,7 +476,7 @@ export class GameMap {
         return results;
     }
 
-    getAllSettlementNeighborIdSet(){
+    getAllSettlementNeighborIdSet() {
         let results = new Set();
         for (let settlementId of this.getAllSettlementIdSet()) {
             let neighborSet = this.getSettlementNeighborIdSet(settlementId);
@@ -471,12 +487,48 @@ export class GameMap {
         return results;
     }
 
+
+    /**
+     * Get all the edge IDs on the map (based on existing tiles)
+     * Note: this should be static after map initialization
+     * @returns {Set} - A set of edge IDs
+     */
+    getAllEdgeIdSet() {
+        if (this.allEdgeIdSet !== null) {
+            return this.allEdgeIdSet;
+        }
+
+        let results = new Set();
+        for (let [tileId, tile] of this.tiles) {
+            let eCoordList = HexUtils.getEdgesFromHex(tile.coord);
+            for (let eCoord of eCoordList) {
+                results.add(HexUtils.coordToId(eCoord));
+            }
+        }
+        this.allEdgeIdSet = results;
+        return results;
+    }
+
+
+    getAllRoadIdSet() {
+        let results = new Set();
+        for (let [id, road] of this.roads) {
+            results.add(id);
+        }
+        return results;
+    }
+
+
+    getVertexNeighborEdgeIdSet(vertexCoord) {
+        return HexUtils.coordsArrayToIdSet(HexUtils.getAdjEdgesFromVertex(vertexCoord));
+    }
+
     /**
      * Generic helper to get neighboring settlement ids within a certain distance
      * @param {*} vertexId 
      * @returns {Array} - An array of neighboring vertex IDs
      */
-    getSettlementNeighborIdSet(vertexId){
+    getSettlementNeighborIdSet(vertexId) {
         let vertexCoord = HexUtils.idToCoord(vertexId);
         return HexUtils.coordsArrayToIdSet(HexUtils.getAdjVerticesFromVertex(vertexCoord));
     }
@@ -499,21 +551,7 @@ export class GameMap {
         return resources;
     }
 
-    /**
-     * Get a list of unoccupied settlement spots (vertex coordinates) on the map, if owner is given, only return spots connected to owner's road
-     * @param {*} owner 
-     * @returns an array of vertex coordinates
-     */
-    getValidSettlementSpots(owner = null) {
-        let results = [];
-        let allVertices = this.getAllVertexCoords();
-        for (let [key, vCoord] of allVertices) {
-            if (this.isSettlementSpotValid(vCoord, owner)) {
-                results.push(vCoord);
-            }
-        }
-        return results;
-    }
+
 
     isSettlementSpotValid(vCoord, owner = null) {
         let vertexId = HexUtils.coordToId(vCoord);
@@ -551,22 +589,6 @@ export class GameMap {
         return true;
     }
 
-    /**
-     * Return a list of unoccupied road spots (edge coordinates), if owner is specified, only return roads that are connected to owner's settlement or road
-     * @param {Array} vCoord 
-     * @returns {Array} list of edge coordinates
-     */
-    getValidRoadSpotsFromVertex(vCoord, owner = null) {
-        const vCoordList = HexUtils.getAdjVerticesFromVertex(vCoord);
-        let results = [];
-        for (let vCoord1 of vCoordList) {
-            const eCoord = HexUtils.add(vCoord, vCoord1);
-            if (this.isRoadSpotValid(eCoord, owner)) {
-                results.push(eCoord);
-            }
-        }
-        return results;
-    }
 
     /**
      * Return true if the road spot (edge coordinate) is valid (unoccupied), if owner is given, check if connected to owner's road
@@ -679,7 +701,7 @@ export class GameMap {
         return Array.from(this.roads.values());
     }
 
-    getRobberCoord(){
+    getRobberCoord() {
         return this.robberCoord;
     }
 
