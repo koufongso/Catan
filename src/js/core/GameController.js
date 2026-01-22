@@ -8,6 +8,7 @@ import { COSTS, INITIAL_BANK_RESOURCES, PLAYER_NAMES, PLAYER_COLORS, NUMBER_TOKE
 import { DevCardDeck } from '../models/devCards/DevCardDeck.js';
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.js';
 import { DevCardEffects } from '../models/devCards/DevCardActions.js';
+import { GameUtils } from '../utils/game-utils.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -92,8 +93,7 @@ export class GameController {
         switch (this.gameContext.currentState) {
             case GameState.SETUP:
                 // handle setup events
-                await this.handleStateSetup(event);
-                break;
+                return await this.handleStateSetup(event);s
             case GameState.INIT:
                 // handle init events
                 await this.handleStateInit(event);
@@ -198,26 +198,39 @@ export class GameController {
         for (let i = 0; i < gameContext.humanPlayers; i++) {
             gameContext.players.push(new Player(i, PLAYER_NAMES[i], PLAYER_COLORS[i], 'HUMAN'));
         }
+
         for (let j = 0; j < gameContext.aiPlayers; j++) {
             gameContext.players.push(new Player(gameContext.humanPlayers + j, `AI_${j + 1}`, PLAYER_COLORS[gameContext.humanPlayers + j], 'AI'));
         }
         // generate map
         await this.generateDefaultMap(this.gameContext.seed);
 
+        const validSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // pre-compute valid settlement spots for initial placement
+
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
-        // render the initial map and prompt to place first settlement
-        // render intial map
-        const gameMap = this.gameContext.gameMap
-        this.renderer.renderMainUI(gameMap.tiles, gameMap.tradingPosts, gameMap.robberCoord);
+        return {
+            map: {
+                tiles: this.gameContext.gameMap.tiles,
+                tradingPosts: this.gameContext.gameMap.tradingPosts,
+            },
 
-        // "activate" vertex elements for settlement placement
-        const availableSettlementCoords = this.gameContext.gameMap.getValidSettlementSpots();
-        this.renderer.highlightValidSpots(availableSettlementCoords, 'SETTLEMENT');
+            state: {
+                robberCoord: this.gameContext.gameMap.getRobberCoord(),
+                roads: this.gameContext.gameMap.getRoads(),
+                settlements: this.gameContext.gameMap.getSettlements(),
+                players: this.gameContext.players,                 
+                currentPlayerIndex: this.gameContext.currentPlayerIndex,
+                turnNumber: this.gameContext.turnNumber
+            },
 
-
-        // update debug HUD
-        this.debug.renderDebugHUD(this.gameContext);
+            interaction: {
+                action: 'PLACE_INIT_SETTLEMENT1',
+                data:{
+                    validSettlementCoords: validSettlementCoords
+                }
+            }
+        };
     }
 
     async handleStatePlaceSettlement1(event) {

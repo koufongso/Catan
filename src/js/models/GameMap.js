@@ -437,16 +437,48 @@ export class GameMap {
     }
 
 
-    // get all settlement spot defined by current tiles on the map
-    getAllSettlementCoords() {
-        let results = new Map();
-        for (let [id, tile] of this.tiles) {
+    /**
+     * Get all the vertex coordinates on the map (based on existing tiles)
+     * @returns {Map<string, Array>} - A map of vertex IDs to vertex coordinates
+     */
+    getAllVertexIdSet() {
+        let results = new Set();
+        for (let [tileId, tile] of this.tiles) {
             let vCoordList = HexUtils.getVerticesFromHex(tile.coord);
             for (let vCoord of vCoordList) {
-                results.set(HexUtils.coordToId(vCoord), vCoord);
+                results.add(HexUtils.coordToId(vCoord));
             }
         }
         return results;
+    }
+
+    getAllSettlementIdSet() {
+        let results = new Set();
+        for (let [id, settlement] of this.settlements) {
+            results.add(id);
+        }
+        return results;
+    }
+
+    getAllSettlementNeighborIdSet(){
+        let results = new Set();
+        for (let settlementId of this.getAllSettlementIdSet()) {
+            let neighborSet = this.getSettlementNeighborIdSet(settlementId);
+            for (let neighborId of neighborSet) {
+                results.add(neighborId);
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Generic helper to get neighboring settlement ids within a certain distance
+     * @param {*} vertexId 
+     * @returns {Array} - An array of neighboring vertex IDs
+     */
+    getSettlementNeighborIdSet(vertexId){
+        let vertexCoord = HexUtils.idToCoord(vertexId);
+        return HexUtils.coordsArrayToIdSet(HexUtils.getAdjVerticesFromVertex(vertexCoord));
     }
 
     getResourcesAdjacentToSettlement(vertexId) {
@@ -474,8 +506,8 @@ export class GameMap {
      */
     getValidSettlementSpots(owner = null) {
         let results = [];
-        let allSettlementCoords = this.getAllSettlementCoords();
-        for (let [key, vCoord] of allSettlementCoords) {
+        let allVertices = this.getAllVertexCoords();
+        for (let [key, vCoord] of allVertices) {
             if (this.isSettlementSpotValid(vCoord, owner)) {
                 results.push(vCoord);
             }
@@ -641,6 +673,18 @@ export class GameMap {
     searchSettlementsByTileId(tileId) {
         const tileCoord = HexUtils.idToCoord(tileId);
         return this.searchSettlementsByTileCoord(tileCoord);
+    }
+
+    getRoads() {
+        return Array.from(this.roads.values());
+    }
+
+    getRobberCoord(){
+        return this.robberCoord;
+    }
+
+    getSettlements() {
+        return Array.from(this.settlements.values());
     }
 
 

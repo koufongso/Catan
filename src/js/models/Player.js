@@ -1,5 +1,6 @@
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 import {PLAYER_ASSET_LIMITS} from '../constants/GameConstants.js';
+import { HexUtils } from '../utils/hex-utils.js';
 
 export class Player {
     constructor(id, name, color, type) {
@@ -203,5 +204,20 @@ export class Player {
         }
 
         return toRemove;
+    }
+
+    /**
+     * Get a Set of vertex IDs connected to player's roads
+     * @returns {Set} - A set of vertex IDs
+     */
+    getRoadVerticesIdSet(){
+        const vertexSet = new Set();
+        for (let road of this.roads) {
+            const vertices = HexUtils.getVerticesFromEdge(road.coord);
+            for (let vertex of vertices) {
+                vertexSet.add(HexUtils.coordToId(vertex));
+            }
+        }
+        return vertexSet;
     }
 }

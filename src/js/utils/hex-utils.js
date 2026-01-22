@@ -343,5 +343,31 @@ export const HexUtils = Object.freeze({
             let sHalf = s / 2;
             return [[(q + 1) / 2, (r + 1) / 2, sHalf], [(q - 1) / 2, (r - 1) / 2, sHalf]];
         }
+    },
+
+    /*--------------------- conversion operations ----------------------------- */
+    /**
+     * Convert a Set of coord ids to an array of coords
+     * @param {Set} idSet input Set of coord ids
+     * @returns an array of coordinates
+     */
+    idSetToCoordsArray(idSet) {
+        const coordArray = [];
+        for (let id of idSet) {
+            coordArray.push(this.idToCoord(id));
+        }
+        return coordArray;
+    },
+
+
+    coordsArrayToIdSet(coordArray) {
+        const idSet = new Set();
+        for (let coord of coordArray) {
+            idSet.add(this.coordToId(coord));
+        }
+        return idSet;
     }
+
+
+
 });

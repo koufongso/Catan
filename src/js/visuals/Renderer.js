@@ -273,14 +273,31 @@ export class Renderer {
             return;
         }
 
-        clone.getElementById('start-game').onclick = () => {
-            this.controller.inputEvent({
+        clone.getElementById('start-game').onclick = async () => {
+            // async due to loading map from json file
+            // emit START_GAME event to controller, expect to recieve map, state, interaction data
+            const res = await this.controller.inputEvent({
                 type: 'START_GAME',
                 mapSize: parseInt(document.getElementById('map-size').value),
                 aiPlayers: parseInt(document.getElementById('ai-players').value),
                 humanPlayers: parseInt(document.getElementById('human-players').value),
                 seed: Date.now()
             });
+
+            // render the main UI with the received data
+            this.renderMainUI(res.map.tiles, res.map.tradingPosts, res.state.robberCoord);
+
+            // render player assets
+            this.renderPlayerAssets(res.state.players[res.state.currentPlayerIndex], res.state.turnNumber);
+
+            // render interaction hints
+            switch (res.interaction.action) {
+                case 'PLACE_INIT_SETTLEMENT1':
+                    this.highlightValidSpots(res.interaction.data.validSettlementCoords, 'SETTLEMENT');
+                    break;
+                default:
+                    console.warn(`Unknown interaction action: ${res.interaction.action}`);
+            }
         }
 
         // clear existing content and add the clone to main wrapper
