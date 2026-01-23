@@ -9,6 +9,7 @@ import { DevCardDeck } from '../models/devCards/DevCardDeck.js';
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.js';
 import { DevCardEffects } from '../models/devCards/DevCardActions.js';
 import { GameUtils } from '../utils/game-utils.js';
+import { StatusCodes } from '../constants/StatusCodes.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -32,8 +33,6 @@ export const GameState = Object.freeze({
 
 export class GameController {
     constructor(seed = Date.now()) {
-        this.renderer = null;
-
         // game setup
         this.seed = seed;
         this.rng = new RNG(this.seed);
@@ -72,15 +71,6 @@ export class GameController {
         }
     }
 
-    attachRenderer(renderer) {
-        this.renderer = renderer;
-    }
-
-    attachDebug(debug) {
-        this.debug = debug;
-    }
-
-
     // Simple log to console
     renderDebugHUDLog(message) {
         console.log("Debug HUD Log:", message);
@@ -89,57 +79,67 @@ export class GameController {
     // main game loop methods would go here
     async inputEvent(event) {
         console.log(`State: ${this.gameContext.currentState} | Event: ${event.type}`);
+        let res = {
+            status: StatusCodes.ERROR
+        };
 
         switch (this.gameContext.currentState) {
             case GameState.SETUP:
                 // handle setup events
-                return await this.handleStateSetup(event);
+                res = await this.handleStateSetup(event);
+                break;
             case GameState.PLACE_SETTLEMENT1:
                 // handle first settlement placement events
-                return await this.handleStatePlaceSettlement1(event);
+                res = await this.handleStatePlaceSettlement1(event);
+                break;
             case GameState.PLACE_ROAD1:
                 // handle first road placement events
-                return await this.handleStatePlaceRoad1(event);
+                res = await this.handleStatePlaceRoad1(event);
+                break;
             case GameState.PLACE_SETTLEMENT2:
                 // handle second settlement placement events
-                return await this.handleStatePlaceSettlement2(event);
+                res = await this.handleStatePlaceSettlement2(event);
+                break;
             case GameState.PLACE_ROAD2:
                 // handle second road placement events
-                return await this.handleStatePlaceRoad2(event);
+                res = await this.handleStatePlaceRoad2(event);
+                break;
             case GameState.ROLL:
                 // handle roll events
-                return await this.handleStateRoll(event); s
+                res = await this.handleStateRoll(event);
+                break;
             case GameState.DISCARD:
                 // handle discard events
-                this.handleStateDiscard(event);
+                res = this.handleStateDiscard(event);
                 break;
             case GameState.MOVE_ROBBER:
-                this.handleStateMoveRobber(event);
+                res = this.handleStateMoveRobber(event);
                 break;
             case GameState.ROB_PLAYER:
-                this.handleStateRobPlayer(event);
+                res = this.handleStateRobPlayer(event);
                 break;
             case GameState.MAIN: // nested main states
-                this.handleStateMain(event);
+                res = this.handleStateMain(event);
                 break;
             case GameState.END:
                 // handle end game events
-                await this.handleStateEnd(event);
+                res = await this.handleStateEnd(event);
                 break;
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
 
         // check for win condition after each event (right after action finished, back to MAIN state)
-        const currentState = this.gameContext.currentState;
-        if (currentState === GameState.MAIN) {
+        if (res.status === StatusCodes.SUCCESS) {
             const winner = this.checkWinCondition();
             if (winner.length > 0) {
                 this.gameContext.currentState = GameState.END;
-                this.renderer.renderGameOver(winner);
-                this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
+                res.status = StatusCodes.GAME_OVER;
+                res.winner = winner;
             }
         }
+
+        return res;
     }
 
     checkWinCondition() {
@@ -156,7 +156,6 @@ export class GameController {
         // handle end game events
         if (event.type === 'RESTART_GAME') {
             this.restartGame();
-            this.renderer.showConfig(); // render setup UI again
         }
     }
 
@@ -164,7 +163,6 @@ export class GameController {
         // reset game context
         this.gameContext = new GameContext();
         this.gameContext.currentState = GameState.SETUP;
-        this.debug.renderDebugHUD(this.gameContext, "Game restarted.");
     }
 
     /**
@@ -175,7 +173,9 @@ export class GameController {
      */
     async handleStateSetup(event) {
         if (event.type !== 'START_GAME') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            }
         }
 
         // set up players
@@ -201,21 +201,8 @@ export class GameController {
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
         return {
-            result: true, // indicate success
-            map: {
-                tiles: this.gameContext.gameMap.tiles,
-                tradingPosts: this.gameContext.gameMap.tradingPosts,
-            },
-
-            state: {
-                robberCoord: this.gameContext.gameMap.getRobberCoord(),
-                roads: this.gameContext.gameMap.getRoads(),
-                settlements: this.gameContext.gameMap.getSettlements(),
-                players: this.gameContext.players,
-                currentPlayerIndex: this.gameContext.currentPlayerIndex,
-                turnNumber: this.gameContext.turnNumber
-            },
-
+            status: StatusCodes.SUCCESS, // indicate success
+            gameContext: this.gameContext,
             interaction: {
                 action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
                 data: {
@@ -227,7 +214,9 @@ export class GameController {
 
     async handleStatePlaceSettlement1(event) {
         if (event.type !== 'BUILD_SETTLEMENT') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
 
         // place settlement logic here
@@ -240,7 +229,7 @@ export class GameController {
         // try to build settlement
         if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
             return {
-                result: false,
+                status: StatusCodes.ERROR,
                 error_message: "Failed to build 1st settlement."
             }
         }
@@ -251,9 +240,11 @@ export class GameController {
         const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
         console.log("Available road coords after 1st settlement:", availableRoadCoords);
         return {
-            result: true,
+            status: StatusCodes.SUCCESS,
             settlementId: settlementId,
+            settlementLevel: 1,
             playerColor: currentPlayer.color,
+            gameContext: this.gameContext,
             interaction: {
                 action: 'HIGHLIGHT_ROAD_SPOTS',
                 data: {
@@ -265,7 +256,9 @@ export class GameController {
 
     async handleStatePlaceRoad1(event) {
         if (event.type !== 'BUILD_ROAD') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
         // place road logic here
 
@@ -274,9 +267,8 @@ export class GameController {
         const roadId = event.edgeId;
 
         if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
-            this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
             return {
-                result: false,
+                status: StatusCodes.ERROR,
                 error_message: "Failed to build 1st road."
             };
         }
@@ -293,11 +285,11 @@ export class GameController {
         }
 
         const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
-        console.log("Available settlement coords after 1st road:", availableSettlementCoords);
         return {
-            result: true,
+            status: StatusCodes.SUCCESS,
             roadId: roadId,
             playerColor: currentPlayer.color,
+            gameContext: this.gameContext,
             interaction: {
                 action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
                 data: {
@@ -310,7 +302,9 @@ export class GameController {
 
     handleStatePlaceSettlement2(event) {
         if (event.type !== 'BUILD_SETTLEMENT') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
 
         // add settlement to map
@@ -319,9 +313,9 @@ export class GameController {
         const currentPlayer = this.getCurrentPlayer();
 
         if (!this.buildSettlement(settlementId, currentPlayer, 'INITIAL')) {
-            this.debug.renderDebugHUD(this.gameContext, "Failed to build 2nd settlement.");
             return {
-                error: "Failed to build 2nd settlement."
+                status: StatusCodes.ERROR,
+                error_message: "Failed to build 2nd settlement."
             };
         }
 
@@ -330,9 +324,11 @@ export class GameController {
         const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
 
         return {
-            result: true,
+            status: StatusCodes.SUCCESS,
             settlementId: settlementId,
+            settlementLevel: 1,
             playerColor: currentPlayer.color,
+            gameContext: this.gameContext,
             interaction: {
                 action: 'HIGHLIGHT_ROAD_SPOTS',
                 data: {
@@ -344,7 +340,9 @@ export class GameController {
 
     handleStatePlaceRoad2(event) {
         if (event.type !== 'BUILD_ROAD') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
         // place road logic here
 
@@ -353,8 +351,10 @@ export class GameController {
         const roadId = event.edgeId;
 
         if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
-            this.debug.renderDebugHUD(this.gameContext, "Failed to build road.");
-            throw new Error("Failed to build 2nd road.");
+            return {
+                status: StatusCodes.ERROR,
+                error_message: "Failed to build 2nd road."
+            }
         }
 
 
@@ -370,9 +370,10 @@ export class GameController {
             // if fisrt player, game setup is complete, move to ROLL state
             this.gameContext.currentState = GameState.ROLL;
             return {
-                result: true,
+                status: StatusCodes.SUCCESS,
                 roadId: roadId,
                 playerColor: currentPlayer.color,
+                gameContext: this.gameContext
             }
         } else {
             // else move to previous player and PLACE_SETTLEMENT2 state
@@ -380,9 +381,10 @@ export class GameController {
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
             const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
             return {
-                result: true,
+                status: StatusCodes.SUCCESS,
                 roadId: roadId,
                 playerColor: currentPlayer.color,
+                gameContext: this.gameContext,
                 interaction: {
                     action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
                     data: {
@@ -404,20 +406,28 @@ export class GameController {
             // get all the tiles ids with the rolled number token
             if (rolledNumber === 7) {
                 // check players that needs to discard cards
-                this.discardCardAndActivateRobber(GameState.MAIN);
+                return this.discardCardAndActivateRobber(GameState.MAIN);
             } else {
                 this.distributeResourcesByRoll(rolledNumber);
-                this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
                 // transition to MAIN state
                 this.gameContext.currentState = GameState.MAIN;
-                this.debug.renderDebugHUD(this.gameContext);
+                return {
+                    status: StatusCodes.SUCCESS,
+                    roll: rollResult,
+                    gameContext: this.gameContext
+                };
             }
+
         } else if (event.type === 'ACTIVATE_KNIGHT' ||
             event.type === 'ACTIVATE_YEAR_OF_PLENTY' ||
             event.type === 'ACTIVATE_MONOPOLY' ||
             event.type === 'ACTIVATE_ROAD_BUILDING') {
             // handle play development card event
-            this.handleEventActivateDevCard(event);
+            return this.handleEventActivateDevCard(event);
+        } else {
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
     }
 
@@ -426,47 +436,64 @@ export class GameController {
         // main game logic would go here
         switch (event.type) {
             case 'END_TURN':
-                this.__handleEventEnd(event);
-                break;
+                return this.handleEventEnd(event);
             case 'QUERY_VALID_SPOTS':
                 // user request to query valid spots for building road/settlement, this will trigger renderer to highlight valid spots (for human player)
-                const validSpots = this.queryValidSpots(this.gameContext.currentPlayerIndex, event.queryType);
-                this.renderer.highlightValidSpots(validSpots, event.queryType);
-                break;
+                return this.queryValidSpots(this.gameContext.currentPlayerIndex, event.queryType);
             case 'BUILD_ROAD':
                 // user request to build settlement with
-                this.handleEventBuildRoad(event);
-                break;
+                return this.handleEventBuildRoad(event);
             case 'BUILD_SETTLEMENT':
                 // user request to build settlement with
-                this.handleEventBuildSettlement(event);
-                break;
+                return this.handleEventBuildSettlement(event);
             case 'BUILD_CITY':
-                this.handleEventBuildCity(event);
-                break;
+                return this.handleEventBuildCity(event);
             case 'BUY_DEV_CARD':
                 // TODO: handle buy development card
-                this.handleEventBuyDevCard(event);
-                break;
+                return this.handleEventBuyDevCard(event);
             case 'ACTIVATE_KNIGHT':
             case 'ACTIVATE_YEAR_OF_PLENTY':
             case 'ACTIVATE_MONOPOLY':
             case 'ACTIVATE_ROAD_BUILDING':
-                this.handleEventActivateDevCard(event);
-                break;
+                return this.handleEventActivateDevCard(event);
             case 'TRADE':
                 // TODO: handle trade
-                console.log("Trade event received, action not implemented yet:", event);
-                break;
+                return {
+                    status: StatusCodes.TODO_IMPLEMENT
+                };
 
             default:
                 // do nothing for events not belonging to MAIN state
-                return;
+                return {
+                    status: StatusCodes.INAPPLICABLE_EVENT
+                };
         }
     }
 
     isValidPlayerId(playerId) {
         return (playerId >= 0 && playerId < this.gameContext.totalPlayers);
+    }
+
+    handleEventEnd(event) {
+        const winner = this.checkWinCondition();
+        if (winner.length > 0) {
+            // game over, render UI
+            this.gameContext.currentState = GameState.END;
+            return {
+                status: StatusCodes.GAME_OVER,
+                winner: winner,
+                gameContext: this.gameContext,
+            }
+        } else {
+            // continue to next turn
+            this.nextPlayer();
+            this.nextTurn();
+            this.gameContext.currentState = GameState.ROLL;
+            return {
+                status: StatusCodes.SUCCESS,
+                gameContext: this.gameContext,
+            }
+        }
     }
 
 
@@ -477,24 +504,46 @@ export class GameController {
      * @returns an array of coords
      */
     queryValidSpots(playerId, queryType) {
-        // check if playerId is valid
-        if (!this.isValidPlayerId(playerId)) {
-            throw new Error(`Invalid player ID: ${playerId}`);
-        }
-
         const player = this.gameContext.players[playerId];
         switch (queryType) {
             case 'ROAD':
                 // compute all valid road spots based on player's owned roads
-                return this.queryValidRoadSpots(player);
+                const validRoadCoords = this.queryValidRoadSpots(player);
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    interaction: {
+                        action: 'HIGHLIGHT_ROAD_SPOTS',
+                        data: { validRoadCoords: validRoadCoords }
+                    }
+                };
             case 'SETTLEMENT':
                 // compute all valid settlement spots based on player's owned roads
-                return this.queryValidSettlementSpots(player);
+                const validSettlementCoords = this.queryValidSettlementSpots(player);
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    interaction: {
+                        action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                        data: { validSettlementCoords: validSettlementCoords }
+                    }
+                };
             case 'CITY':
                 // compute all valid city upgrade spots based on player's owned settlements
-                return this.queryValidCitySpots(player);
+                const validCityCoords = this.queryValidCitySpots(player);
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    interaction: {
+                        action: 'HIGHLIGHT_CITY_SPOTS',
+                        data: { validCityCoords: validCityCoords }
+                    }
+                };
             default:
-                throw new Error(`Invalid query type: ${queryType}`);
+                return {
+                    status: StatusCodes.ERROR,
+                    error_message: `Invalid query type: ${queryType}, must be one of 'ROAD', 'SETTLEMENT', 'CITY'`
+                }
         }
     }
 
@@ -507,14 +556,14 @@ export class GameController {
         const playerRoadCoords = playerRoads.map(road => road.coord);
 
         // compute all valid road spots based on player's owned roads
-        let availableRoads = [];
+        let availableRoads = new Set(); // use set to avoid duplicates
         playerRoadCoords.forEach(eCoord => {
             HexUtils.getVerticesFromEdge(eCoord).forEach(vCoord => {
-                const availableECoords = this.gameContext.gameMap.getValidRoadSpotsFromVertex(vCoord, player.id);
-                availableRoads = availableRoads.concat(availableECoords);
+                const availableECoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, vCoord, player);
+                availableECoords.forEach(coord => availableRoads.add(coord));
             });
         });
-        return availableRoads;
+        return Array.from(availableRoads);
     }
 
     /**
@@ -523,7 +572,7 @@ export class GameController {
      * @returns an array of vertex coords
      */
     queryValidSettlementSpots(player) {
-        return this.gameContext.gameMap.getValidSettlementSpots(player.id); // onyl spots connected to player's roads
+        return GameUtils.getValidSettlementCoords(this.gameContext.gameMap, player); // onyl spots connected to player's roads
     }
 
     /**
@@ -532,34 +581,23 @@ export class GameController {
      * @returns an array of vertex coords
      */
     queryValidCitySpots(player) {
-        const playerSettlements = player.getSettlements(1); // get level 1 settlements only
-        const playerSettlementCoords = playerSettlements.map(settlement => settlement.coord);
-        return playerSettlementCoords;
-    }
-
-
-    __handleEventEnd(event) {
-        const winner = this.checkWinCondition();
-        if (winner.length > 0) {
-            // game over, render UI
-            this.gameContext.currentState = GameState.END;
-            this.renderer.renderGameOver(winner);
-            this.debug.renderDebugHUD(this.gameContext, `Winner: ${winner.map(p => p.name).join(', ')}`);
-        } else {
-            // continue to next turn
-            this.nextPlayer();
-            this.nextTurn();
-            this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber); // update to next player's aseets
-            this.gameContext.currentState = GameState.ROLL;
-            this.debug.renderDebugHUD(this.gameContext, `Turn ended. Next player: Player ${this.getCurrentPlayer().id}. Please roll the dice.`);
-        }
+        return GameUtils.getValidCityCoords(player);
     }
 
     handleEventBuildRoad(event) {
-        const player = this.getCurrentPlayer();
-        if (this.buildRoad(event.edgeId, player, "MAIN")) {
-            this.renderer.renderRoad(HexUtils.idToCoord(event.edgeId), player.color);
-            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
+        const currentPlayer = this.getCurrentPlayer();
+        if (this.buildRoad(event.edgeId, currentPlayer, "MAIN")) {
+            return {
+                status: StatusCodes.SUCCESS,
+                roadId: event.edgeId,
+                playerColor: currentPlayer.color,
+                gameContext: this.gameContext
+            }
+        } else {
+            return {
+                status: StatusCodes.ERROR,
+                error_message: "Failed to build road."
+            }
         }
     }
 
@@ -580,7 +618,6 @@ export class GameController {
         } else if (phase === 'MAIN') {
             // check if player can afford road
             if (!player.canAfford(COSTS.road)) {
-                this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a road.`);
                 return false;
             }
             player.addResources(COSTS.road);
@@ -597,11 +634,20 @@ export class GameController {
     }
 
     handleEventBuildSettlement(event) {
-        const player = this.getCurrentPlayer();
-        if (this.buildSettlement(event.vertexId, player, "MAIN")) {
-            this.renderer.renderSettlement(event.vertexId, player.color, 1);
-            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
-            this.debug.renderDebugHUD(this.gameContext);
+        const currentPlayer = this.getCurrentPlayer();
+        if (this.buildSettlement(event.vertexId, currentPlayer, "MAIN")) {
+            return {
+                status: StatusCodes.SUCCESS,
+                settlementId: event.vertexId,
+                settlementLevel: 1,
+                playerColor: currentPlayer.color,
+                gameContext: this.gameContext
+            }
+        } else {
+            return {
+                status: StatusCodes.ERROR,
+                error_message: "Failed to build settlement."
+            }
         }
     }
 
@@ -621,7 +667,6 @@ export class GameController {
             // place settlement logic
             // check if player can afford settlement
             if (!player.canAfford(COSTS.settlement)) {
-                this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a settlement.`);
                 return false;
             }
             // deduct settlement cost from player and bank
@@ -637,12 +682,21 @@ export class GameController {
     }
 
     handleEventBuildCity(event) {
-        const player = this.getCurrentPlayer();
-        const cityId = event.vertexId;
-        if (this.buildCity(cityId, player)) {
-            this.renderer.renderSettlement(cityId, player.color, 2);
-            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
-            this.debug.renderDebugHUD(this.gameContext);
+        const currentPlayer = this.getCurrentPlayer();
+        const settlementId = event.vertexId;
+        if (this.buildCity(settlementId, currentPlayer)) {
+            return {
+                status: StatusCodes.SUCCESS,
+                settlementId: settlementId, // note: we use settlementId to represent city as wellss
+                playerColor: currentPlayer.color,
+                settlementLevel: 2,
+                gameContext: this.gameContext
+            }
+        } else {
+            return {
+                status: StatusCodes.ERROR,
+                error_message: "Failed to build city."
+            }
         }
     }
 
@@ -656,7 +710,6 @@ export class GameController {
 
         // check if player can afford city
         if (!player.canAfford(COSTS.city)) {
-            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to build a city.`);
             return false;
         }
 
@@ -672,7 +725,15 @@ export class GameController {
     handleEventBuyDevCard(event) {
         const player = this.getCurrentPlayer();
         if (this.buyDevCard(player)) {
-            this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber);
+            return {
+                status: StatusCodes.SUCCESS,
+                gameContext: this.gameContext
+            }
+        } else {
+            return {
+                status: StatusCodes.ERROR,
+                error_message: " You don't have enough resources or the deck is empty."
+            }
         }
     }
 
@@ -680,7 +741,6 @@ export class GameController {
         // check if player can afford dev card
         if (!player.canAfford(COSTS.devCard)) {
             this.gameContext.currentState = GameState.MAIN;
-            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} cannot afford to buy a development card.`);
             return false;
         }
 
@@ -690,6 +750,9 @@ export class GameController {
 
         // add dev card to player and render
         const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
+        if (!devCard) {
+            return false;
+        }
         player.addDevCard(devCard);
         return true;
     }
@@ -698,8 +761,7 @@ export class GameController {
     getDevCard(player, devCardType) {
         const devCard = player.getDevCards().find(card => PLAYERABLDE_DEVCARDS.includes(card.type) && card.type === devCardType && card.isPlayable(this.gameContext.turnNumber));
         if (!devCard) {
-            this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} does not have a playable ${devCardType} card.`);
-            throw new Error(`Player ${player.id} does not have a playable ${devCardType} card.`);
+            return null;
         }
         return devCard;
     }
@@ -710,16 +772,22 @@ export class GameController {
         switch (event.type) {
             case 'ACTIVATE_KNIGHT':
                 this.getDevCard(currentPlayer, DEV_CARD_TYPES.KNIGHT).activate(this);
-                break;
+                return {
+                    result: true,
+                    gameContext: this.gameContext
+                }
             case 'ACTIVATE_YEAR_OF_PLENTY':
                 console.log("Activating Year of Plenty with selected cards:", event.selectedCards);
                 this.getDevCard(currentPlayer, DEV_CARD_TYPES.YEAR_OF_PLENTY).activate(this, event.selectedCards);
-                this.renderer.deactivateResourceSelectionMode(currentPlayer, this.gameContext.turnNumber);
-                this.renderer.renderPlayerAssets(currentPlayer, this.gameContext.turnNumber);
-                this.debug.renderDebugHUD(this.gameContext);
-                break;
+                return {
+                    result: true,
+                    gameContext: this.gameContext
+                }
             default:
-                throw new Error(`Invalid dev card activation event type: ${event.type}`);
+                return {
+                    status: StatusCodes.ERROR,
+                    error_message: `Unhandled dev card activation event type: ${event.type}`
+                }
         }
 
     }
@@ -816,15 +884,6 @@ export class GameController {
     }
 
 
-    activateDiceRollMode() {
-        if (this.renderer) {
-            this.renderer.activateDiceRollMode();
-        } else {
-            console.warn("Renderer not attached. Cannot activate dice roll mode.");
-        }
-    }
-
-
     /**
      * Distribute resources to players based on the rolled number.
      * @param {*} rolledNumber 
@@ -877,11 +936,20 @@ export class GameController {
             this.gameContext.currentState = GameState.DISCARD; // wait for players to discard
             const playerToDiscard = this.gameContext.playersToDiscard[0];
             const numberToDiscard = Math.floor(playerToDiscard.getTotalResourceCount() / 2);
-            this.renderer.activateDiscardSelectionMode(playerToDiscard.getResources(), numberToDiscard, playerToDiscard.id);
-            this.debug.renderDebugHUD(this.gameContext);
+            return { // direct result from rolling 7, enter discard state and "tell" caller the player and the number to discard
+                result: true,
+                gameContext: this.gameContext,
+                interaction: {
+                    action: 'ACTIVATE_DISCARD_MODE',
+                    data: {
+                        player: playerToDiscard,
+                        numberToDiscard: numberToDiscard
+                    }
+                }
+            };
         } else {
-            // no one need to discard
-            this.activateRobber(stateAfterRob); // this is after finish rolling dice, therefore return to the given state
+            // no one need to discard, continue the process to move robber
+            return this.activateRobber(stateAfterRob); // this is after finish rolling dice, therefore return to the given state
         }
     }
 
@@ -891,9 +959,17 @@ export class GameController {
      */
     activateRobber(stateAfterRob) {
         this.gameContext.stateAfterRob = stateAfterRob; // store the state to return to after robber process
-        this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber()); // render to select where to move robber
         this.gameContext.currentState = GameState.MOVE_ROBBER;
-        this.debug.renderDebugHUD(this.gameContext);
+        return { // tell caller to activate robber placement mode/select one tile from robable tiles
+            status: StatusCodes.SUCCESS,
+            gameContext: this.gameContext,
+            interaction: {
+                action: 'ACTIVATE_ROBBER_PLACEMENT_MODE',
+                data: {
+                    robableTileCoords: this.gameContext.gameMap.searchTileCoordsWithoutRobber()
+                }
+            }
+        }
     }
 
     /**
@@ -912,8 +988,14 @@ export class GameController {
     }
 
     handleStateDiscard(event) {
+        // in discard state: wait for players to discard cards one by one
+        // first check the input event  (number/type of cards to discard) is valid: 
+        // match the required number and player has enough of each type
+
         if (event.type !== 'CONFIRM_DISCARD') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
 
         // discard logic
@@ -938,18 +1020,22 @@ export class GameController {
         let selectedCount = 0;
         for (const cardType in discardCount) {
             if (player.getTotalResourceCount(cardType) < discardCount[cardType]) {
-                throw new Error(`Player does not have enough ${cardType} cards to discard`);
+                return {
+                    status: StatusCodes.ERROR,
+                    error_message: `Player does not have enough ${cardType} cards to discard.`
+                }
             }
             selectedCount += discardCount[cardType];
         }
 
         if (selectedCount !== requiredDiscard) {
-            throw new Error(`Player must discard exactly ${requiredDiscard} cards, but selected ${selectedCount}`);
+            return {
+                status: StatusCodes.ERROR,
+                error_message: `Player must discard exactly ${requiredDiscard} cards, but selected ${selectedCount}.`
+            }
         }
 
         // pass validation test,
-        this.renderer.deactivateDiscardSelectionMode();
-
         // actually discard the cards
         player.discardResources(discardCount);
 
@@ -960,35 +1046,43 @@ export class GameController {
         if (this.gameContext.playersToDiscard.length > 0) {
             const playerToDiscard = this.gameContext.playersToDiscard[0];
             const numberToDiscard = Math.floor(playerToDiscard.getTotalResourceCount() / 2);
-            this.renderer.activateDiscardSelectionMode(playerToDiscard.getResources(), numberToDiscard, playerToDiscard.id);
+            return { // this is telling caller the next player to discard and the number to discard
+                status: StatusCodes.SUCCESS,
+                gameContext: this.gameContext,
+                interaction: {
+                    action: 'ACTIVATE_DISCARD_MODE',
+                    data: {
+                        resourceToDiscard: playerToDiscard.getResources(),
+                        numberToDiscard: numberToDiscard
+                    }
+                }
+            };
         } else {
             // no more players to discard, activate move robber mode
-            this.renderer.deactivateDiscardSelectionMode();
-            this.gameContext.currentState = GameState.MOVE_ROBBER;
-            this.renderer.activateRobberPlacementMode(this.gameContext.gameMap.searchTileCoordsWithoutRobber());
-            this.debug.renderDebugHUD(this.gameContext, `All players have discarded. Please move the robber.`);
-
+            return this.activateRobber(this.gameContext.stateAfterRob);
         }
     }
 
 
     handleStateMoveRobber(event) {
         if (event.type !== 'PLACE_ROBBER') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            }
         }
 
         const robTileId = event.tileId;
         // check if the tile is valid
         if (!this.gameContext.gameMap.isRobableTile(robTileId)) {
-            throw new Error(`Invalid robber placement tile: ${robTileId}`);
+            return {
+                status: StatusCodes.ERROR,
+                error_message: `Invalid robber placement tile: ${robTileId}`
+            };
         }
-        // deactivate robber placement mode
-        this.renderer.deactivateRobberPlacementMode();
 
         // update robber position on map
         const robTileCoord = HexUtils.idToCoord(robTileId);
         this.gameContext.gameMap.moveRobberToTile(robTileCoord);
-        this.renderer.moveRobberToTile(robTileCoord);
 
         // get player list adjacent to the robber tile to steal from
         const adjacentSettlements = this.gameContext.gameMap.searchSettlementsByTileId(robTileId);
@@ -1001,21 +1095,34 @@ export class GameController {
             // no one to rob, rob process complete, transition to MAIN state
             this.gameContext.currentState = this.gameContext.stateAfterRob;
             this.gameContext.stateAfterRob = null; // reset return state
-            this.debug.renderDebugHUD(this.gameContext, `Robber moved. No players to rob. Turn continues.`);
-            return;
+            return { // tell caller no one to rob, skip robbing process
+                status: StatusCodes.SUCCESS,
+                gameContext: this.gameContext,
+            };
         }
 
+        // there are players to rob from, get their settlement coords
         const robableSettlementsCoords = robableSettlements.map(settlement => settlement.coord);
         // activate rob selection mode
-        this.renderer.activateRobSelectionMode(robableSettlementsCoords, HexUtils.idToCoord(robTileId));
         this.gameContext.currentState = GameState.ROB_PLAYER;
-        this.debug.renderDebugHUD(this.gameContext, `Robber moved. Please select a player to rob.`);
+        return { // tell caller to activate rob selection mode with the robable settlements/ select one settlement to rob from
+            status: StatusCodes.SUCCESS,
+            gameContext: this.gameContext,
+            interaction: {
+                action: 'ACTIVATE_ROB_SELECTION_MODE',
+                data: {
+                    robableSettlementsCoords: robableSettlementsCoords
+                }
+            }
+        };
     }
 
 
     handleStateRobPlayer(event) {
         if (event.type !== 'ROB_PLAYER') {
-            return;
+            return {
+                status: StatusCodes.INAPPLICABLE_EVENT
+            };
         }
 
         // targeted settlement and player
@@ -1026,14 +1133,13 @@ export class GameController {
 
         // check if the settlement is valid to rob from
         if (!settlement || settlement.owner !== targetPlayer.id || totalResourceCount === 0) {
-            throw new Error(`Invalid rob target settlement: ${targetVertexId}`);
+            return {
+                status: StatusCodes.ERROR,
+                error_message: `Invalid rob target settlement: ${targetVertexId}`
+            };
         }
 
-        // deactivate rob selection mode
-        this.renderer.deactivateRobSelectionMode();
-
         // steal a random resource from the target player
-
         // compute the resource index to steal
         const randomIndex = this.rng.nextInt(0, totalResourceCount - 1); // generate a random index from 0 to  n-1
 
@@ -1044,10 +1150,11 @@ export class GameController {
         this.gameContext.currentState = this.gameContext.stateAfterRob;
         this.gameContext.stateAfterRob = null; // reset return state
 
-        // render updated player assets
-        this.renderer.renderPlayerAssets(this.getCurrentPlayer(), this.gameContext.turnNumber);
-        this.debug.renderDebugHUD(this.gameContext, `Robbed Player ${targetPlayer.id} and stole ${Object.entries(stolenResources).map(([type, amount]) => `${amount} ${type}`).join(', ')}.`);
-
+        return { // tell caller the rob process is complete along with the stolen resources (should back to stateAfterRob)
+            status: StatusCodes.SUCCESS,
+            gameContext: this.gameContext,
+            stolenResources: stolenResources
+        };
     }
 
     updateLargestArmy() {
@@ -1057,10 +1164,13 @@ export class GameController {
                 if (!this.gameContext.playerWithLargestArmy || this.gameContext.players[this.gameContext.playerWithLargestArmy].achievements.knightPlayed < armySize) {
                     // no current largest army holder or current player has larger army than existing holder
                     this.gameContext.playerWithLargestArmy = player.id;
-                    this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} now has the Largest Army with ${armySize} knights played.`);
                 }
             }
         });
+        return {
+            status: StatusCodes.SUCCESS,
+            gameContext: this.gameContext,
+        }
     }
 
 
@@ -1071,9 +1181,12 @@ export class GameController {
                 if (!this.gameContext.playerWithLongestRoad || this.gameContext.players[this.gameContext.playerWithLongestRoad].calculateLongestRoad(this.gameContext.gameMap) < longestRoadLength) {
                     // no current longest road holder or current player has longer road than existing holder
                     this.gameContext.playerWithLongestRoad = player.id;
-                    this.debug.renderDebugHUD(this.gameContext, `Player ${player.id} now has the Longest Road with ${longestRoadLength} segments.`);
                 }
             }
         });
+        return {
+            status: StatusCodes.SUCCESS,
+            gameContext: this.gameContext,
+        }
     }
 }

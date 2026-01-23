@@ -65,11 +65,6 @@ export const GameUtils = Object.freeze({
         const playerRoadVerticesSet = player.getRoadVerticesIdSet();
         const playerSettlementVerticesSet = player.getSettlementVerticesIdSet();
 
-        console.log("Valid adjacent edges from vertex:", HexUtils.idSetToCoordsArray(validAdjacentEdgeIdSet));
-        console.log("Player road vertices set:", playerRoadVerticesSet);
-        console.log("Player settlement vertices set:", playerSettlementVerticesSet);
-
-
         // Find edges connected to player's roads or settlements
         for (let edgeId of validAdjacentEdgeIdSet) {
             const edgeVertices = HexUtils.getVerticesFromEdge(HexUtils.idToCoord(edgeId));
@@ -81,5 +76,10 @@ export const GameUtils = Object.freeze({
             }
         }
         return HexUtils.idSetToCoordsArray(validIdSet);
+    },
+
+    getValidCityCoords(player) {
+        // valid city spots are simply existing settlements owned by the player
+        return player.getSettlements(1).map(settlement => settlement.coord);;
     }
 });

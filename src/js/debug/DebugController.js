@@ -1,14 +1,13 @@
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { DevCard } from "../models/devCards/DevCard.js";
 import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
+import { StatusCodes } from "../constants/StatusCodes.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
     constructor(gameController) {
         this.controller = gameController; // reference to the main game controller
         this.gameContext = gameController.gameContext; // shared game state
-        this.debug = gameController.debug; // reference to the debug dashboard
-        this.renderer = gameController.renderer; // reference to the renderer
 
         this.CHEAT_CARD_MAP = {
             "kt": DEV_CARD_TYPES.KNIGHT,
@@ -38,10 +37,10 @@ export class DebugController {
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 const player = this.gameContext.players[playerIndex];
                 player.addResources({ [type]: parseInt(qty) });
-                this.debug.renderDebugHUD(this.gameContext, `Added ${qty} ${type} to Player ${playerIndex}`);
 
-                if (playerIndex === this.gameContext.currentPlayerIndex) {
-                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext
                 }
             },
 
@@ -55,17 +54,19 @@ export class DebugController {
                 const amount = parseInt(qty);
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 if (!this.isValidPlayerIndex(playerIndex)) {
-                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid player index: ${playerIndex}`
+                    }
                 }
                 const player = this.gameContext.players[playerIndex];
                 for (const type of Object.values(RESOURCE_TYPES)) {
                     player.addResources({ [type]: amount });
                 }
-                this.debug.renderDebugHUD(this.gameContext, `Added ${qty} of all resources to Player ${playerIndex}`);
-
-                if (playerIndex === this.gameContext.currentPlayerIndex) {
-                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    message: `Added ${amount} of all resources to Player ${playerIndex}`
                 }
             },
 
@@ -79,17 +80,18 @@ export class DebugController {
                 const [amount, pIdx] = args;
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 if (!this.isValidPlayerIndex(playerIndex)) {
-                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid player index: ${playerIndex}`
+                    }
                 }
                 const player = this.gameContext.players[playerIndex];
                 player.achievements.cheatVP += parseInt(amount);
-                this.debug.renderDebugHUD(this.gameContext, `Added ${amount} cheat VP to Player ${playerIndex}`);
-
-                if (playerIndex === this.gameContext.currentPlayerIndex) {
-                    this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // only re-render if current player
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    message: `Added ${amount} cheat VP to Player ${playerIndex}`
                 }
-                // note: since VP are added as bunus cheat VP, no need to re-render assets
             },
 
             /**
@@ -102,22 +104,27 @@ export class DebugController {
                 const diceValue = parseInt(value);
 
                 if (diceValue < 2 || diceValue > 12) {
-                    this.debug.renderDebugHUD(this.gameContext, "Dice roll must be between 2 and 12.");
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid dice value: ${diceValue}`
+                    }
                 }
 
                 if (diceValue === 7) {
-                    this.controller.discardCardAndActivateRobber(this.gameContext.currentState); // this will not change state after robber
+                    return this.controller.discardCardAndActivateRobber(this.gameContext.currentState); // this will not change state after robber
                 } else {
                     this.controller.distributeResourcesByRoll(diceValue);
-                    this.renderer.renderPlayerAssets(this.gameContext.players[this.gameContext.currentPlayerIndex], this.gameContext.turnNumber);
+                    return {
+                        status: StatusCodes.SUCCESS,
+                        gameContext: this.gameContext,
+                        message: `Forced dice roll to ${diceValue}`
+                    }
                 }
-                this.debug.renderDebugHUD(this.gameContext, `Forced dice roll to ${diceValue}`);
             },
 
             rob: (args) => {
                 const [tileId, targetPlayerIndex] = args;
-                this.controller.activateRobber(this.gameContext.currentState); // this will not change state after robber
+                return this.controller.activateRobber(this.gameContext.currentState); // this will not change state after robber
             },
 
             /**
@@ -133,20 +140,26 @@ export class DebugController {
                 // cehck card type
                 const resolvedCardType = this.CHEAT_CARD_MAP[cardType.toLowerCase()];
                 if (!resolvedCardType) {
-                    this.debug.renderDebugHUD(this.gameContext, `Unknown card code: "${cardType}". Try: kt, rb, mn, vp, yop`);
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid dev card type: ${cardType}`
+                    }
                 }
 
                 // check player 
                 if (!this.isValidPlayerIndex(playerIndex)) {
-                    this.debug.renderDebugHUD(this.gameContext, `Invalid player index: ${playerIndex}`);
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid player index: ${playerIndex}`
+                    };
                 }
 
                 const amountInt = parseInt(amount);
                 if (isNaN(amountInt) || amountInt <= 0) {
-                    this.debug.renderDebugHUD(this.gameContext, `Invalid amount: "${amount}". Must be a positive integer.`);
-                    return;
+                    return {
+                        status: StatusCodes.ERROR,
+                        error_message: `Invalid amount: ${amount}`
+                    }
                 }
 
                 // cheat add dev card
@@ -154,8 +167,12 @@ export class DebugController {
                 for (let i = 0; i < amountInt; i++) {
                     player.addDevCard(new DevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
                 }
-                this.renderer.renderPlayerAssets(player, this.gameContext.turnNumber); // re-render assets
-                this.debug.renderDebugHUD(this.gameContext, `Gave ${amountInt} dev card "${resolvedCardType}" to Player ${playerIndex}`);
+
+                return {
+                    status: StatusCodes.SUCCESS,
+                    gameContext: this.gameContext,
+                    message: `Added ${amount} ${resolvedCardType} dev card(s) to Player ${playerIndex}`
+                }
             },
 
             /**
@@ -163,7 +180,7 @@ export class DebugController {
              * @param {*} args 
              */
             refresh: (args) => {
-                this.debug.renderDebugHUD(this.gameContext, `Refreshed Debug HUD`);
+                this.renderer.renderDebugHUD(this.gameContext, `Refreshed Debug HUD`);
             }
         };
     }
@@ -174,7 +191,14 @@ export class DebugController {
         const [cmd, ...args] = input.trim().split(/\s+/);
         const action = this.commands[cmd.toLowerCase()];
         console.log("Executing cheat command:", cmd, args);
-        if (action) action(args);
+        if (action){
+            return action(args);
+        }else{
+            return {
+                status: StatusCodes.ERROR,
+                error_message: `Unknown command: ${cmd}`
+            }
+        }
     }
 
     isValidPlayerIndex(index) {

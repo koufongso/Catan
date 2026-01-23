@@ -1,22 +1,82 @@
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
+import { StatusCodes } from "../constants/StatusCodes.js";
 
 export class DebugDashboard {
 
-    resourceIcons = {
-        brick: '🧱',
-        lumber: '🌲',
-        wool: '🐑',
-        wheat: '🌾',
-        ore: '⛏️',
-    };
+    constructor(debugController, renderer) {
+        this.debugController = debugController;
+        this.renderer = renderer;
 
-    devCardIcons = {
-        knight: '🛡️',
-        victory_point: '⭐',
-        road_building: '🛣️',
-        monopoly: '💰',
-        year_of_plenty: '🌽',
-    };
+        this.resourceIcons = {
+            brick: '🧱',
+            lumber: '🌲',
+            wool: '🐑',
+            wheat: '🌾',
+            ore: '⛏️',
+        };
+
+        this.devCardIcons = {
+            knight: '🛡️',
+            victory_point: '⭐',
+            road_building: '🛣️',
+            monopoly: '💰',
+            year_of_plenty: '🌽',
+        };
+
+        this.initDebugConsole();
+    }
+
+
+    initDebugConsole() {
+        const input = document.getElementById('debug-input');
+        const submit = document.getElementById('debug-submit');
+
+        const handleCommand = () => {
+            const commandText = input.value.trim();
+            if (commandText) {
+                const res = this.debugController.parse(commandText);
+                if (res.status !== StatusCodes.SUCCESS) {
+                    this.renderer.updateDebugDashboard(this.debugController.gameContext, `Error: ${res.error_message}`);
+                } else {
+                    const logMsg = res.message || `Executed command: ${commandText}`;
+                    this.renderer.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+                    this.renderer.updateDebugDashboard(this.debugController.gameContext, logMsg);
+                    this.renderer.renderInteractionHints(res.interaction);
+                }
+
+                input.value = ''; // Clear after use
+            }
+        };
+
+        submit.addEventListener('click', handleCommand);
+
+        // Add "Ctrl+Enter" support for the textarea
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleCommand();
+            }
+        });
+
+        // add toggle button
+        const debugWrapper = document.getElementById('debug-wrapper');
+        const debugBtn = document.getElementById('debug-toggle-btn');
+
+        function toggleDebug() {
+            debugWrapper.classList.toggle('hidden');
+        }
+
+        // Click listener
+        debugBtn.addEventListener('click', toggleDebug);
+
+        // Keyboard listener (Tilde/Backtick key)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '`') { // The key below ESC
+                e.preventDefault();
+                toggleDebug();
+            }
+        });
+    }
 
     getResourceIcon(type) {
         if (!type) return '❓';

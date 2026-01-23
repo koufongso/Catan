@@ -4,6 +4,8 @@ import { TEXTURE_PATHS } from "../constants/GameConstants.js";
 import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
 import { Player } from "../models/Player.js";
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
+import { StatusCodes } from "../constants/StatusCodes.js";
+import { DebugDashboard } from "./DebugDashboard.js";
 
 
 // constants for hex geometry
@@ -13,14 +15,24 @@ const SQRT3 = Math.sqrt(3);
 const SQRT3_HALF = SQRT3 / 2;
 // take care of all UI rendering and user interactions
 export class Renderer {
-    constructor(svgId) {
-        this.svg = document.getElementById(svgId);
-        this.controller = null;
+    constructor(controller, debugController) {
+        // references to game controller and debug controller (for cheat commands)
+        this.controller = controller;
+        this.debugController = debugController;
+
+        // debug dashboard showing game context
+        this.debugdashboard = new DebugDashboard(debugController, this);
+
+        // SVG setup
         this.hexSize = 50; // default hex this.hexSize
+
+
     }
 
-    attachController(controller) {
-        this.controller = controller;
+    updateDebugDashboard(gameContext, logMessage = null) {
+        if (this.debugdashboard) {
+            this.debugdashboard.renderDebugHUD(gameContext, logMessage);
+        }
     }
 
 
@@ -174,6 +186,17 @@ export class Renderer {
         layer.appendChild(defs);
     }
 
+    isRequestSuccessful(res) {
+        if (res.status !== StatusCodes.SUCCESS) {
+            console.log("Renderer: response status:", res.status);
+            if (res.error_message) {
+                console.error("Error message:", res.error_message);
+            }
+            return false;
+        }
+        return true;
+    }
+
     renderMainUI(tiles, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
 
@@ -196,38 +219,86 @@ export class Renderer {
 
         // add action buttons event listeners
         const diceBtn = clone.getElementById('dice-btn');
-        diceBtn.onclick = () => {
-            this.emitInputEvent('ROLL_DICE', {});
+        diceBtn.onclick = async () => {
+            const res = await this.controller.inputEvent({ type: 'ROLL_DICE' });
+
+            if (!this.isRequestSuccessful(res)) {
+                return;
+            }
+            // handle the result from controller
+            // there are three possible scenarios: 
+            // 1. normal roll (2-6,8-12): no interaction
+            // 2. roll a 7: robber interaction
+            //      2.1. game over (someone wins) -> interaction
+            //      2.2. activate discard selection mode -> interaction
+            //      2.3. actiave robber placement mode -> interaction
+            this.renderInteractionHints(res.interaction);
+
+            // update assets
+            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+
+            // update debug dashboard
+            this.updateDebugDashboard(res.gameContext, `Rolled a ${res.gameContext.lastRoll.sum}`);
+
         }
 
+        // want to build road, first query valid spots
         const buildRoadBtn = clone.getElementById('build-road-btn');
-        buildRoadBtn.onclick = () => {
-            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'ROAD' });
+        buildRoadBtn.onclick = async () => {
+            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'ROAD' });
+            if (!this.isRequestSuccessful(res)) { // internal error, insufficient resources, wrong state, etc, nothing to do
+                return;
+            }
+
+            // render valid road spots
+            this.renderInteractionHints(res.interaction);
+            this.updateDebugDashboard(res.gameContext, "Select a road placement spot.");
         }
 
+        // want to build settlement, first query valid spots
         const buildSettlementBtn = clone.getElementById('build-settlement-btn');
-        buildSettlementBtn.onclick = () => {
-            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'SETTLEMENT' });
+        buildSettlementBtn.onclick = async () => {
+            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'SETTLEMENT' });
+            if (!this.isRequestSuccessful(res)) {
+                return;
+            }
+            // render valid settlement spots
+            this.renderInteractionHints(res.interaction);
+            this.updateDebugDashboard(res.gameContext, "Select a settlement placement spot.");
         }
 
+        // want to build city, first query valid spots
         const buildCityBtn = clone.getElementById('build-city-btn');
-        buildCityBtn.onclick = () => {
-            this.emitInputEvent('QUERY_VALID_SPOTS', { queryType: 'CITY' });
+        buildCityBtn.onclick = async () => {
+            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'CITY' });
+            if (!this.isRequestSuccessful(res)) {
+                return;
+            }
+            // render valid city spots
+            this.renderInteractionHints(res.interaction);
+            this.updateDebugDashboard(res.gameContext, "Select a city placement spot.");
         }
 
+        // want to buy dev card, first show confirmation UI
         const buyDevCardBtn = clone.getElementById('buy-dev-card-btn');
         buyDevCardBtn.onclick = () => {
-            this.activateBuyDevCardConfirmationUI();
+            this.activateBuyDevCardConfirmationUI(); // activate confirmation UI before emitting events
         }
 
+        // want to end turn, send request to end turn (advance FSM)
         const endTurnBtn = clone.getElementById('end-turn-btn');
-        endTurnBtn.onclick = () => {
-            this.emitInputEvent('END_TURN', {});
+        endTurnBtn.onclick = async () => {
+            const res = await this.controller.inputEvent({ type: 'END_TURN' });
+            if (!this.isRequestSuccessful(res)) {
+                return;
+            }
+            this.updateDebugDashboard(res.gameContext, "Turn ended.");
         }
 
+        // cancel interation layer elements (like road/settlement/city spots)
         const cancelBtn = clone.getElementById('cancel-btn');
         cancelBtn.onclick = () => {
-            this.emitInputEvent('CANCEL_ACTION', {});
+            this.clearElementById('interaction-layer');
         }
 
         this.updateDOM(clone);
@@ -284,20 +355,20 @@ export class Renderer {
                 seed: Date.now()
             });
 
-            if (!res.result) {
-                console.error("Renderer: Failed to start game:", res.error_message);
+            if (!this.isRequestSuccessful(res)) {
                 return;
             }
 
             // render the main UI with the received data
-            this.renderMainUI(res.map.tiles, res.map.tradingPosts, res.state.robberCoord);
-
-            // render player assets
-            this.renderPlayerAssets(res.state.players[res.state.currentPlayerIndex], res.state.turnNumber);
+            const map = res.gameContext.gameMap;
+            this.renderMainUI(map.tiles, map.tradingPosts, map.robberCoord);
 
             // render interaction hints
             this.renderInteractionHints(res.interaction);
-            
+
+            // update debug dashboard
+            this.updateDebugDashboard(res.gameContext, "Game Started");
+
         }
 
         // clear existing content and add the clone to main wrapper
@@ -318,6 +389,15 @@ export class Renderer {
             case 'HIGHLIGHT_ROAD_SPOTS':
                 this.highlightValidSpots(interaction.data.validRoadCoords, 'ROAD');
                 break
+            case 'ACTIVATE_DISCARD_MODE':
+                this.activateDiscardSelectionMode(interaction.data.discardList, interaction.data.requiredDiscardCount);
+                break;
+            case 'ACTIVATE_ROBBER_PLACEMENT_MODE':
+                this.activateRobberPlacementMode(interaction.data.robableTileCoords);
+                break
+            case 'ACTIVATE_ROB_SELECTION_MODE':
+                this.activateRobSelectionMode(interaction.data.robableSettlementsCoords);
+                break;
             default:
                 console.warn(`Unknown interaction action: ${interaction.action}`);
         }
@@ -381,17 +461,23 @@ export class Renderer {
                     vertexId: vertexId
                 });
 
-                if (!res.result) {
-                    console.error("Renderer: Failed to build settlement:", res.error_message);
+                if (!this.isRequestSuccessful(res)) {
+                    return;
                 }
 
                 // render the new settlement/city
                 const settlementId = res.settlementId;
+                const settlementLevel = res.settlementLevel;
                 const color = res.playerColor;
-                this.renderSettlement(settlementId, color, type === 'SETTLEMENT' ? 1 : 2);
+                this.renderSettlement(settlementId, color, settlementLevel);
+
+                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
 
                 // highlight road placement
                 this.renderInteractionHints(res.interaction);
+
+                // update debug dashboards
+                this.updateDebugDashboard(res.gameContext, `Built ${type} at vertex ${vertexId}`);
             }
         };
     }
@@ -454,18 +540,22 @@ export class Renderer {
                     edgeId: target.dataset.id
                 });
 
-                if (!res.result) {
-                    console.error("Renderer: Failed to build road:", res.error_message);
+                if (!this.isRequestSuccessful(res)) {
                     return;
                 }
 
-                // render the new road
+                // render the new roads
                 const roadId = res.roadId;
                 const color = res.playerColor;
                 this.renderRoad(HexUtils.idToCoord(roadId), color);
 
+                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+
                 // proceed to next interaction (initial settlement  placement 2)
                 this.renderInteractionHints(res.interaction);
+
+                // update debug dashboard
+                this.updateDebugDashboard(res.gameContext, `Built road at edge ${roadId}. Select second settlement location.`);
             }
         };
     }
@@ -510,24 +600,6 @@ export class Renderer {
     }
 
 
-    activateDiceRollMode() {
-        const diceBtn = document.getElementById('dice-btn');
-        if (!diceBtn) {
-            console.error("Renderer: Dice button not found in HTML. Cannot activate dice roll mode.");
-            return;
-        }
-        diceBtn.classList.add('btn-active');
-        diceBtn.onclick = () => {
-            this.emitInputEvent('ROLL_DICE', {});
-        }
-    }
-
-
-    activateActionBtnMode() {
-        // build
-        const actionBtn = document.getElementById('action-btn');
-    }
-
     activateBuyDevCardConfirmationUI() {
         this.activateActionConfirmationUI({
             title: 'Buy Development Card',
@@ -567,10 +639,20 @@ export class Renderer {
             btnsContainer.appendChild(confirmBtn);
             btnsContainer.appendChild(cancelBtn);
 
-            // 3. Attach Listeners
-            confirmBtn.onclick = () => {
+            // 3. Attach ListenersW
+            confirmBtn.onclick = async () => {
+                const res = await this.controller.inputEvent({ type: confirm_event_name });
+                if (!this.isRequestSuccessful(res)) { // if action failed do nothing (buy dev card failed)
+                    const overlay = document.getElementById('action-confirmation-modal-overlay')
+                    overlay.querySelector('#modal-body').textContent = res.error_message || "Action failed.";
+                    return;
+                }
+
                 this.deactivateActionConfirmationUI();
-                this.emitInputEvent(confirm_event_name);
+
+                // update player assets
+                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+                this.updateDebugDashboard(res.gameContext, "Development Card purchased.");
             };
 
             cancelBtn.onclick = () => {
@@ -607,7 +689,7 @@ export class Renderer {
 
     /**
      * Generic helper to render resources into ANY container.
-     * @param {Player} player player object
+     * @param {Object} resources player object
      * @param {*} container the target container to render into
      * @param {*} onCardClick callback when a card is clicked (optional)
      */
@@ -760,9 +842,15 @@ export class Renderer {
         );
     }
 
-    activateDiscardSelectionMode(resources, numToDiscard, playerId = null) {
+    /**
+     * Activate discard selection UI
+     * @param {Object} resourcesToDiscard map of resource type to count
+     * @param {*} numToDiscard number of cards to discard
+     * @param {*} playerId player id (optional)
+     */
+    activateDiscardSelectionMode(resourcesToDiscard, numToDiscard, playerId = null) {
         this.activateResourcesSelectionMode(
-            resources,
+            resourcesToDiscard,
             numToDiscard,
             playerId ? `Player ${playerId} Select Resources to Discard` : `Select Resources to Discard`,
             "CONFIRM_DISCARD"
@@ -775,7 +863,10 @@ export class Renderer {
 
     /**
      * Let the player select cards to discard
-     * @param {*} player 
+     * @param {Object} resources resource type to count
+     * @param {*} numToSelect number of cards to select
+     * @param {*} msg message to display in modal title
+     * @param {*} confirmEventName event name to emit when selection is confirmed
      */
     activateResourcesSelectionMode(resources, numToSelect, msg, confirmEventName) {
         // render text (not implemented yet)
@@ -830,10 +921,18 @@ export class Renderer {
             }
         });
 
-        // send all selected cards when confirm is clicked
-        confirmBtn.onclick = () => {
+        // send selected cards with action, this is action cannot be cancelled
+        confirmBtn.onclick = async () => {
             const selectedCardsArray = Array.from(modalBody.querySelectorAll('.card-selected')).map(cardDiv => cardDiv.dataset.type);
-            this.emitInputEvent(confirmEventName, { selectedCards: selectedCardsArray });
+            const res = await this.controller.inputEvent({ type: confirmEventName, selectedCards: selectedCardsArray });
+            if (this.isRequestSuccessful(res)) {
+                throw new Error("Failed to process resource selection action."); // this should not happen in a normal flow
+            }
+
+            // clean up
+            this.deactivateResourceSelectionMode();
+            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+            this.updateDebugDashboard(res.gameContext, "Resource selection processed.");
         };
         // append to main wrapper
         document.getElementById('main-wrapper').appendChild(clone);
@@ -841,7 +940,6 @@ export class Renderer {
 
 
     activateRobberPlacementMode(robbableTileCoords) {
-
         // get the tile layer
         const tileLayer = document.getElementById('interaction-layer');
         if (!tileLayer) return;
@@ -860,8 +958,23 @@ export class Renderer {
             robberPlacementGroup.appendChild(hexHitbox);
 
             // add click event listener to the hitbox
-            hexHitbox.addEventListener('click', (event) => {
-                this.emitInputEvent('PLACE_ROBBER', { tileId: tileId });
+            hexHitbox.addEventListener('click', async (event) => {
+                const res = await this.controller.inputEvent({ type: 'PLACE_ROBBER', tileId: tileId });
+                if (!this.isRequestSuccessful(res)) {
+                    throw new Error("Failed to place robber.");
+                }
+
+                // clean up
+                this.deactivateRobberPlacementMode();
+
+                // animate the robber moving to the new tile
+                this.moveRobberToTile(hCoord);
+
+                this.renderInteractionHints(res.interaction);
+
+                // update debug dashboard
+                this.updateDebugDashboard(res.gameContext, `Robber moved to tile ${tileId}`);
+
             });
         });
     }
@@ -935,8 +1048,14 @@ export class Renderer {
             robSelectionGroup.appendChild(robableCircle);
 
             // add click event listener to the hitbox
-            robableCircle.addEventListener('click', (event) => {
-                this.emitInputEvent('ROB_PLAYER', { vertexId: vertexId });
+            robableCircle.addEventListener('click', async (event) => {
+                const res = await this.controller.inputEvent({ type: 'ROB_PLAYER', vertexId: vertexId });
+                if (!this.isRequestSuccessful(res)) {
+                    throw new Error("Failed to rob player.");
+                }
+                this.deactivateRobSelectionMode();
+                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndexIndex], res.gameContext.turnNumber);
+                this.updateDebugDashboard(res.gameContext, `Robbed player at settlement ${vertexId}`);
             });
         });
     }

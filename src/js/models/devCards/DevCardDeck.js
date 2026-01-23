@@ -33,7 +33,7 @@ export class DevCardDeck {
 
     drawCard(currentTurnNumber) {
         if (this.cards.length === 0) {
-            throw new Error("No development cards left in the deck");
+            return null;
         }
         return new DevCard(this.cards.pop(), currentTurnNumber);
     }
