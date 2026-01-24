@@ -476,6 +476,14 @@ export class GameMap {
         return results;
     }
 
+    getSettlementOwner(vertexId) {
+        if (this.settlements.has(vertexId)) {
+            let settlement = this.settlements.get(vertexId);
+            return settlement.owner;
+        }
+        return null;
+    }
+
     getAllSettlementNeighborIdSet() {
         let results = new Set();
         for (let settlementId of this.getAllSettlementIdSet()) {
@@ -516,6 +524,20 @@ export class GameMap {
             results.add(id);
         }
         return results;
+    }
+
+    isRoadInMap(eCoord) {
+        let edgeId = HexUtils.coordToId(eCoord);
+        return this.getAllEdgeIdSet().has(edgeId);
+    }
+
+    getRoadOwner(eCoord) {
+        let edgeId = HexUtils.coordToId(eCoord);
+        if (this.roads.has(edgeId)) {
+            let road = this.roads.get(edgeId);
+            return road.owner;
+        }
+        return null;
     }
 
 

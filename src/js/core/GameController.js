@@ -237,7 +237,7 @@ export class GameController {
         this.gameContext.currentState = GameState.PLACE_ROAD1;
 
         // compute all valid road spots based on last settlement placed
-        const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
+        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer, new Set([settlementId]));
         console.log("Available road coords after 1st settlement:", availableRoadCoords);
         return {
             status: StatusCodes.SUCCESS,
@@ -321,7 +321,7 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        const availableRoadCoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, settlementCoord, currentPlayer);
+        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer, new Set([settlementId]));
 
         return {
             status: StatusCodes.SUCCESS,
@@ -552,18 +552,7 @@ export class GameController {
      * @param {*} player 
      */
     queryValidRoadSpots(player) {
-        const playerRoads = player.getRoads();
-        const playerRoadCoords = playerRoads.map(road => road.coord);
-
-        // compute all valid road spots based on player's owned roads
-        let availableRoads = new Set(); // use set to avoid duplicates
-        playerRoadCoords.forEach(eCoord => {
-            HexUtils.getVerticesFromEdge(eCoord).forEach(vCoord => {
-                const availableECoords = GameUtils.getValidRoadFromVertex(this.gameContext.gameMap, vCoord, player);
-                availableECoords.forEach(coord => availableRoads.add(coord));
-            });
-        });
-        return Array.from(availableRoads);
+        return GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, player);
     }
 
     /**
