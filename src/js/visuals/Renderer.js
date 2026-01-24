@@ -841,11 +841,11 @@ export class Renderer {
     activateYearOfPlentyResourceSelection() {
         this.activateResourcesSelectionMode(
             {
-                [RESOURCE_TYPES.BRICK]: 1,
-                [RESOURCE_TYPES.ORE]: 1,
-                [RESOURCE_TYPES.WOOL]: 1,
-                [RESOURCE_TYPES.WHEAT]: 1,
-                [RESOURCE_TYPES.LUMBER]: 1
+                [RESOURCE_TYPES.BRICK]: 2,
+                [RESOURCE_TYPES.ORE]: 2,
+                [RESOURCE_TYPES.WOOL]: 2,
+                [RESOURCE_TYPES.WHEAT]: 2,
+                [RESOURCE_TYPES.LUMBER]: 2
             },
             2,
             'Select 2 Resources for Year of Plenty',

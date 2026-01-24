@@ -19,14 +19,17 @@ export const DevCardEffects = {
     const currentPlayer = gameController.getCurrentPlayer();
     selectedResources.forEach(resource => {
       if (!Object.values(RESOURCE_TYPES).includes(resource)) {
-        throw new Error(`Invalid resource type selected for Year of Plenty: ${resource}`);
+        return {
+          status: StatusCodes.ERROR,
+          error_message: `Invalid resource type selected for Year of Plenty: ${resource}`
+        };
       }
       console.log(`Year of Plenty: Giving player 1 ${resource}`);
       currentPlayer.addResources({ [resource]: 1 });
-      return {
-        status: StatusCodes.SUCCESS,
-        gameContext: gameController.gameContext
-      }
     });
+    return {
+      status: StatusCodes.SUCCESS,
+      gameContext: gameController.gameContext
+    }
   },
 };
