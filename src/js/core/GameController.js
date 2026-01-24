@@ -771,18 +771,9 @@ export class GameController {
 
         switch (event.type) {
             case 'ACTIVATE_KNIGHT':
-                this.getDevCard(currentPlayer, DEV_CARD_TYPES.KNIGHT).activate(this);
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext
-                }
+                return this.getDevCard(currentPlayer, DEV_CARD_TYPES.KNIGHT).activate(this);
             case 'ACTIVATE_YEAR_OF_PLENTY':
-                console.log("Activating Year of Plenty with selected cards:", event.selectedCards);
-                this.getDevCard(currentPlayer, DEV_CARD_TYPES.YEAR_OF_PLENTY).activate(this, event.selectedCards);
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext
-                }
+                return this.getDevCard(currentPlayer, DEV_CARD_TYPES.YEAR_OF_PLENTY).activate(this, event.selectedCards);
             default:
                 return {
                     status: StatusCodes.ERROR,
@@ -1168,10 +1159,6 @@ export class GameController {
                 }
             }
         });
-        return {
-            status: StatusCodes.SUCCESS,
-            gameContext: this.gameContext,
-        }
     }
 
 
@@ -1185,9 +1172,5 @@ export class GameController {
                 }
             }
         });
-        return {
-            status: StatusCodes.SUCCESS,
-            gameContext: this.gameContext,
-        }
     }
 }

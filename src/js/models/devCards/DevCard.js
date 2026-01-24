@@ -1,5 +1,6 @@
 import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 import { DevCardEffects } from "./DevCardActions.js";
+import { StatusCodes } from "../../constants/StatusCodes.js";
 
 
 export class DevCard {
@@ -41,7 +42,10 @@ export class DevCard {
     }
 
     activate(gameController, ...args) {
-        DevCardEffects[this.type](gameController, ...args);
-        this.markAsPlayed();
+        const res = DevCardEffects[this.type](gameController, ...args);
+        if (res.status === StatusCodes.SUCCESS) { // only mark as played if activation was successful
+            this.markAsPlayed();
+        }
+        return res;
     }
 }

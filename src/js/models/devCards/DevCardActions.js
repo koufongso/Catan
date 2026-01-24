@@ -1,5 +1,6 @@
 import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
+import { StatusCodes } from "../../constants/StatusCodes.js";
 
 export const DevCardEffects = {
 
@@ -9,7 +10,7 @@ export const DevCardEffects = {
     const currentPlayer = gameController.getCurrentPlayer();
     currentPlayer.achievements.knightsPlayed++;
     gameController.updateLargestArmy();  // check for largest army update
-    gameController.activateRobber(gameController.gameContext.currentState);    // start robber move process, need to return to current state after completion
+    return gameController.activateRobber(gameController.gameContext.currentState);    // start robber move process, need to return to current state after completion
   },
 
   [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, selectedResources) => {
@@ -22,6 +23,10 @@ export const DevCardEffects = {
       }
       console.log(`Year of Plenty: Giving player 1 ${resource}`);
       currentPlayer.addResources({ [resource]: 1 });
+      return {
+        status: StatusCodes.SUCCESS,
+        gameContext: gameController.gameContext
+      }
     });
   },
 };

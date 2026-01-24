@@ -803,13 +803,23 @@ export class Renderer {
 
                 switch (devCard.type) {
                     case DEV_CARD_TYPES.KNIGHT:
-                        playBtn.onclick = () => {
-                            this.emitInputEvent('ACTIVATE_KNIGHT');
+                        playBtn.onclick = async () => {
+                            const res = await this.controller.inputEvent({type: 'ACTIVATE_KNIGHT'});
+
+                            if (!this.isRequestSuccessful(res)) {
+                                return;
+                            }
+
                             actionMenu.remove();
+
+                            // render updated player assets
+                            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+                            this.renderInteractionHints(res.interaction);
+                            this.updateDebugDashboard(res.gameContext, "Knight card played. Select a tile to move the robber.");
                         };
                         break;
                     case DEV_CARD_TYPES.YEAR_OF_PLENTY:
-                        playBtn.onclick = () => {
+                        playBtn.onclick = async () => {
                             this.activateYearOfPlentyResourceSelection();
                             actionMenu.remove();
                         }
