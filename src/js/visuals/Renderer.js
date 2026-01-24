@@ -390,13 +390,13 @@ export class Renderer {
                 this.highlightValidSpots(interaction.data.validRoadCoords, 'ROAD');
                 break
             case 'ACTIVATE_DISCARD_MODE':
-                this.activateDiscardSelectionMode(interaction.data.discardList, interaction.data.requiredDiscardCount);
+                this.activateDiscardSelectionMode(interaction.data.resourceToDiscard, interaction.data.numberToDiscard);
                 break;
             case 'ACTIVATE_ROBBER_PLACEMENT_MODE':
                 this.activateRobberPlacementMode(interaction.data.robableTileCoords);
                 break
             case 'ACTIVATE_ROB_SELECTION_MODE':
-                this.activateRobSelectionMode(interaction.data.robableSettlementsCoords);
+                this.activateRobSelectionMode(interaction.data.robableSettlementsCoords, interaction.data.robTileCoord);
                 break;
             default:
                 console.warn(`Unknown interaction action: ${interaction.action}`);
@@ -925,14 +925,18 @@ export class Renderer {
         confirmBtn.onclick = async () => {
             const selectedCardsArray = Array.from(modalBody.querySelectorAll('.card-selected')).map(cardDiv => cardDiv.dataset.type);
             const res = await this.controller.inputEvent({ type: confirmEventName, selectedCards: selectedCardsArray });
-            if (this.isRequestSuccessful(res)) {
+            if (!this.isRequestSuccessful(res)) {
                 throw new Error("Failed to process resource selection action."); // this should not happen in a normal flow
             }
 
             // clean up
             this.deactivateResourceSelectionMode();
             this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+
+            // render next interaction if any
+            this.renderInteractionHints(res.interaction);
             this.updateDebugDashboard(res.gameContext, "Resource selection processed.");
+
         };
         // append to main wrapper
         document.getElementById('main-wrapper').appendChild(clone);
@@ -1054,7 +1058,7 @@ export class Renderer {
                     throw new Error("Failed to rob player.");
                 }
                 this.deactivateRobSelectionMode();
-                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndexIndex], res.gameContext.turnNumber);
+                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
                 this.updateDebugDashboard(res.gameContext, `Robbed player at settlement ${vertexId}`);
             });
         });

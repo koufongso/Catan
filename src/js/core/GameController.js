@@ -773,14 +773,14 @@ export class GameController {
             case 'ACTIVATE_KNIGHT':
                 this.getDevCard(currentPlayer, DEV_CARD_TYPES.KNIGHT).activate(this);
                 return {
-                    result: true,
+                    status: StatusCodes.SUCCESS,
                     gameContext: this.gameContext
                 }
             case 'ACTIVATE_YEAR_OF_PLENTY':
                 console.log("Activating Year of Plenty with selected cards:", event.selectedCards);
                 this.getDevCard(currentPlayer, DEV_CARD_TYPES.YEAR_OF_PLENTY).activate(this, event.selectedCards);
                 return {
-                    result: true,
+                    status: StatusCodes.SUCCESS,
                     gameContext: this.gameContext
                 }
             default:
@@ -937,12 +937,12 @@ export class GameController {
             const playerToDiscard = this.gameContext.playersToDiscard[0];
             const numberToDiscard = Math.floor(playerToDiscard.getTotalResourceCount() / 2);
             return { // direct result from rolling 7, enter discard state and "tell" caller the player and the number to discard
-                result: true,
+                status: StatusCodes.SUCCESS,
                 gameContext: this.gameContext,
                 interaction: {
                     action: 'ACTIVATE_DISCARD_MODE',
                     data: {
-                        player: playerToDiscard,
+                        resourceToDiscard: playerToDiscard.getResources(),
                         numberToDiscard: numberToDiscard
                     }
                 }
@@ -1111,7 +1111,8 @@ export class GameController {
             interaction: {
                 action: 'ACTIVATE_ROB_SELECTION_MODE',
                 data: {
-                    robableSettlementsCoords: robableSettlementsCoords
+                    robableSettlementsCoords: robableSettlementsCoords,
+                    robTileCoord: robTileCoord
                 }
             }
         };
