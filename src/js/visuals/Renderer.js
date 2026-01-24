@@ -292,6 +292,7 @@ export class Renderer {
             if (!this.isRequestSuccessful(res)) {
                 return;
             }
+            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
             this.updateDebugDashboard(res.gameContext, "Turn ended.");
         }
 
