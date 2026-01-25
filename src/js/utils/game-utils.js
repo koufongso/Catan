@@ -15,7 +15,7 @@ export const GameUtils = Object.freeze({
      * @param {Player} [player=null] - The player object for whom the settlement is being placed.
      * @returns {Array} - An array of valid coordinates for settlement placements
      */
-    getValidSettlementCoords(gameMap, player = null) {
+    getValidSettlementCoords(gameMap, playerId = null) {
         const allVertexSet = gameMap.getAllVertexIdSet();
         const occupiedSet = gameMap.getAllSettlementIdSet();
         const adjacentToOccupiedSet = gameMap.getAllSettlementNeighborIdSet();
@@ -26,12 +26,12 @@ export const GameUtils = Object.freeze({
         // remove vertices adjacent to existing settlements
         const validSet = nonOccupiedSet.difference(adjacentToOccupiedSet);
 
-        if (player === null) {
+        if (playerId === null) {
             // No player specified, return any valid settlement spot
             return HexUtils.idSetToCoordsArray(validSet)
         } else {
             // Player specified, filter further based on connectivity to player's roads
-            const playerRoadCoords = player.getRoadVerticesIdSet();
+            const playerRoadCoords = gameMap.getPlayerRoadVerticesIdSet(playerId);
             const connectedValidSet = validSet.intersection(playerRoadCoords);
             return HexUtils.idSetToCoordsArray(connectedValidSet);
         }
@@ -43,12 +43,12 @@ export const GameUtils = Object.freeze({
      *  - The road must not already be occupied.
      * @param {*} gameMap 
      * @param {*} player 
-     * @returns a set of valid road coordinates
+     * @returns an array of valid road coordinates
      */
-    getValidRoadFromSettlementIds(gameMap, player, playerSettlementSet = null, phantomRoads = []) {
+    getValidRoadFromSettlementIds(gameMap, playerId, playerSettlementSet = null) {
         // first get all settlments
         if (playerSettlementSet === null) {
-            playerSettlementSet = player.getSettlementVerticesIdSet();
+            playerSettlementSet = gameMap.getPlayerSettlementVerticesIdSet(playerId);
         }
 
         const visitedVertexIds = new Set();
@@ -66,7 +66,7 @@ export const GameUtils = Object.freeze({
 
                 // check if this vertex is blocked by another player's settlement
                 const settlementOwner = gameMap.getSettlementOwner(vId0);
-                if (settlementOwner !== null && settlementOwner !== player.id) {
+                if (settlementOwner !== null && settlementOwner !== playerId) {
                     // blocked by another player's settlement, cannot extend roads from here
                     continue;
                 }
@@ -85,7 +85,7 @@ export const GameUtils = Object.freeze({
                     if (edgeOwner === null) {
                         // unoccupied road, valid placement, stop BFS in this direction
                         validRoadIds.add(HexUtils.coordToId(edgeCoord));
-                    } else if (edgeOwner === player.id) {
+                    } else if (edgeOwner === playerId) {
                         // road owned by player, can continue BFS
                         if (!visitedVertexIds.has(vId1)) {
                             // not visited yet, add to queue
@@ -100,8 +100,8 @@ export const GameUtils = Object.freeze({
         return HexUtils.idSetToCoordsArray(validRoadIds);
     },
 
-    getValidCityCoords(player) {
+    getValidCityCoords(gameMap, playerId) {
         // valid city spots are simply existing settlements owned by the player
-        return player.getSettlements(1).map(settlement => settlement.coord);;
+        return gameMap.getPlayerSettlementVerticesIdSet(playerId).map(id => HexUtils.idToCoord(id));
     }
 });

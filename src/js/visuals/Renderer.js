@@ -6,6 +6,8 @@ import { Player } from "../models/Player.js";
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
 import { StatusCodes } from "../constants/StatusCodes.js";
 import { DebugDashboard } from "./DebugDashboard.js";
+import { GameUtils } from "../utils/game-utils.js";
+import { HtmlUtils } from "../utils/html-utils.js";
 
 
 // constants for hex geometry
@@ -25,8 +27,6 @@ export class Renderer {
 
         // SVG setup
         this.hexSize = 50; // default hex this.hexSize
-
-
     }
 
     updateDebugDashboard(gameContext, logMessage = null) {
@@ -52,7 +52,7 @@ export class Renderer {
         // skip if no token or token is 7 (robber)
         if (tile.numberToken === null || tile.numberToken === 7) return;
         const [x, y] = HexUtils.hexToPixel(tile.coord, this.hexSize);
-        const circle = this.createHtmlCircleElement(x, y, this.hexSize / 2 * 0.9, ["token-circle", "token-number"]);
+        const circle = HtmlUtils.createSvgCircle(x, y, this.hexSize / 2 * 0.9, ["token-circle", "token-number"]);
         circle.setAttribute("fill", `url(#pattern-number-${tile.numberToken})`);
         layer.appendChild(circle);
     }
@@ -72,7 +72,7 @@ export class Renderer {
             const xStart = x0 + (x - x0) * shortenRatio;
             const yStart = y0 + (y - y0) * shortenRatio;
 
-            const line = this.createHtmlLineElement(xStart, yStart, x, y, ["trading-post-line"]);
+            const line = HtmlUtils.createSvgLine(xStart, yStart, x, y, ["trading-post-line"]);
             layer.appendChild(line);
         });
 
@@ -93,7 +93,7 @@ export class Renderer {
     drawRobber(layer, robberTileCoord) {
         if (!robberTileCoord) return;
         const [x, y] = HexUtils.hexToPixel(robberTileCoord, this.hexSize);
-        const circle = this.createHtmlCircleElement(x, y, this.hexSize / 2 * 0.9, ["token-circle"], "robber-token");
+        const circle = HtmlUtils.createSvgCircle(x, y, this.hexSize / 2 * 0.9, ["token-circle"], "robber-token");
         circle.setAttribute("fill", `url(#pattern-robber)`);
         layer.appendChild(circle);
     }
@@ -423,7 +423,33 @@ export class Renderer {
                 this.activateSettlementPlacementMode(coords, type);
                 break;
             case 'ROAD':
-                this.activateRoadPlacementMode(coords);
+                this.activateRoadPlacementMode(coords, async (event) => {
+                    const target = event.target;
+                    if (target.classList.contains('edge-road-available')) {
+                        HtmlUtils.removeElementById('road-placement-group');
+                        const res = await this.controller.inputEvent({
+                            type: 'BUILD_ROAD',
+                            edgeId: target.dataset.id
+                        });
+
+                        if (!this.isRequestSuccessful(res)) {
+                            return;
+                        }
+
+                        // render the new roads
+                        const roadId = res.roadId;
+                        const color = res.playerColor;
+                        HtmlUtils.renderRoad(HexUtils.idToCoord(roadId), color);
+
+                        this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
+
+                        // proceed to next interaction (initial settlement  placement 2)
+                        this.renderInteractionHints(res.interaction);
+
+                        // update debug dashboard
+                        this.updateDebugDashboard(res.gameContext, `Built road at edge ${roadId}. Select second settlement location.`);
+                    }
+                });
                 break;
 
             default:
@@ -432,11 +458,10 @@ export class Renderer {
     }
 
     activateSettlementPlacementMode(availableVertexCoords, type) {
-        const interactionLayer = this.clearElementById('interaction-layer');
+        const interactionLayer = HtmlUtils.clearElementById('interaction-layer');
         if (!interactionLayer) return;
 
-        const setttlementPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        setttlementPlacementGroup.id = `${type}-placement-group`;
+        const setttlementPlacementGroup = HtmlUtils.createSvgGroup(`${type}-placement-group`);
         interactionLayer.appendChild(setttlementPlacementGroup);
         interactionLayer.classList.add('placement-mode');
 
@@ -444,7 +469,7 @@ export class Renderer {
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-            const circle = this.createHtmlCircleElement(x, y, 10, [`vertex-${type}-available`, 'hitbox']);
+            const circle = HtmlUtils.createSvgCircle(x, y, 10, [`vertex-${type}-available`, 'hitbox']);
             circle.dataset.id = vertexId; // Store ID for the delegation
             setttlementPlacementGroup.appendChild(circle);
         });
@@ -454,7 +479,7 @@ export class Renderer {
         setttlementPlacementGroup.onclick = async (event) => {
             const target = event.target;
             if (target.classList.contains(`vertex-${type}-available`)) {
-                this.removeElementById(`${type}-placement-group`);
+                HtmlUtils.removeElementById(`${type}-placement-group`);
                 const vertexId = target.dataset.id;
 
                 const res = await this.controller.inputEvent({
@@ -470,7 +495,7 @@ export class Renderer {
                 const settlementId = res.settlementId;
                 const settlementLevel = res.settlementLevel;
                 const color = res.playerColor;
-                this.renderSettlement(settlementId, color, settlementLevel);
+                HtmlUtils.renderSettlement(settlementId, color, settlementLevel);
 
                 this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
 
@@ -485,30 +510,15 @@ export class Renderer {
 
 
 
-    renderSettlement(vertexId, color, level) {
-        // render a settlement at the given vertexId with the given color and level
-        const vertexLayer = document.getElementById('settlement-layer');
-        if (!vertexLayer) {
-            console.error("Renderer: Vertex layer not found in SVG. Cannot render settlement.");
-            return;
-        }
 
-        // create a circle element for the settlement
-        const vCoord = HexUtils.idToCoord(vertexId);
-        const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-        const settlementCircle = this.createHtmlCircleElement(x, y, level === 1 ? 12 : 18, level === 1 ? ["settlement"] : ["city"]);
-        settlementCircle.setAttribute("fill", color);
-        settlementCircle.dataset.id = vertexId;
-        vertexLayer.appendChild(settlementCircle);
-    }
 
     /**
      * 
      * @param {Array} validEdgeCoords list of edge coordinates where roads can be placed
      * @returns 
      */
-    activateRoadPlacementMode(validEdgeCoords) {
-        const interactionLayer = this.clearElementById('interaction-layer');
+    activateRoadPlacementMode(validEdgeCoords, onClickCallback = null) {
+        const interactionLayer = HtmlUtils.clearElementById('interaction-layer');
         if (!interactionLayer) return;
 
         const roadPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -524,81 +534,23 @@ export class Renderer {
             const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.hexSize);
 
             // Use your shortening logic for a better look
-            const shortened = this.getShortenedLine(x1, y1, x2, y2, 0.2);
-            const edgeLine = this.createHtmlLineElement(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["edge-road-available", "hitbox"]);
+            const shortened = HtmlUtils.getShortenedLine(x1, y1, x2, y2, 0.2);
+            const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["edge-road-available", "hitbox"]);
             edgeLine.dataset.id = edgeId;
 
             roadPlacementGroup.appendChild(edgeLine);
         });
 
         // EVENT DELEGATION: One listener for all roads
-        roadPlacementGroup.onclick = async (event) => {
-            const target = event.target;
-            if (target.classList.contains('edge-road-available')) {
-                this.removeElementById('road-placement-group');
-                const res = await this.controller.inputEvent({
-                    type: 'BUILD_ROAD',
-                    edgeId: target.dataset.id
-                });
-
-                if (!this.isRequestSuccessful(res)) {
-                    return;
-                }
-
-                // render the new roads
-                const roadId = res.roadId;
-                const color = res.playerColor;
-                this.renderRoad(HexUtils.idToCoord(roadId), color);
-
-                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-
-                // proceed to next interaction (initial settlement  placement 2)
-                this.renderInteractionHints(res.interaction);
-
-                // update debug dashboard
-                this.updateDebugDashboard(res.gameContext, `Built road at edge ${roadId}. Select second settlement location.`);
-            }
+        roadPlacementGroup.onclick = (event) => {
+            onClickCallback(event);
         };
     }
 
 
 
     // Helper to keep math clean
-    getShortenedLine(x1, y1, x2, y2, ratio) {
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const offset_x = dx * ratio;
-        const offset_y = dy * ratio;
-        return {
-            x1: x1 + offset_x,
-            y1: y1 + offset_y,
-            x2: x2 - offset_x,
-            y2: y2 - offset_y
-        };
-    }
 
-    renderRoad(roadCoord, color) {
-        // render a road at the given edgeCoord with the given color
-        const roadLayer = document.getElementById('road-layer');
-        if (!roadLayer) {
-            console.error("Renderer: Road layer not found in SVG. Cannot render road.");
-            return;
-        }
-
-        // get the two vertex coordinates from edgeCoord
-        const [vCoord1, vCoord2] = HexUtils.getVerticesFromEdge(roadCoord);
-        const roadId = HexUtils.coordToId(roadCoord);
-
-        // create a line element for the road
-        const [x1, y1] = HexUtils.vertexToPixel(vCoord1, this.hexSize);
-        const [x2, y2] = HexUtils.vertexToPixel(vCoord2, this.hexSize);
-
-        const shortened = this.getShortenedLine(x1, y1, x2, y2, 0.2);
-        const roadLine = this.createHtmlLineElement(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["road", `road-${roadId}`]);
-        roadLine.dataset.id = roadId;
-        roadLine.style.stroke = `${color}`;
-        roadLayer.appendChild(roadLine);
-    }
 
 
     activateBuyDevCardConfirmationUI() {
@@ -665,7 +617,7 @@ export class Renderer {
     }
 
     deactivateActionConfirmationUI() {
-        this.removeElementById('action-confirmation-modal-overlay');
+        HtmlUtils.removeElementById('action-confirmation-modal-overlay');
     }
 
 
@@ -778,7 +730,7 @@ export class Renderer {
             cardDiv.classList.add('dev-card-playable');
             cardDiv.onclick = (event) => {
                 // 1. remove existing menu if any
-                this.removeElementById('card-action-menu');
+                HtmlUtils.removeElementById('card-action-menu');
                 // 2. create new menu on click
                 const actionMenuTemplate = document.getElementById('card-action-menu-template');
                 if (!actionMenuTemplate) {
@@ -804,7 +756,7 @@ export class Renderer {
                 switch (devCard.type) {
                     case DEV_CARD_TYPES.KNIGHT:
                         playBtn.onclick = async () => {
-                            const res = await this.controller.inputEvent({type: 'ACTIVATE_KNIGHT'});
+                            const res = await this.controller.inputEvent({ type: 'ACTIVATE_KNIGHT' });
 
                             if (!this.isRequestSuccessful(res)) {
                                 return;
@@ -869,7 +821,7 @@ export class Renderer {
     }
 
     deactivateDiscardSelectionMode() {
-        this.removeElementById('resource-selection-modal-overlay');
+        HtmlUtils.removeElementById('resource-selection-modal-overlay');
     }
 
     /**
@@ -1068,105 +1020,13 @@ export class Renderer {
                 if (!this.isRequestSuccessful(res)) {
                     throw new Error("Failed to rob player.");
                 }
-                this.deactivateRobSelectionMode();
+                HtmlUtils.deactivateRobSelectionMode();
                 this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
                 this.updateDebugDashboard(res.gameContext, `Robbed player at settlement ${vertexId}`);
             });
         });
     }
 
-    // code to deactivate elements
-    /**
-     * Helper to remove an element by id
-     * @param {*} elementId 
-     * @returns 
-     */
-    removeElementById(elementId) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        // clean up
-        element.onclick = null;
-        element.remove();
-    }
 
-    clearElementById(elementId) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        element.onclick = null;
-        element.innerHTML = '';
-        return element;
-    }
-
-    deactivateSettlementPlacementMode() {
-        this.removeElementById('settlement-placement-group');
-    }
-
-    deactivateRobSelectionMode() {
-        this.removeElementById('rob-selection-group');
-    }
-
-    deactivateRoadPlacementMode() {
-        this.removeElementById('road-placement-group');
-    }
-
-    deactivateDiceRollMode() {
-        this.removeElementById('dice-btn');
-    }
-
-    deactivateRobberPlacementMode() {
-        this.removeElementById('robber-placement-group');
-    }
-
-    deactivateResourceSelectionMode() {
-        this.removeElementById('resource-selection-modal-overlay');
-    }
-
-
-    // code to create circle elements
-    createHtmlCircleElement(cx, cy, r, className = [], id = null) {
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", cx);
-        circle.setAttribute("cy", cy);
-        circle.setAttribute("r", r);
-
-        className.forEach(cls => {
-            circle.classList.add(cls);
-        });
-
-        if (id) {
-            circle.id = id;
-        }
-        return circle;
-    }
-
-    // code to create line elements
-    createHtmlLineElement(x1, y1, x2, y2, className = [], id = null) {
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", x1);
-        line.setAttribute("y1", y1);
-        line.setAttribute("x2", x2);
-        line.setAttribute("y2", y2);
-
-        className.forEach(cls => {
-            line.classList.add(cls);
-        });
-
-        if (id) {
-            line.id = id;
-        }
-        return line;
-    }
-
-    createHtmlButtonElement(text, className = [], id = null) {
-        const button = document.createElement("button");
-        button.textContent = text;
-        className.forEach(cls => {
-            button.classList.add(cls);
-        });
-        if (id) {
-            button.id = id;
-        }
-        return button;
-    }
 
 }

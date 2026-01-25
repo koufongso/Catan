@@ -237,7 +237,7 @@ export class GameController {
         this.gameContext.currentState = GameState.PLACE_ROAD1;
 
         // compute all valid road spots based on last settlement placed
-        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer, new Set([settlementId]));
+        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer.id, new Set([settlementId]));
         console.log("Available road coords after 1st settlement:", availableRoadCoords);
         return {
             status: StatusCodes.SUCCESS,
@@ -321,7 +321,7 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer, new Set([settlementId]));
+        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer.id, new Set([settlementId]));
 
         return {
             status: StatusCodes.SUCCESS,
@@ -552,7 +552,7 @@ export class GameController {
      * @param {*} player 
      */
     queryValidRoadSpots(player) {
-        return GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, player);
+        return GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, player.id);
     }
 
     /**
@@ -561,7 +561,7 @@ export class GameController {
      * @returns an array of vertex coords
      */
     queryValidSettlementSpots(player) {
-        return GameUtils.getValidSettlementCoords(this.gameContext.gameMap, player); // onyl spots connected to player's roads
+        return GameUtils.getValidSettlementCoords(this.gameContext.gameMap, player.id); // onyl spots connected to player's roads
     }
 
     /**
@@ -570,7 +570,7 @@ export class GameController {
      * @returns an array of vertex coords
      */
     queryValidCitySpots(player) {
-        return GameUtils.getValidCityCoords(player);
+        return GameUtils.getValidCityCoords(this.gameContext.gameMap, player.id);
     }
 
     handleEventBuildRoad(event) {

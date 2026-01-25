@@ -495,6 +495,29 @@ export class GameMap {
         return results;
     }
 
+    getPlayerRoadVerticesIdSet(playerId) {
+        const vertexSet = new Set();
+        for (let [id, road] of this.roads) {
+            if (road.owner === playerId) {
+                const vertices = HexUtils.getVerticesFromEdge(road.coord);
+                for (let vertex of vertices) {
+                    vertexSet.add(HexUtils.coordToId(vertex));
+                }
+            }
+        }
+        return vertexSet;
+    }
+
+    getPlayerSettlementVerticesIdSet(playerId) {
+        const vertexSet = new Set();
+        for (let [id, settlement] of this.settlements) {
+            if (settlement.owner === playerId) {
+                vertexSet.add(id);
+            }
+        }
+        return vertexSet;
+    }
+
 
     /**
      * Get all the edge IDs on the map (based on existing tiles)
