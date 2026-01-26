@@ -57,16 +57,40 @@ body {
     filter: drop-shadow(0 0 2px rgba(100, 80, 60, 0.5));
 }
 
-.edge-road-available {
-    stroke: rgba(0, 255, 0, 1.0);
-    stroke-width: 12px;
+.available-road {
+    stroke: rgba(0, 255, 0, 0.5);
+    opacity: 0.5;
+    stroke-width: 8px;
+    stroke-linecap: butt;
+    filter: drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.hitbox {
-    fill: rgba(0, 255, 0, 1.0);
-    ;
+/* 2. THE "GHOST" ROAD (Selected/Placed) */
+.placed-road {
+    /* Slightly thicker and more transparent to indicate ghost road */
+    stroke-width: 14px; 
+    opacity: 1.0;  
+    stroke-linecap: round;
+    filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
+    transition: all 0.2s ease;
 }
+ 
+
+.available-settlement, .available-city {
+    fill: rgba(0, 255, 0, 0.5);
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 2px;
+    stroke-linecap: round;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+
+
+
 
 .vertex-slot:hover {
     fill: rgba(255, 255, 255, 0.5);
@@ -226,6 +250,46 @@ body {
 .popover-row.cancel {
     color: red;
 }
+
+/* for interaction layer svg buttons */
+.svg-btn-primary {
+    border: #000000 2px solid;
+    border-radius: 8px;
+    fill: #0056b3;
+    cursor: pointer;
+    user-select: none;
+}
+
+.svg-btn-primary:hover {
+    fill: #007bff;
+}
+
+.svg-btn-cancel {
+    border: #000000 2px solid;
+    border-radius: 8px;
+    fill: #c82333;
+    cursor: pointer;
+    user-select: none;
+}
+
+.svg-btn-cancel:hover {
+    fill: #dc3545;
+}
+
+.svg-btn text {
+    fill: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.svg-btn-disabled {
+    fill: #444444;
+    cursor: not-allowed;
+}
+
+
 
 
 

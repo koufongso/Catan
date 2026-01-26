@@ -8,7 +8,7 @@ import { StatusCodes } from "../constants/StatusCodes.js";
 import { DebugDashboard } from "./DebugDashboard.js";
 import { GameUtils } from "../utils/game-utils.js";
 import { HtmlUtils } from "../utils/html-utils.js";
-
+import { MapInteractionRenderer } from "./MapInteractionRenderer.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -27,6 +27,8 @@ export class Renderer {
 
         // SVG setup
         this.hexSize = 50; // default hex this.hexSize
+
+        this.mapInteractionRenderer = new MapInteractionRenderer();
     }
 
     updateDebugDashboard(gameContext, logMessage = null) {
@@ -425,7 +427,7 @@ export class Renderer {
             case 'ROAD':
                 this.activateRoadPlacementMode(coords, async (event) => {
                     const target = event.target;
-                    if (target.classList.contains('edge-road-available')) {
+                    if (target.classList.contains('available-road')) {
                         HtmlUtils.removeElementById('road-placement-group');
                         const res = await this.controller.inputEvent({
                             type: 'BUILD_ROAD',
@@ -469,7 +471,7 @@ export class Renderer {
         availableVertexCoords.forEach(vCoord => {
             const vertexId = HexUtils.coordToId(vCoord);
             const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-            const circle = HtmlUtils.createSvgCircle(x, y, 10, [`vertex-${type}-available`, 'hitbox']);
+            const circle = HtmlUtils.createSvgCircle(x, y, 10, [`available-${type.toLowerCase()}`]);
             circle.dataset.id = vertexId; // Store ID for the delegation
             setttlementPlacementGroup.appendChild(circle);
         });
@@ -478,7 +480,7 @@ export class Renderer {
         // Remove existing listener first if necessary to prevent duplicates
         setttlementPlacementGroup.onclick = async (event) => {
             const target = event.target;
-            if (target.classList.contains(`vertex-${type}-available`)) {
+            if (target.classList.contains(`available-${type.toLowerCase()}`)) {
                 HtmlUtils.removeElementById(`${type}-placement-group`);
                 const vertexId = target.dataset.id;
 
@@ -535,7 +537,7 @@ export class Renderer {
 
             // Use your shortening logic for a better look
             const shortened = HtmlUtils.getShortenedLine(x1, y1, x2, y2, 0.2);
-            const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["edge-road-available", "hitbox"]);
+            const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["available-road"]);
             edgeLine.dataset.id = edgeId;
 
             roadPlacementGroup.appendChild(edgeLine);

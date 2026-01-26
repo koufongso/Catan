@@ -59,6 +59,54 @@ export const HtmlUtils = Object.freeze({
         return g;
     },
 
+    createSvgButton(x, y, width, height, text, onClick = null, imageHref = null) {
+
+        // 1. The Container Group
+        const group = this.createSvgGroup(`btn-${text.replace(/\s/g, '')}`, ["svg-btn"]);
+        // Move group to position so internal elements can be relative (0,0)
+        // Note: Standard SVG doesn't support x/y on <g>, so we use transform
+        group.setAttribute("transform", `translate(${x}, ${y})`);
+
+        // 2. The Background (Image or Rect)
+        if (imageHref) {
+            const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            img.setAttribute("href", imageHref);
+            img.setAttribute("width", width);
+            img.setAttribute("height", height);
+            img.setAttribute("x", -width / 2); // Center horizontally
+            img.setAttribute("y", -height / 2); // Center vertically
+            group.appendChild(img);
+        } else {
+            // Fallback: Stylish Rectangle
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("width", width);
+            rect.setAttribute("height", height);
+            rect.setAttribute("x", -width / 2);
+            rect.setAttribute("y", -height / 2);
+            rect.setAttribute("rx", 10); // Rounded corners
+            rect.classList.add("btn-bg"); // Add CSS class for styling
+            group.appendChild(rect);
+        }
+
+        // 3. The Text Label
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.textContent = text;
+        label.setAttribute("text-anchor", "middle");      // Horizontal Center
+        label.setAttribute("dominant-baseline", "middle"); // Vertical Center
+        label.setAttribute("pointer-events", "none");     // Let clicks pass through to the rect/group
+        label.classList.add("btn-text");
+        group.appendChild(label);
+
+        // 4. Interaction
+        group.onclick = (e) => {
+            e.stopPropagation(); // Prevent clicking the map underneath
+            if (onClick) onClick(e);
+        };
+
+        return group;
+    },
+
+
     // --- HTML FACTORY (Standard DOM) ---
 
     createButton(text, classList = [], id = null, onClick = null) {
@@ -72,38 +120,40 @@ export const HtmlUtils = Object.freeze({
         return button;
     },
 
-    createRoadPlacementGroup(coords, onclick = null) {
+    createRoadPlacementGroup(coords, onclick = null, attributes = {}, hexSize = HEX_SIZE) {
         const roadPlacementGroup = HtmlUtils.createSvgGroup(null, ["road-placement-group", "placement-mode"]);
-        coords.array.forEach(element => {
-            const [v1, v2] = HexUtils.getVerticesFromEdge(element);
-            const p1 = HexUtils.vertexToPixel(v1);
-            const p2 = HexUtils.vertexToPixel(v2);
-            const roadLine = HtmlUtils.createSvgLine(p1, p2, ["road-highlight", "hitbox"]);
-            roadPlacementGroup.appendChild(roadLine);
+        coords.forEach(eCoord => {
+            const edgeLine = HtmlUtils.createRoadElement(eCoord, attributes, hexSize);
+            roadPlacementGroup.appendChild(edgeLine);
         });
-
+        roadPlacementGroup.id = 'road-placement-group';
         roadPlacementGroup.onclick = onclick;
         return roadPlacementGroup;
     },
 
-    createSettlementPlacementGroup(coords, onclick = null) {
+    createSettlementPlacementGroup(coords, onclick = null, attributes = {}, hexSize = HEX_SIZE) {
         const settlementPlacementGroup = HtmlUtils.createSvgGroup(null, ["settlement-placement-group", "placement-mode"]);
-        coords.array.forEach(coord => {
-            const p = HexUtils.vertexToPixel(coord);
-            const settlementCircle = HtmlUtils.createSvgCircle(p.x, p.y, 10, ["settlement-highlight", "hitbox"]);
+        coords.forEach(coord => {
+            const p = HexUtils.vertexToPixel(coord, hexSize);
+            const settlementCircle = HtmlUtils.createSvgCircle(p.x, p.y, 10, ["available-settlement"]);
+            if (attributes.color) {
+                settlementCircle.style.fill = attributes.color;
+            }
             settlementPlacementGroup.appendChild(settlementCircle);
         });
+        settlementPlacementGroup.id = 'settlement-placement-group';
         settlementPlacementGroup.onclick = onclick;
         return settlementPlacementGroup;
     },
 
-    createCityPlacementGroup(coords, onclick = null) {
+    createCityPlacementGroup(coords, onclick = null, color = 'green', hexSize = HEX_SIZE) {
         const cityPlacementGroup = HtmlUtils.createSvgGroup(null, ["city-placement-group", "placement-mode"]);
-        coords.array.forEach(coord => {
-            const p = HexUtils.vertexToPixel(coord);
-            const cityCircle = HtmlUtils.createSvgCircle(p.x, p.y, 12, ["city-highlight", "hitbox"]);
+        coords.forEach(coord => {
+            const p = HexUtils.vertexToPixel(coord, hexSize);
+            const cityCircle = HtmlUtils.createSvgCircle(p.x, p.y, 12, ["available-city"]);
+            cityCircle.style.fill = color;
             cityPlacementGroup.appendChild(cityCircle);
-        });
+        }); s
         cityPlacementGroup.onclick = onclick;
         return cityPlacementGroup;
     },
@@ -116,7 +166,7 @@ export const HtmlUtils = Object.freeze({
         const roadLayer = document.getElementById('road-layer');
         if (!roadLayer) {
             console.error("Renderer: Road layer not found in SVG. Cannot render road.");
-            return;
+            return;z
         }
 
         // get the two vertex coordinates from edgeCoord
@@ -173,5 +223,21 @@ export const HtmlUtils = Object.freeze({
             x2: x2 - offset_x,
             y2: y2 - offset_y
         };
+    },
+
+    createRoadElement(eCoord, attributes = {}, hexSize = HEX_SIZE) {
+        const edgeId = HexUtils.coordToId(eCoord);
+        const [v1Coord, v2Coord] = HexUtils.getVerticesFromEdge(eCoord);
+        const [x1, y1] = HexUtils.vertexToPixel(v1Coord, hexSize);
+        const [x2, y2] = HexUtils.vertexToPixel(v2Coord, hexSize);
+
+        // Use your shortening logic for a better look
+        const shortened = HtmlUtils.getShortenedLine(x1, y1, x2, y2, 0.2);
+        const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["available-road"]);
+        edgeLine.dataset.id = edgeId;
+        if (attributes.color) {
+            edgeLine.style.stroke = attributes.color;
+        }
+        return edgeLine;
     }
 });
