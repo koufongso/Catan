@@ -134,11 +134,7 @@ export const HtmlUtils = Object.freeze({
     createSettlementPlacementGroup(coords, onclick = null, attributes = {}, hexSize = HEX_SIZE) {
         const settlementPlacementGroup = HtmlUtils.createSvgGroup(null, ["settlement-placement-group", "placement-mode"]);
         coords.forEach(coord => {
-            const p = HexUtils.vertexToPixel(coord, hexSize);
-            const settlementCircle = HtmlUtils.createSvgCircle(p.x, p.y, 10, ["available-settlement"]);
-            if (attributes.color) {
-                settlementCircle.style.fill = attributes.color;
-            }
+            const settlementCircle = HtmlUtils.createSettlementElement(coord, attributes, hexSize);
             settlementPlacementGroup.appendChild(settlementCircle);
         });
         settlementPlacementGroup.id = 'settlement-placement-group';
@@ -184,7 +180,7 @@ export const HtmlUtils = Object.freeze({
         roadLayer.appendChild(roadLine);
     },
 
-    renderSettlement(vertexId, color, level, hexSize = HEX_SIZE) {
+    renderSettlement(settlementCoord, color, level, hexSize = HEX_SIZE) {
         // render a settlement at the given vertexId with the given color and level
         const vertexLayer = document.getElementById('settlement-layer');
         if (!vertexLayer) {
@@ -193,11 +189,11 @@ export const HtmlUtils = Object.freeze({
         }
 
         // create a circle element for the settlement
-        const vCoord = HexUtils.idToCoord(vertexId);
-        const [x, y] = HexUtils.vertexToPixel(vCoord, hexSize);
+        const settlementId = HexUtils.coordToId(settlementCoord);
+        const [x, y] = HexUtils.vertexToPixel(settlementCoord, hexSize);
         const settlementCircle = HtmlUtils.createSvgCircle(x, y, level === 1 ? 12 : 18, level === 1 ? ["settlement"] : ["city"]);
         settlementCircle.setAttribute("fill", color);
-        settlementCircle.dataset.id = vertexId;
+        settlementCircle.dataset.id = settlementId;
         vertexLayer.appendChild(settlementCircle);
     },
 
@@ -239,5 +235,16 @@ export const HtmlUtils = Object.freeze({
             edgeLine.style.stroke = attributes.color;
         }
         return edgeLine;
+    },
+
+    createSettlementElement(vCoord, attributes = {}, hexSize = HEX_SIZE) {
+        const vertexId = HexUtils.coordToId(vCoord);
+        const [x, y] = HexUtils.vertexToPixel(vCoord, hexSize);
+        const settlementCircle = HtmlUtils.createSvgCircle(x, y, 10, ["available-settlement"]);
+        settlementCircle.dataset.id = vertexId;
+        if (attributes.color) {
+            settlementCircle.style.fill = attributes.color;
+        }  
+        return settlementCircle;
     }
 });

@@ -36,6 +36,23 @@ export class GameMap {
         this.initialized = false;
     }
 
+    clone() {
+        const copy = new GameMap(this.rng);
+
+        // 2. deep copy of data structures
+        copy.rng = null; // hide RNG state in clone
+        copy.tiles = structuredClone(this.tiles);
+        copy.roads = structuredClone(this.roads);
+        copy.settlements = structuredClone(this.settlements);
+        copy.tradingPosts = structuredClone(this.tradingPosts);
+        copy.robberCoord = structuredClone(this.robberCoord);
+        copy.allVertexIdSet = structuredClone(this.allVertexIdSet);
+        copy.allEdgeIdSet = structuredClone(this.allEdgeIdSet);
+        copy.initialized = this.initialized;
+
+        return copy;
+    }
+
     // load the map from json file to initializes the interactable elements
     async loadMapFromJson(path) {
         // load the json file

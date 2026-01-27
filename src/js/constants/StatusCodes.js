@@ -5,4 +5,4 @@ export const StatusCodes = {
     GAME_OVER: 'GAME_OVER',
     INAPPLICABLE_EVENT: 'INAPPLICABLE_EVENT',
     TODO_IMPLEMENT: 'TODO_IMPLEMENT',
-};
+}; 

@@ -13,7 +13,7 @@ export class RoadBuildingPredictor {
     }
 
     init(gameMap) {
-        this.gameMap = gameMap; // avoid mutating original map
+        this.gameMap = gameMap.clone(); // avoid mutating original map
         this.selectedRoadStack = [];
         this.playerId = null;
     }

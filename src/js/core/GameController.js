@@ -10,6 +10,7 @@ import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from '../constants/DevCardTypes.
 import { DevCardEffects } from '../models/devCards/DevCardActions.js';
 import { GameUtils } from '../utils/game-utils.js';
 import { StatusCodes } from '../constants/StatusCodes.js';
+import {RoadBuildingPredictor} from '../utils/road-building-predictor.js';
 
 export const GameState = Object.freeze({
     SETUP: 'SETUP', // prompt UI wait for game setup
@@ -204,9 +205,13 @@ export class GameController {
             status: StatusCodes.SUCCESS, // indicate success
             gameContext: this.gameContext,
             interaction: {
-                action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                action: 'BUILD_SETTLEMENT',
                 data: {
-                    validSettlementCoords: validSettlementCoords
+                    currentPlayerId: this.gameContext.currentPlayerIndex, 
+                    currentPlayerColor: this.gameContext.players[this.gameContext.currentPlayerIndex].color,
+                    gameMap: this.gameContext.gameMap,
+                    enforced: false, // initial placement, not enforced regular placement rules
+                    noCancel: true, // must place settlement
                 }
             }
         };
@@ -222,6 +227,7 @@ export class GameController {
         // place settlement logic here
 
         // add settlement to map
+        console.log("Handling PLACE_SETTLEMENT1 event:", event);
         const settlementCoord = HexUtils.idToCoord(event.vertexId);
         const settlementId = event.vertexId;
         const currentPlayer = this.getCurrentPlayer();
@@ -241,14 +247,19 @@ export class GameController {
         console.log("Available road coords after 1st settlement:", availableRoadCoords);
         return {
             status: StatusCodes.SUCCESS,
-            settlementId: settlementId,
+            settlementCoord: settlementCoord,
             settlementLevel: 1,
             playerColor: currentPlayer.color,
-            gameContext: this.gameContext,
+            gameMap: this.gameContext.gameMap,
             interaction: {
-                action: 'HIGHLIGHT_ROAD_SPOTS',
+                action: 'BUILD_ROAD',
                 data: {
-                    validRoadCoords: availableRoadCoords
+                    currentPlayerId: this.gameContext.currentPlayerIndex, 
+                    currentPlayerColor: this.gameContext.players[this.gameContext.currentPlayerIndex].color,
+                    gameMap: this.gameContext.gameMap,
+                    enforced: false, // initial placement, not enforced regular placement rules
+                    noCancel: true, // must place settlement
+                    numberOfRoads: 1
                 }
             }
         };
@@ -264,15 +275,15 @@ export class GameController {
 
         // add road to map
         const currentPlayer = this.getCurrentPlayer();
-        const roadId = event.edgeId;
-
-        if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+        const roadCoords = event.roadCoords;
+        
+        // verify the requested road in order
+        if (!this.buildRoadBatch(roadCoords.map(coord => HexUtils.coordToId(coord)), currentPlayer, 'INITIAL')) {
             return {
                 status: StatusCodes.ERROR,
                 error_message: "Failed to build 1st road."
             };
         }
-
 
         // check if current player is last player
         if (this.gameContext.currentPlayerIndex === this.gameContext.totalPlayers - 1) {
@@ -284,16 +295,19 @@ export class GameController {
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
         }
 
-        const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
         return {
-            status: StatusCodes.SUCCESS,
-            roadId: roadId,
+            status: StatusCodes.SUCCESS, // indicate success
+            gameMap: this.gameContext.gameMap,
+            roadCoords: roadCoords,
             playerColor: currentPlayer.color,
-            gameContext: this.gameContext,
             interaction: {
-                action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                action: 'BUILD_SETTLEMENT',
                 data: {
-                    validSettlementCoords: availableSettlementCoords
+                    currentPlayerId: this.gameContext.currentPlayerIndex, 
+                    currentPlayerColor: this.gameContext.players[this.gameContext.currentPlayerIndex].color,
+                    gameMap: this.gameContext.gameMap,
+                    enforced: false, // initial placement, not enforced regular placement rules
+                    noCancel: true, // must place settlement
                 }
             }
         };
@@ -321,18 +335,21 @@ export class GameController {
 
         // move to previous player and PLACE_ROAD2 state (since placement is in reverse order in the second round by rule)
         this.gameContext.currentState = GameState.PLACE_ROAD2;
-        const availableRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameContext.gameMap, currentPlayer.id, new Set([settlementId]));
 
         return {
             status: StatusCodes.SUCCESS,
-            settlementId: settlementId,
+            settlementCoord: settlementCoord,
             settlementLevel: 1,
             playerColor: currentPlayer.color,
-            gameContext: this.gameContext,
+            gameMap: this.gameContext.gameMap,
             interaction: {
-                action: 'HIGHLIGHT_ROAD_SPOTS',
+                action: 'BUILD_ROAD',
                 data: {
-                    validRoadCoords: availableRoadCoords
+                    currentPlayerId: this.gameContext.currentPlayerIndex,
+                    currentPlayerColor: currentPlayer.color,
+                    gameMap: this.gameContext.gameMap,
+                    enforced: false, // initial placement, not enforced regular placement rules
+                    noCancel: true, // must place settlement
                 }
             }
         };
@@ -348,9 +365,9 @@ export class GameController {
 
         // add road to map and register its ownership
         const currentPlayer = this.getCurrentPlayer();
-        const roadId = event.edgeId;
+        const roadCoords = event.roadCoords;
 
-        if (!this.buildRoad(roadId, currentPlayer, 'INITIAL')) {
+        if (!this.buildRoadBatch(roadCoords.map(coord => HexUtils.coordToId(coord)), currentPlayer, 'INITIAL')) {
             return {
                 status: StatusCodes.ERROR,
                 error_message: "Failed to build 2nd road."
@@ -371,24 +388,27 @@ export class GameController {
             this.gameContext.currentState = GameState.ROLL;
             return {
                 status: StatusCodes.SUCCESS,
-                roadId: roadId,
+                roadCoords: roadCoords,
                 playerColor: currentPlayer.color,
-                gameContext: this.gameContext
+                gameMap: this.gameContext.gameMap
             }
         } else {
             // else move to previous player and PLACE_SETTLEMENT2 state
             this.prevPlayer();
             this.gameContext.currentState = GameState.PLACE_SETTLEMENT2;
-            const availableSettlementCoords = GameUtils.getValidSettlementCoords(this.gameContext.gameMap, null); // "free" spots for initial placement
             return {
                 status: StatusCodes.SUCCESS,
-                roadId: roadId,
+                roadCoords: roadCoords,
                 playerColor: currentPlayer.color,
-                gameContext: this.gameContext,
+                gameMap: this.gameContext.gameMap,
                 interaction: {
-                    action: 'HIGHLIGHT_SETTLEMENT_SPOTS',
+                    action: 'BUILD_SETTLEMENT',
                     data: {
-                        validSettlementCoords: availableSettlementCoords
+                        gameMap: this.gameContext.gameMap,
+                        currentPlayerId: this.gameContext.currentPlayerIndex,
+                        currentPlayerColor: this.gameContext.players[this.gameContext.currentPlayerIndex].color,
+                        enforced: false, // initial placement, not enforced regular placement rules
+                        noCancel: true, // must place settlement
                     }
                 }
             }
@@ -414,7 +434,7 @@ export class GameController {
                 return {
                     status: StatusCodes.SUCCESS,
                     roll: rollResult,
-                    gameContext: this.gameContext
+                    gameMap: this.gameContext.gameMap
                 };
             }
 
@@ -588,6 +608,42 @@ export class GameController {
                 error_message: "Failed to build road."
             }
         }
+    }
+
+    /**
+     * Build multiple roads in order, only deduct resources when all roads are valid and total cost can be afforded
+     * @param {*} roadIds 
+     * @param {*} player 
+     * @param {*} phase 
+     * @returns 
+     */
+    buildRoadBatch(roadIds, player, phase) {
+        if (phase !== 'INITIAL' && phase !== 'MAIN') {
+            throw new Error(`Invalid phase: ${phase}`);
+        }
+
+        // first check if resource can be afforded (only in MAIN phase)
+        if (phase === 'MAIN') {
+            const totalCost = { wood: 0, brick: 0 };
+            roadIds.forEach(roadId => {
+                totalCost.wood += COSTS.road.wood;
+                totalCost.brick += COSTS.road.brick;
+            });
+            if (!player.canAfford(totalCost)) {
+                return false;
+            }
+
+            // player can afford, check if all road spots are valid
+            const roadBuildingPredictor = new RoadBuildingPredictor(this.gameContext.gameMap, player.id);
+            for (let roadId of roadIds) {
+                const roadCoord = HexUtils.idToCoord(roadId);
+                if (!roadBuildingPredictor.isRoadSpotValid(roadCoord)) {
+                    throw new Error(`Invalid road spot in batch: ${roadCoord}`);
+                }
+                roadBuildingPredictor.addPredictedRoad(roadCoord);
+            }
+        }
+        return true;
     }
 
     buildRoad(roadId, player, phase) {

@@ -9,6 +9,7 @@ import { DebugDashboard } from "./DebugDashboard.js";
 import { GameUtils } from "../utils/game-utils.js";
 import { HtmlUtils } from "../utils/html-utils.js";
 import { MapInteractionRenderer } from "./MapInteractionRenderer.js";
+import { StatusCodesUtils } from "../utils/status-code-utils.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -28,7 +29,9 @@ export class Renderer {
         // SVG setup
         this.hexSize = 50; // default hex this.hexSize
 
-        this.mapInteractionRenderer = new MapInteractionRenderer();
+        this.gameMap = null; // a client-side copy of the game map for rendering
+
+        this.MapInteractionRenderer = new MapInteractionRenderer(this.controller);
     }
 
     updateDebugDashboard(gameContext, logMessage = null) {
@@ -188,16 +191,6 @@ export class Renderer {
         layer.appendChild(defs);
     }
 
-    isRequestSuccessful(res) {
-        if (res.status !== StatusCodes.SUCCESS) {
-            console.log("Renderer: response status:", res.status);
-            if (res.error_message) {
-                console.error("Error message:", res.error_message);
-            }
-            return false;
-        }
-        return true;
-    }
 
     renderMainUI(tiles, tradingPosts, robberCoord) {
         const { clone, layers } = this.setupTemplate();
@@ -224,7 +217,7 @@ export class Renderer {
         diceBtn.onclick = async () => {
             const res = await this.controller.inputEvent({ type: 'ROLL_DICE' });
 
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 return;
             }
             // handle the result from controller
@@ -248,7 +241,7 @@ export class Renderer {
         const buildRoadBtn = clone.getElementById('build-road-btn');
         buildRoadBtn.onclick = async () => {
             const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'ROAD' });
-            if (!this.isRequestSuccessful(res)) { // internal error, insufficient resources, wrong state, etc, nothing to do
+            if (!StatusCodesUtils.isRequestSuccessful(res)) { // internal error, insufficient resources, wrong state, etc, nothing to do
                 return;
             }
 
@@ -261,7 +254,7 @@ export class Renderer {
         const buildSettlementBtn = clone.getElementById('build-settlement-btn');
         buildSettlementBtn.onclick = async () => {
             const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'SETTLEMENT' });
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 return;
             }
             // render valid settlement spots
@@ -273,7 +266,7 @@ export class Renderer {
         const buildCityBtn = clone.getElementById('build-city-btn');
         buildCityBtn.onclick = async () => {
             const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'CITY' });
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 return;
             }
             // render valid city spots
@@ -291,7 +284,7 @@ export class Renderer {
         const endTurnBtn = clone.getElementById('end-turn-btn');
         endTurnBtn.onclick = async () => {
             const res = await this.controller.inputEvent({ type: 'END_TURN' });
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 return;
             }
             this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
@@ -358,7 +351,7 @@ export class Renderer {
                 seed: Date.now()
             });
 
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 return;
             }
 
@@ -367,7 +360,7 @@ export class Renderer {
             this.renderMainUI(map.tiles, map.tradingPosts, map.robberCoord);
 
             // render interaction hints
-            this.renderInteractionHints(res.interaction);
+            this.MapInteractionRenderer.renderInteractionUI(res.interaction);
 
             // update debug dashboard
             this.updateDebugDashboard(res.gameContext, "Game Started");
@@ -384,22 +377,41 @@ export class Renderer {
         if (!interaction) return;
         switch (interaction.action) {
             case 'HIGHLIGHT_SETTLEMENT_SPOTS':
-                this.highlightValidSpots(interaction.data.validSettlementCoords, 'SETTLEMENT');
+                this.MapInteractionRenderer.renderInteractionUI('BUILD_SETTLEMENT',
+                    {
+                        currentPlayerId: interaction.data.currentPlayerId,
+                        currentPlayerColor: interaction.data.currentPlayerColor,
+                        gameMap: interaction.data.gameMap,
+                        enforced: interaction.data.currentPlayerId === null // if null, it's initial placement, no cancel
+                    });
                 break;
             case 'HIGHLIGHT_CITY_SPOTS':
-                this.highlightValidSpots(interaction.data.validCityCoords, 'CITY');
+                this.MapInteractionRenderer.renderInteractionUI('BUILD_CITY',
+                    {
+                        currentPlayerId: interaction.data.currentPlayerId,
+                        currentPlayerColor: interaction.data.currentPlayerColor,
+                        gameMap: interaction.data.gameMap,
+                        enforced: interaction.data.currentPlayerId === null // if null, it's initial placement, no cancel
+
+                    });
                 break;
             case 'HIGHLIGHT_ROAD_SPOTS':
-                this.highlightValidSpots(interaction.data.validRoadCoords, 'ROAD');
+                this.MapInteractionRenderer.renderInteractionUI('BUILD_ROAD',
+                    {
+                        currentPlayerId: interaction.data.currentPlayerId,
+                        gameMap: interaction.data.gameMap,
+                        numberOfRoads: interaction.data.numberOfRoads,
+                        currentPlayerColor: interaction.data.currentPlayerColor
+                    });
                 break
             case 'ACTIVATE_DISCARD_MODE':
                 this.activateDiscardSelectionMode(interaction.data.resourceToDiscard, interaction.data.numberToDiscard);
                 break;
             case 'ACTIVATE_ROBBER_PLACEMENT_MODE':
-                this.activateRobberPlacementMode(interaction.data.robableTileCoords);
+                this.MapInteractionRenderer.renderInteractionUI('PLACE_ROBBER', { validCoords: interaction.data.robableTileCoords });
                 break
             case 'ACTIVATE_ROB_SELECTION_MODE':
-                this.activateRobSelectionMode(interaction.data.robableSettlementsCoords, interaction.data.robTileCoord);
+                this.MapInteractionRenderer.renderInteractionUI('SELECT_ROB_TARGET', { validCoords: interaction.data.robableSettlementsCoords, tileCoord: interaction.data.robTileCoord });
                 break;
             default:
                 console.warn(`Unknown interaction action: ${interaction.action}`);
@@ -416,142 +428,6 @@ export class Renderer {
         // Append to body to ensure it covers the entire viewport
         document.body.appendChild(clone);
     }
-
-
-    highlightValidSpots(coords, type) {
-        switch (type) {
-            case 'SETTLEMENT':
-            case 'CITY':
-                this.activateSettlementPlacementMode(coords, type);
-                break;
-            case 'ROAD':
-                this.activateRoadPlacementMode(coords, async (event) => {
-                    const target = event.target;
-                    if (target.classList.contains('available-road')) {
-                        HtmlUtils.removeElementById('road-placement-group');
-                        const res = await this.controller.inputEvent({
-                            type: 'BUILD_ROAD',
-                            edgeId: target.dataset.id
-                        });
-
-                        if (!this.isRequestSuccessful(res)) {
-                            return;
-                        }
-
-                        // render the new roads
-                        const roadId = res.roadId;
-                        const color = res.playerColor;
-                        HtmlUtils.renderRoad(HexUtils.idToCoord(roadId), color);
-
-                        this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-
-                        // proceed to next interaction (initial settlement  placement 2)
-                        this.renderInteractionHints(res.interaction);
-
-                        // update debug dashboard
-                        this.updateDebugDashboard(res.gameContext, `Built road at edge ${roadId}. Select second settlement location.`);
-                    }
-                });
-                break;
-
-            default:
-                console.warn(`Unknown highlight type: ${type}`);
-        }
-    }
-
-    activateSettlementPlacementMode(availableVertexCoords, type) {
-        const interactionLayer = HtmlUtils.clearElementById('interaction-layer');
-        if (!interactionLayer) return;
-
-        const setttlementPlacementGroup = HtmlUtils.createSvgGroup(`${type}-placement-group`);
-        interactionLayer.appendChild(setttlementPlacementGroup);
-        interactionLayer.classList.add('placement-mode');
-
-        // 2. Draw ONLY the available spots passed from the controller
-        availableVertexCoords.forEach(vCoord => {
-            const vertexId = HexUtils.coordToId(vCoord);
-            const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-            const circle = HtmlUtils.createSvgCircle(x, y, 10, [`available-${type.toLowerCase()}`]);
-            circle.dataset.id = vertexId; // Store ID for the delegation
-            setttlementPlacementGroup.appendChild(circle);
-        });
-
-        // 3. Single Event Listener (Event Delegation)
-        // Remove existing listener first if necessary to prevent duplicates
-        setttlementPlacementGroup.onclick = async (event) => {
-            const target = event.target;
-            if (target.classList.contains(`available-${type.toLowerCase()}`)) {
-                HtmlUtils.removeElementById(`${type}-placement-group`);
-                const vertexId = target.dataset.id;
-
-                const res = await this.controller.inputEvent({
-                    type: `BUILD_${type.toUpperCase()}`,
-                    vertexId: vertexId
-                });
-
-                if (!this.isRequestSuccessful(res)) {
-                    return;
-                }
-
-                // render the new settlement/city
-                const settlementId = res.settlementId;
-                const settlementLevel = res.settlementLevel;
-                const color = res.playerColor;
-                HtmlUtils.renderSettlement(settlementId, color, settlementLevel);
-
-                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-
-                // highlight road placement
-                this.renderInteractionHints(res.interaction);
-
-                // update debug dashboards
-                this.updateDebugDashboard(res.gameContext, `Built ${type} at vertex ${vertexId}`);
-            }
-        };
-    }
-
-
-
-
-
-    /**
-     * 
-     * @param {Array} validEdgeCoords list of edge coordinates where roads can be placed
-     * @returns 
-     */
-    activateRoadPlacementMode(validEdgeCoords, onClickCallback = null) {
-        const interactionLayer = HtmlUtils.clearElementById('interaction-layer');
-        if (!interactionLayer) return;
-
-        const roadPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        roadPlacementGroup.id = 'road-placement-group';
-        interactionLayer.appendChild(roadPlacementGroup);
-        interactionLayer.classList.add('placement-mode');
-
-        validEdgeCoords.forEach(eCoord => {
-            // Get the two vertex endpoints for this edge
-            const edgeId = HexUtils.coordToId(eCoord);
-            const [v1Coord, v2Coord] = HexUtils.getVerticesFromEdge(eCoord);
-            const [x1, y1] = HexUtils.vertexToPixel(v1Coord, this.hexSize);
-            const [x2, y2] = HexUtils.vertexToPixel(v2Coord, this.hexSize);
-
-            // Use your shortening logic for a better look
-            const shortened = HtmlUtils.getShortenedLine(x1, y1, x2, y2, 0.2);
-            const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["available-road"]);
-            edgeLine.dataset.id = edgeId;
-
-            roadPlacementGroup.appendChild(edgeLine);
-        });
-
-        // EVENT DELEGATION: One listener for all roads
-        roadPlacementGroup.onclick = (event) => {
-            onClickCallback(event);
-        };
-    }
-
-
-
-    // Helper to keep math clean
 
 
 
@@ -597,7 +473,7 @@ export class Renderer {
             // 3. Attach ListenersW
             confirmBtn.onclick = async () => {
                 const res = await this.controller.inputEvent({ type: confirm_event_name });
-                if (!this.isRequestSuccessful(res)) { // if action failed do nothing (buy dev card failed)
+                if (!StatusCodesUtils.isRequestSuccessful(res)) { // if action failed do nothing (buy dev card failed)
                     const overlay = document.getElementById('action-confirmation-modal-overlay')
                     overlay.querySelector('#modal-body').textContent = res.error_message || "Action failed.";
                     return;
@@ -760,7 +636,7 @@ export class Renderer {
                         playBtn.onclick = async () => {
                             const res = await this.controller.inputEvent({ type: 'ACTIVATE_KNIGHT' });
 
-                            if (!this.isRequestSuccessful(res)) {
+                            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                                 return;
                             }
 
@@ -890,7 +766,7 @@ export class Renderer {
         confirmBtn.onclick = async () => {
             const selectedCardsArray = Array.from(modalBody.querySelectorAll('.card-selected')).map(cardDiv => cardDiv.dataset.type);
             const res = await this.controller.inputEvent({ type: confirmEventName, selectedCards: selectedCardsArray });
-            if (!this.isRequestSuccessful(res)) {
+            if (!StatusCodesUtils.isRequestSuccessful(res)) {
                 throw new Error("Failed to process resource selection action."); // this should not happen in a normal flow
             }
 
@@ -929,7 +805,7 @@ export class Renderer {
             // add click event listener to the hitbox
             hexHitbox.addEventListener('click', async (event) => {
                 const res = await this.controller.inputEvent({ type: 'PLACE_ROBBER', tileId: tileId });
-                if (!this.isRequestSuccessful(res)) {
+                if (!StatusCodesUtils.isRequestSuccessful(res)) {
                     throw new Error("Failed to place robber.");
                 }
 
@@ -1019,7 +895,7 @@ export class Renderer {
             // add click event listener to the hitbox
             robableCircle.addEventListener('click', async (event) => {
                 const res = await this.controller.inputEvent({ type: 'ROB_PLAYER', vertexId: vertexId });
-                if (!this.isRequestSuccessful(res)) {
+                if (!StatusCodesUtils.isRequestSuccessful(res)) {
                     throw new Error("Failed to rob player.");
                 }
                 HtmlUtils.deactivateRobSelectionMode();

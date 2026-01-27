@@ -81,9 +81,20 @@ body {
 
 .available-settlement, .available-city {
     fill: rgba(0, 255, 0, 0.5);
+    opacity: 0.5;
     stroke: rgba(255, 255, 255, 0.5);
-    stroke-width: 2px;
+    stroke-width: 3px;
     stroke-linecap: round;
+    filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.placed-settlement {
+    /* Slightly thicker and more transparent to indicate ghost settlement */
+    opacity: 1.0;  
+    stroke-linecap: round;
+    filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
     transition: all 0.2s ease;
 }
