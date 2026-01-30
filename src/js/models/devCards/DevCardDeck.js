@@ -37,4 +37,11 @@ export class DevCardDeck {
         }
         return new DevCard(this.cards.pop(), currentTurnNumber);
     }
+
+    getRemainingCardCount(type = null) {
+        if (type === null) {
+            return this.cards.length;
+        }
+        return this.cards.filter(cardType => cardType === type).length;
+    }
 }

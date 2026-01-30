@@ -7,18 +7,8 @@ export const MAX_PLAYERS = 4;
 export const PLAYER_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple'];
 export const PLAYER_NAMES = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
 
-export const NUMBER_TOKENS_DISTRIBUTION = {
-    2: 1,
-    3: 2,
-    4: 2,
-    5: 2,
-    6: 2,
-    8: 2,
-    9: 2,
-    10: 2,
-    11: 2,
-    12: 1
-};
+// number token in alphabetical order on the standard Catan board
+export const NUMBER_TOKENS_ORDER = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11];
 
 
 // cost to build each structure
@@ -43,6 +33,15 @@ export const PLAYER_ASSET_LIMITS = {
     roads: 15,
     settlements: 5,
     cities: 4
+};
+
+export const TERRAIN_TYPES_DISTRIBUTION = {
+    [TERRAIN_TYPES.FOREST]: 4,    
+    [TERRAIN_TYPES.HILL]: 3,      
+    [TERRAIN_TYPES.PASTURE]: 4,  
+    [TERRAIN_TYPES.FIELD]: 4,     
+    [TERRAIN_TYPES.MOUNTAIN]: 3,  
+    [TERRAIN_TYPES.DESERT]: 1
 };
 
 export const TEXTURE_PATHS = {

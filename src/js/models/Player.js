@@ -1,13 +1,12 @@
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
-import {PLAYER_ASSET_LIMITS} from '../constants/GameConstants.js';
+import {PLAYER_ASSET_LIMITS} from '../constants/GameRuleConstants.js';
 import { HexUtils } from '../utils/hex-utils.js';
 
 export class Player {
-    constructor(id, name, color, type) {
+    constructor(id, name, color) {
         this.id = id;
         this.name = name;
         this.color = color;
-        this.type = type;
         this.roadsLeft = PLAYER_ASSET_LIMITS.roads;
         this.settlementsLeft = PLAYER_ASSET_LIMITS.settlements;
         this.citiesLeft = PLAYER_ASSET_LIMITS.cities;
@@ -31,7 +30,6 @@ export class Player {
         this.achievements = {
             hasLongestRoad: false,
             hasLargestArmy: false,
-            victoryPointCards: 0,
             knightsPlayed: 0,
             cheatVP: 0 // Victory points from cheats (for testing purposes)
         };
@@ -101,19 +99,6 @@ export class Player {
         return this.resources;
     }
 
-    getTotalResourceCount(type=null){
-        // if type is specified, return count of that resource
-        if(type){
-            return this.resources[type] || 0;
-        }
-
-        // else return total count of all resources
-        let total = 0;
-        for (let amount of Object.values(this.resources)) {
-            total += amount;
-        }   
-        return total;
-    }
 
     /**
      * Discard resources from player

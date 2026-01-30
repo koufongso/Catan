@@ -9,35 +9,30 @@
 
 <body>
 
-    <template id="config-template">
-        <div class="modal-container">
-            <div class="modal">
-                <h2 style="text-align: center">Game Settings</h2>
-                <label for="map-size">Board radius (hex rings)</label>
-                <input type="range" id="map-size" min="2" max="5" value="3"
-                    oninput="this.nextElementSibling.value = this.value">
-                <output id="map-size-value">3</output>
-
-                <label for="human-players">Human players</label>
-                <input type="range" id="human-players" min="1" max="4" value="1"
-                    oninput="this.nextElementSibling.value = this.value">
-                <output id="human-players-value">1</output>
-
-                <label for="ai-players">AI players</label>
-                <input type="range" id="ai-players" min="0" max="3" value="1"
-                    oninput="this.nextElementSibling.value = this.value">
-                <output id="ai-players-value">1</output>
-
-                <button id="start-game">Start Game</button>
+    <div class="modal-container" id="game-menu">
+        <div class="modal">
+            <h2 style="text-align: center">Game Settings</h2>
+            <div>
+                Player Name: <input type="text" id="input-player-name" value="Player 1"></input><br><br>
             </div>
+
+
+            <label for="ai-players">AI players</label>
+            <input type="range" id="num-ai-players" min="1" max="3" value="1"
+                oninput="this.nextElementSibling.value = this.value">
+            <output id="ai-players-value">1</output>
+
+            <button id="btn-start-game">Start Game</button>
         </div>
-    </template>
+    </div>
+
 
     <template id="game-template">
         <div id="game-container">
             <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="-600 -350 1200 700">
                 <g id="defs-layer"></g> <!-- Definitions layer for patterns (terrain and tokens)-->
-                <g id="static-layer"></g> <!-- static, tile, port and token layer, should not change through the game -->
+                <g id="static-layer"></g>
+                <!-- static, tile, port and token layer, should not change through the game -->
                 <g id="road-layer"></g>
                 <g id="settlement-layer"></g>
                 <g id="robber-layer"></g>
