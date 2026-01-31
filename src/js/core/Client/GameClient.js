@@ -1,9 +1,13 @@
+import { GameRenderer } from "../../rendering/GameRenderer.js";
+
 export class GameClient{
-    constructor(playerId, isAI){
-        this.playerId = playerId;
+    constructor(id, name, color, isAI){
+        this.id = id;
+        this.name = name;
+        this.color = color;
         this.isAI = isAI;           // boolean indicating if this client is an AI, if ai, it will not need the uiRenderer
         this.gameController = null;
-        this.gameState = null; // will hold the latest game state
+        this.gameState = null;      // will hold the latest game state
         this.gameContext = null;
         // this.uiRenderer = isAI ? null : new GameRenderer(); // only create UI renderer for human players
     }
@@ -19,9 +23,8 @@ export class GameClient{
 
     onGameStateUpdate(updatePacket) {
         // Update the local game state
-        this.gameState = updatePacket.gameContext;
-        console.log(`Client ${this.playerId} received game state update:`, this.gameState);
-
+        this.gameContext = updatePacket.gameContext;
+        console.log(`Client ${this.id} received game state update:`, this.gameContext);
     }
 
     

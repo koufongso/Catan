@@ -1,6 +1,5 @@
 export class MenuUI {
-    constructor(gameEngine) {
-        this.gameEngine = gameEngine;
+    constructor() {
         this.setupListeners();
 
         // default settings
@@ -17,7 +16,7 @@ export class MenuUI {
     setupListeners() {
         // Listen for the Start Game button click
         const startButton = document.getElementById('btn-start-game');
-        startButton.addEventListener('click', () => this.onStartGame());
+        startButton.addEventListener('click', async () => this.onStartGame());
     }
 
     getConfigInfo() {
@@ -26,10 +25,11 @@ export class MenuUI {
         this.gameConfig.playerName = playerNameInput.value;
         this.gameConfig.numAIPlayers = parseInt(numAIPlayersInput.value);
         this.gameConfig.numTotalPlayers = this.gameConfig.numHumanPlayers + this.gameConfig.numAIPlayers;
+        return this.gameConfig;
     }
 
     onStartGame() {
-        this.getConfigInfo();
-        this.gameEngine.startGame(this.gameConfig);
+        console.log("Start Game button clicked.");
     }
+
 }

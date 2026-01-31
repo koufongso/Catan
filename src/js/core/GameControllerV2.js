@@ -72,8 +72,8 @@ export class GameControllerV2 {
      * @param {Function} callback - Function to run when state changes
      */
     subscribe(client, callback) {
-        this.gameContext.players.push(new Player(client.playerId, client.name, client.color));
-        this.listeners.set(client.playerId, callback);
+        this.gameContext.players.push(new Player(client.id, client.name, client.color));
+        this.listeners.set(client.id, callback);
     }
 
 
