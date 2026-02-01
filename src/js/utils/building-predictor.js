@@ -134,7 +134,6 @@ export class BuildingPredictor {
         if (this.validRoadSpots.size === 0 && this.validSettlementSpots.size === 0) {
             throw new Error("No valid spots computed. Call getNextValidSpots() before build().");
         }
-
         const coord = typeof location === 'string' ? HexUtils.idToCoord(location) : location;
         const coordId = HexUtils.coordToId(coord);
 

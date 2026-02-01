@@ -7,13 +7,12 @@ import { RNG } from "../utils/rng.js";
 import { INITIAL_BANK_RESOURCES } from "../constants/GameRuleConstants.js";
 import { Player } from "../models/Player.js";
 import { PlayerUtils } from "../utils/player-utils.js";
+import { BuildingPredictor } from "../utils/building-predictor.js";
 
 export const GameState = Object.freeze({
     IDLE: 'IDLE', // wait for start
-    PLACE_SETTLEMENT1: 'PLACE_SETTLEMENT1', // wait for first settlement and road placements
-    PLACE_ROAD1: 'PLACE_ROAD1',
-    PLACE_SETTLEMENT2: 'PLACE_SETTLEMENT2', // wait for second settlement and road placements
-    PLACE_ROAD2: 'PLACE_ROAD2',
+    INITIAL_PLACEMENT1: 'INITIAL_PLACEMENT1', // wait for first settlement and road placements
+    INITIAL_PLACEMENT2: 'INITIAL_PLACEMENT2', // wait for second settlement and road placements
     ROLL: 'ROLL',                           // wait for current player to roll dice
 
     // sub-states for when 7 is rolled
@@ -127,9 +126,9 @@ export class GameControllerV2 {
         return gameContextCopy;
     }
 
-    start(){
+    start() {
         // check if clients are ready
-        if(this.listeners.size !== this.expectedTotalPlayers){
+        if (this.listeners.size !== this.expectedTotalPlayers) {
             throw new Error(`Cannot start game: expected ${this.expectedTotalPlayers} clients, but got ${this.listeners.size}`);
         }
 
@@ -141,10 +140,18 @@ export class GameControllerV2 {
         this.gameContext.bankResources = structuredClone(INITIAL_BANK_RESOURCES);
 
         // change state to first placement
-        this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
+        this.gameContext.currentState = GameState.INITIAL_PLACEMENT1;
 
         // broadcast initial state
-        this._broadcast({ type: `WAITING_FOR_PLAYER_${this.gameContext.currentPlayerId}_PLACEMENT` });
+        const event = {
+            type: 'WAITING_FOR_INPUT',
+            payload: {
+                phase: 'INITIAL_PLACEMENT1',
+                activePlayerId: this.gameContext.currentPlayerId,
+            } // expectedResponse: [{'SETTLEMENT':null}, {'ROAD':null}]
+        }
+
+        this._broadcast(event);
     }
 
 
@@ -156,60 +163,135 @@ export class GameControllerV2 {
         };
 
         switch (this.gameContext.currentState) {
-            case GameState.SETUP:
-                // handle setup events
-                res = await this.handleStateSetup(event);
-                break;
-            case GameState.PLACE_SETTLEMENT1:
+            case GameState.INITIAL_PLACEMENT1:
                 // handle first settlement placement events
-                res = await this.handleStatePlaceSettlement1(event);
+                res = this.handleStateInitialPlacement1(event);
                 break;
-            case GameState.PLACE_ROAD1:
-                // handle first road placement events
-                res = await this.handleStatePlaceRoad1(event);
-                break;
-            case GameState.PLACE_SETTLEMENT2:
-                // handle second settlement placement events
-                res = await this.handleStatePlaceSettlement2(event);
-                break;
-            case GameState.PLACE_ROAD2:
-                // handle second road placement events
-                res = await this.handleStatePlaceRoad2(event);
-                break;
-            case GameState.ROLL:
-                // handle roll events
-                res = await this.handleStateRoll(event);
-                break;
-            case GameState.DISCARD:
-                // handle discard events
-                res = this.handleStateDiscard(event);
-                break;
-            case GameState.MOVE_ROBBER:
-                res = this.handleStateMoveRobber(event);
-                break;
-            case GameState.ROB_PLAYER:
-                res = this.handleStateRobPlayer(event);
-                break;
-            case GameState.MAIN: // nested main states
-                res = this.handleStateMain(event);
-                break;
-            case GameState.GAME_OVER:
-                // no events should be processed in GAME_OVER state
-                return;
+
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
 
-        // check for win condition after each event (right after action finished, back to MAIN state)
-        if (res.status === StatusCodes.SUCCESS) {
-            const winner = this.checkWinCondition();
-            if (winner.length > 0) {
-                this.gameContext.currentState = GameState.GAME_OVER;
-                res.status = StatusCodes.GAME_OVER;
-                res.winner = winner;
-            }
-        }
 
         return res;
+    }
+
+
+    /*-------------------------------------------------------State Handlers-------------------------------------------------------*/
+
+    handleStateInitialPlacement1(event) {
+        if (event.type !== 'INITIAL_PLACEMENT1') {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid event type, expected INITIAL_PLACEMENT1, received ${event.type}`
+            };
+        }
+
+
+        const playerId = event.payload.playerId;
+        const buildStack = event.payload.buildStack; // array of build actions
+
+        // verify player
+        if (playerId !== this.gameContext.currentPlayerId) {
+            console.error(`It's not player ${playerId}'s turn.`);
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `It's not player ${playerId}'s turn.`
+            };
+        }
+
+        // verify buildStack
+        // 1. must have length 2
+        if (buildStack.length !== 2) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid buildStack length for initial placement: ${buildStack.length}`
+            };
+        }
+        // 2. first must be settlement, second must be road
+        if (buildStack[0].type !== 'SETTLEMENT' || buildStack[1].type !== 'ROAD') {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid buildStack types for initial placement: ${buildStack[0].type}, ${buildStack[1].type}`
+            };
+        }
+        // 3. verify using BuildingPredictor
+        const buildingPredictor = new BuildingPredictor();
+        buildingPredictor.init(this.gameContext.gameMap, this.gameContext.players, "INITIAL_PLACEMENT");
+        buildingPredictor.getNextValidSpots(); // prepare valid spots for the player
+        buildStack.forEach((building) => {
+            console.log(`Verifying building: ${building.type} at ${building.coord}`);
+            if (!buildingPredictor.build(building.type, building.coord)) {
+                return {
+                    status: StatusCodes.ERROR,
+                    errorMessage: `Invalid building: ${building.type} at ${building.coord}`
+                };
+            }
+        });
+
+        // all checks passed, apply the build actions to the game map
+        buildStack.forEach((building) => {
+            switch (building.type) {
+                case 'SETTLEMENT':
+                    this.gameContext.gameMap.updateSettlement(building.coord, playerId, 1);
+                    break;
+                case 'ROAD':
+                    this.gameContext.gameMap.updateRoad(building.coord, playerId);
+                    break;
+                default:
+                    throw new Error(`Invalid building type in initial placement: ${building.type}`);
+            }
+        });
+
+        // update last settlement placed
+        this.gameContext.lastSettlementPlaced = buildStack[0];
+        // advance
+        // 1. if current player is the last player, move to next state
+        if (this.gameContext.currentPlayerIndex === this.gameContext.totalPlayers - 1) {
+            this.gameContext.currentState = GameState.INITIAL_PLACEMENT2;
+            // set current player to last player (will reverse order in next state)
+            this.gameContext.currentPlayerId = this.gameContext.players[this.gameContext.currentPlayerIndex].id;
+            const newEvent = {
+                type: 'WAITING_FOR_INPUT',
+                payload: {
+                    phase: 'INITIAL_PLACEMENT2',
+                    activePlayerId: this.gameContext.currentPlayerId,
+                } // expectedResponse: [{'SETTLEMENT':null}, {'ROAD':null}]
+            };
+            this._broadcast(newEvent);
+        } else {
+            // 2. else, move to next player (update index and id)
+            this._nextPlayer();
+            const newEvent = {
+                type: 'WAITING_FOR_INPUT',
+                payload: {
+                    phase: 'INITIAL_PLACEMENT1',
+                    activePlayerId: this.gameContext.currentPlayerId,
+                } // expectedResponse: [{'SETTLEMENT':null}, {'ROAD':null}]
+            };
+            this._broadcast(newEvent);
+        }
+    }
+
+
+
+
+
+    /*-------------------------------------------------------Helper Methods-------------------------------------------------------*/
+    /**
+     * update current player to next playerIndex, and id in turn order
+     */
+    _nextPlayer() {
+        this.gameContext.currentPlayerIndex = (this.gameContext.currentPlayerIndex + 1) % this.gameContext.totalPlayers;
+        this.gameContext.currentPlayerId = this.gameContext.players[this.gameContext.currentPlayerIndex].id;
+    }
+
+    _previousPlayer() {
+        this.gameContext.currentPlayerIndex = (this.gameContext.currentPlayerIndex - 1 + this.gameContext.totalPlayers) % this.gameContext.totalPlayers;
+        this.gameContext.currentPlayerId = this.gameContext.players[this.gameContext.currentPlayerIndex].id;
+    }
+
+    getCurrentPlayer() {
+        return this.gameContext.players[this.gameContext.currentPlayerIndex];
     }
 }

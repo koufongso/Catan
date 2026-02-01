@@ -12,6 +12,8 @@ export class GameClient {
         this.gameContext = null;
         this.uiRenderer = isAI ? null : new GameRenderer(); // only create UI renderer for human players
         this.inputManager = isAI ? null : new InputManager(this); // only create input manager for human players
+
+        this.mapInitialized = false;
     }
 
     /**
@@ -35,12 +37,8 @@ export class GameClient {
 
         // For human players, render according to the event type
         switch (updatePacket.event.type) {
-            case 'WAITING_FOR_PLAYER_0_PLACEMENT':
-                // draw map for initial placement
-                this.uiRenderer.drawMap(this.gameContext.gameMap);
-
-                // start initial placement process
-                this.inputManager.activateInitialPlacementInteractionLayer(this.id, updatePacket.gameContext.gameMap, this.color);
+            case 'WAITING_FOR_INPUT':
+                this.handleWaitingForInput(updatePacket.event.payload);
                 break;
             case 'WAITING_FOR_PLAYER_0_ROLL':
                 // roll, play dev card
@@ -51,6 +49,29 @@ export class GameClient {
             default:
                 // maybe waiting for other players
                 console.log(`Client ${this.id} received event type: ${updatePacket.event.type}`);
+        }
+    }
+
+
+    /* ----------------------------------------------------Handle updates from GameController---------------------------------------------------- */
+    handleWaitingForInput(payload) {      
+        switch (payload.phase) {
+            case 'INITIAL_PLACEMENT1':
+                // draw map for initial placement
+                if (!this.mapInitialized) {
+                    this.uiRenderer.drawMap(this.gameContext.gameMap);
+                    this.mapInitialized = true;
+                }
+
+                // only activate input for the active player
+                if (payload.activePlayerId === this.id) {
+                    // start initial placement process
+                    this.inputManager.activateInitialPlacementInteractionLayer(this.id, this.gameContext.gameMap, this.color);
+                }
+                break;
+
+            default:
+                console.warn(`Unhandled phase in handleWaitingForInput: ${payload.phase}`);
         }
     }
 
@@ -74,7 +95,7 @@ export class GameClient {
 
         // 3. (Skip for now) check if the locations are valid according to game rules
 
-        this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT', playerId: this.id, buildStack: buildStack });
+        this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT1', payload: { playerId: this.id, buildStack: buildStack } });
     }
 
 
