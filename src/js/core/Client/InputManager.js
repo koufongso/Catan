@@ -45,6 +45,7 @@ export class InputManager {
     }
 
     clearInteractionLayer() {
+        console.warn("Clearing interaction layer.");
         HtmlUtils.clearElementById(this.interactionLayerId);
     }
 
@@ -125,6 +126,8 @@ export class InputManager {
 
         // clear interaction layer
         this.clearInteractionLayer();
+        console.log("Start drawing interaction layer from BuildingPredictor.");
+
         // redraw valid spots
         if (buildingType === 'SETTLEMENT' && validBuildingSpots.size > 0) {
             const validSettlementCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
@@ -149,7 +152,7 @@ export class InputManager {
                 this.interactionLayer.appendChild(roadElement);
             }
         }
-
+        console.log("Drew interaction layer from BuildingPredictor.");
         return;
     }
 
@@ -181,7 +184,7 @@ export class InputManager {
 
         // clear/reset interaction layer
         this.clearInteractionLayer();
-        this.clearInitialPlacementContext();
+        this.clearInitialPlacementContext();        
         this.setInitialPlacementContext(playerId, gameMap, playerColor);
 
         // show all valid settlement spots for the player
@@ -521,12 +524,15 @@ export class InputManager {
     handleConfirmBtnClick() {
         switch (this.currentMode) {
             case 'INITIAL_PLACEMENT':
-                // submit the selected buildings to server/controller
-                const buildStack = this.buildingPredictor.buildStack;
-                this.gameClient.submitInitialPlacement(buildStack);
+                const buildStack = structuredClone(this.buildingPredictor.buildStack); // deep clone to avoid mutation after clear
+
                 // clear interaction layer no matter success or fail at the server side
+                // do this first to avoid async call so it clear after server response
                 this.clearInitialPlacementContext();
                 this.clearInteractionLayer();
+
+                // submit the selected buildings to server/controller
+                this.gameClient.submitInitialPlacement(buildStack);
                 break;
 
             case 'BUILD_ROAD':

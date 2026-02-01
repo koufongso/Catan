@@ -9,6 +9,7 @@ import { DebugDashboard } from "../../debug/DebugDashboard.js";
 import { GameUtils } from "../../utils/game-utils.js";
 import { HtmlUtils } from "../../utils/html-utils.js";
 import { StatusCodesUtils } from "../../utils/status-code-utils.js";
+import { HEX_SIZE } from "../../constants/RenderingConstants.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -17,21 +18,19 @@ const SQRT3 = Math.sqrt(3);
 const SQRT3_HALF = SQRT3 / 2;
 // take care of all UI rendering and user interactions
 export class GameRenderer {
-    constructor(controller, debugController) {
+    constructor() {
         // references to game controller and debug controller (for cheat commands)
-        this.controller = controller;
-        this.debugController = debugController;
 
         // debug dashboard showing game context
-        this.debugdashboard = new DebugDashboard(debugController, this);
+        // this.debugdashboard = new DebugDashboard(debugController, this);
 
         // SVG setup
-        this.hexSize = 50; // default hex this.hexSize
+        this.hexSize = HEX_SIZE; // default hex this.hexSize
 
         this.gameMap = null; // a client-side copy of the game map for rendering
     }
 
-    drawMap(gameMap) {
+    drawMap(gameMap, playerColors = {}) {
         const { clone, layers } = this.setupTemplate(); // get cloned template and layers
 
         // set up defs for patterns
@@ -51,6 +50,18 @@ export class GameRenderer {
 
         // draw robber
         this.drawRobber(layers.robber, gameMap.robberCoord);
+
+        // draw existing settlements and roads
+        
+        for (const settlement of Object.values(gameMap.settlements)) {
+           const settlementElement = HtmlUtils.createSettlementElement( settlement.coord, {color: playerColors[settlement.ownerId]}, ["settlement"], this.hexSize);
+            layers.settlement.appendChild(settlementElement);
+        }
+
+        for (const road of Object.values(gameMap.roads)) {
+            const roadElement = HtmlUtils.createRoadElement(road.coord,{color: playerColors[road.ownerId]}, ["road"], this.hexSize);
+            layers.road.appendChild(roadElement);
+        }
 
         this.updateDOM(clone);
     }
@@ -215,114 +226,6 @@ export class GameRenderer {
     }
 
 
-    renderMainUI(tiles, tradingPosts, robberCoord) {
-        const { clone, layers } = this.setupTemplate();
-
-        // set up defs for patterns
-        this.setupPatterns(layers.defs);
-
-        // draw tiles
-        tiles.forEach(t => {
-            this.drawHex(layers.static, t);
-            this.drawToken(layers.static, t);
-        });
-
-        // draw trading posts
-        tradingPosts.forEach(tp => {
-            this.drawTradingPost(layers.static, tp);
-        });
-
-        // draw robber
-        this.drawRobber(layers.robber, robberCoord);
-
-        // add action buttons event listeners
-        const diceBtn = clone.getElementById('dice-btn');
-        diceBtn.onclick = async () => {
-            const res = await this.controller.inputEvent({ type: 'ROLL_DICE' });
-
-            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                return;
-            }
-            // handle the result from controller
-            // there are three possible scenarios: 
-            // 1. normal roll (2-6,8-12): no interaction
-            // 2. roll a 7: robber interaction
-            //      2.1. game over (someone wins) -> interaction
-            //      2.2. activate discard selection mode -> interaction
-            //      2.3. actiave robber placement mode -> interaction
-            this.renderInteractionHints(res.interaction);
-
-            // update assets
-            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-
-            // update debug dashboard
-            this.updateDebugDashboard(res.gameContext, `Rolled a ${res.gameContext.lastRoll.sum}`);
-
-        }
-
-        // want to build road, first query valid spots
-        const buildRoadBtn = clone.getElementById('build-road-btn');
-        buildRoadBtn.onclick = async () => {
-            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'ROAD' });
-            if (!StatusCodesUtils.isRequestSuccessful(res)) { // internal error, insufficient resources, wrong state, etc, nothing to do
-                return;
-            }
-
-            // render valid road spots
-            this.renderInteractionHints(res.interaction);
-            this.updateDebugDashboard(res.gameContext, "Select a road placement spot.");
-        }
-
-        // want to build settlement, first query valid spots
-        const buildSettlementBtn = clone.getElementById('build-settlement-btn');
-        buildSettlementBtn.onclick = async () => {
-            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'SETTLEMENT' });
-            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                return;
-            }
-            // render valid settlement spots
-            this.renderInteractionHints(res.interaction);
-            this.updateDebugDashboard(res.gameContext, "Select a settlement placement spot.");
-        }
-
-        // want to build city, first query valid spots
-        const buildCityBtn = clone.getElementById('build-city-btn');
-        buildCityBtn.onclick = async () => {
-            const res = await this.controller.inputEvent({ type: 'QUERY_VALID_SPOTS', queryType: 'CITY' });
-            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                return;
-            }
-            // render valid city spots
-            this.renderInteractionHints(res.interaction);
-            this.updateDebugDashboard(res.gameContext, "Select a city placement spot.");
-        }
-
-        // want to buy dev card, first show confirmation UI
-        const buyDevCardBtn = clone.getElementById('buy-dev-card-btn');
-        buyDevCardBtn.onclick = () => {
-            this.activateBuyDevCardConfirmationUI(); // activate confirmation UI before emitting events
-        }
-
-        // want to end turn, send request to end turn (advance FSM)
-        const endTurnBtn = clone.getElementById('end-turn-btn');
-        endTurnBtn.onclick = async () => {
-            const res = await this.controller.inputEvent({ type: 'END_TURN' });
-            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                return;
-            }
-            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-            this.updateDebugDashboard(res.gameContext, "Turn ended.");
-        }
-
-        // cancel interation layer elements (like road/settlement/city spots)
-        const cancelBtn = clone.getElementById('cancel-btn');
-        cancelBtn.onclick = () => {
-            this.clearElementById('interaction-layer');
-        }
-
-        this.updateDOM(clone);
-    }
-
 
     /**
      * Create a hex polygon SVG element (this will only set points and id, no styling)
@@ -350,95 +253,6 @@ export class GameRenderer {
         poly.dataset.id = id;
 
         return poly;
-    }
-
-    // show game configuration UI
-    showConfig() {
-        const temp = document.getElementById('config-template');
-        const clone = temp.content.cloneNode(true); // Copy the template
-
-        // Add logic to the new buttons before adding to DOM
-        if (!this.controller) {
-            console.error("Renderer: Controller not attached. Cannot proceed with configuration.");
-            return;
-        }
-
-        clone.getElementById('start-game').onclick = async () => {
-            // async due to loading map from json file
-            // emit START_GAME event to controller, expect to recieve map, state, interaction data
-            const res = await this.controller.inputEvent({
-                type: 'START_GAME',
-                mapSize: parseInt(document.getElementById('map-size').value),
-                aiPlayers: parseInt(document.getElementById('ai-players').value),
-                humanPlayers: parseInt(document.getElementById('human-players').value),
-                seed: Date.now()
-            });
-
-            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                return;
-            }
-
-            // render the main UI with the received data
-            const map = res.gameContext.gameMap;
-            this.renderMainUI(map.tiles, map.tradingPosts, map.robberCoord);
-
-            // render interaction hints
-            this.MapInteractionRenderer.renderInteractionUI(res.interaction);
-
-            // update debug dashboard
-            this.updateDebugDashboard(res.gameContext, "Game Started");
-
-        }
-
-        // clear existing content and add the clone to main wrapper
-        let wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = '';
-        wrapper.appendChild(clone);
-    }
-
-    renderInteractionHints(interaction) {
-        if (!interaction) return;
-        switch (interaction.action) {
-            case 'HIGHLIGHT_SETTLEMENT_SPOTS':
-                this.MapInteractionRenderer.renderInteractionUI('BUILD_SETTLEMENT',
-                    {
-                        currentPlayerId: interaction.data.currentPlayerId,
-                        currentPlayerColor: interaction.data.currentPlayerColor,
-                        gameMap: interaction.data.gameMap,
-                        enforced: interaction.data.currentPlayerId === null // if null, it's initial placement, no cancel
-                    });
-                break;
-            case 'HIGHLIGHT_CITY_SPOTS':
-                this.MapInteractionRenderer.renderInteractionUI('BUILD_CITY',
-                    {
-                        currentPlayerId: interaction.data.currentPlayerId,
-                        currentPlayerColor: interaction.data.currentPlayerColor,
-                        gameMap: interaction.data.gameMap,
-                        enforced: interaction.data.currentPlayerId === null // if null, it's initial placement, no cancel
-
-                    });
-                break;
-            case 'HIGHLIGHT_ROAD_SPOTS':
-                this.MapInteractionRenderer.renderInteractionUI('BUILD_ROAD',
-                    {
-                        currentPlayerId: interaction.data.currentPlayerId,
-                        gameMap: interaction.data.gameMap,
-                        numberOfRoads: interaction.data.numberOfRoads,
-                        currentPlayerColor: interaction.data.currentPlayerColor
-                    });
-                break
-            case 'ACTIVATE_DISCARD_MODE':
-                this.activateDiscardSelectionMode(interaction.data.resourceToDiscard, interaction.data.numberToDiscard);
-                break;
-            case 'ACTIVATE_ROBBER_PLACEMENT_MODE':
-                this.MapInteractionRenderer.renderInteractionUI('PLACE_ROBBER', { validCoords: interaction.data.robableTileCoords });
-                break
-            case 'ACTIVATE_ROB_SELECTION_MODE':
-                this.MapInteractionRenderer.renderInteractionUI('SELECT_ROB_TARGET', { validCoords: interaction.data.robableSettlementsCoords, tileCoord: interaction.data.robTileCoord });
-                break;
-            default:
-                console.warn(`Unknown interaction action: ${interaction.action}`);
-        }
     }
 
     renderGameOver(winners) {

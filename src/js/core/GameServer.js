@@ -5,6 +5,7 @@ import { GameMap } from "../models/GameMap.js";
 import { GameClient } from "./Client/GameClient.js";
 import { GameControllerV2 } from "./GameControllerV2.js";
 import { PLAYER_COLORS } from "../constants/RenderingConstants.js";
+import { DEBUG_FLAGS } from "../constants/Config.js";
 
 export class GameServer {
     constructor() {
@@ -31,7 +32,7 @@ export class GameServer {
         // add AI player clients (assume human player is always player 0 and only 1 human player for local games)
         let playerId = 1;
         for (let i = 0; i < gameConfig.numAIPlayers; i++) {
-            this.clients.push(new GameClient(playerId, `AI ${playerId}`, PLAYER_COLORS[playerId], true));
+            this.clients.push(new GameClient(playerId, `AI ${playerId}`, PLAYER_COLORS[playerId], DEBUG_FLAGS.HOTSEAT_MODE ? true : false));
             playerId++;
         }
 

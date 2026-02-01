@@ -1,17 +1,18 @@
 import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
+import { DEBUG_FLAGS } from "../../constants/Config.js";
 
 export class GameClient {
-    constructor(id, name, color, isAI) {
+    constructor(id, name, color, isHuman) {
         this.id = id;
         this.name = name;
         this.color = color;
-        this.isAI = isAI;           // boolean indicating if this client is an AI, if ai, it will not need the uiRenderer
+        this.isHuman = isHuman;           // boolean indicating if this client is an AI, if ai, it will not need the uiRenderer
         this.gameController = null;
         this.gameState = null;      // will hold the latest game state
         this.gameContext = null;
-        this.uiRenderer = isAI ? null : new GameRenderer(); // only create UI renderer for human players
-        this.inputManager = isAI ? null : new InputManager(this); // only create input manager for human players
+        this.uiRenderer = isHuman ? new GameRenderer() : null; // only create UI renderer for human players
+        this.inputManager = isHuman ? new InputManager(this) : null; // only create input manager for human players
 
         this.mapInitialized = false;
     }
@@ -30,7 +31,7 @@ export class GameClient {
         this.gameContext = updatePacket.gameContext;
         console.log(`Client ${this.id} received game state update:`, updatePacket);
 
-        if (this.isAI) {
+        if (!this.isHuman) {
             console.warn(`AI Client ${this.id} logic not implemented yet.`);
             return;
         }
@@ -54,13 +55,22 @@ export class GameClient {
 
 
     /* ----------------------------------------------------Handle updates from GameController---------------------------------------------------- */
-    handleWaitingForInput(payload) {      
+    handleWaitingForInput(payload) {
         switch (payload.phase) {
             case 'INITIAL_PLACEMENT1':
                 // draw map for initial placement
                 if (!this.mapInitialized) {
-                    this.uiRenderer.drawMap(this.gameContext.gameMap);
-                    this.mapInitialized = true;
+                    if (DEBUG_FLAGS.HOTSEAT_MODE && payload.activePlayerId !== this.id) {
+                        // use hotseat mode, and not the active palyer, skip drawing the map
+                        console.log("HOTSEAT MODE: Drawing map for all players on one machine.");
+                    } else {
+                        let playerColors = {};
+                        for (let player of this.gameContext.players) {
+                            playerColors[player.id] = player.color;
+                        }
+                        this.uiRenderer.drawMap(this.gameContext.gameMap, playerColors);
+                        this.mapInitialized = true;
+                    }
                 }
 
                 // only activate input for the active player

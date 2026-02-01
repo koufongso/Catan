@@ -21,7 +21,7 @@ menu.onStartGame = async () => {
 
         // Now create the local player's client
         gameConfig.playerId = 0; // In local mode, the first player is always player 0
-        myClient = new GameClient(gameConfig.playerId, gameConfig.playerName, PLAYER_COLORS[gameConfig.playerId], false);
+        myClient = new GameClient(gameConfig.playerId, gameConfig.playerName, PLAYER_COLORS[gameConfig.playerId], true);
 
         // Connect the client to the "Server"
         const connection = await gameServer.connectClient(myClient);

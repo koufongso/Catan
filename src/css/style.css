@@ -124,7 +124,6 @@ body {
     stroke-linecap: round;
 }
 
-.built-settlement,
 .settlement {
     stroke: rgb(0, 0, 0);
     stroke-width: 2px;

@@ -31,8 +31,7 @@ export const MapUtils = Object.freeze({
 
     getAllSettlementIdSet(gameMap) {
         const settlementIds = new Set();
-        console.log(gameMap.settlements);
-        for (const id of Object.entries(gameMap.settlements)) {
+        for (const id of Object.keys(gameMap.settlements)) {
             settlementIds.add(id);
         }
         return settlementIds;
