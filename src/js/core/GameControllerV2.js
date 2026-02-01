@@ -144,7 +144,7 @@ export class GameControllerV2 {
         this.gameContext.currentState = GameState.PLACE_SETTLEMENT1;
 
         // broadcast initial state
-        this._broadcast({ type: 'WAITING_FOR_PLAYER_1_PLACEMENT' });
+        this._broadcast({ type: `WAITING_FOR_PLAYER_${this.gameContext.currentPlayerId}_PLACEMENT` });
     }
 
 

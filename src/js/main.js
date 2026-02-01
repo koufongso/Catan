@@ -32,6 +32,7 @@ menu.onStartGame = async () => {
         }
 
         gameServer.startLocalGame(gameConfig);
+        menu.removeMenu();
     } else {
         // TODO: connect to remote server
         console.warn("Connecting to remote server... (not implemented)");

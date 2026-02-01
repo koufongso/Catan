@@ -120,10 +120,10 @@ export const HtmlUtils = Object.freeze({
         return button;
     },
 
-    createRoadPlacementGroup(coords, onclick = null, attributes = {}, hexSize = HEX_SIZE) {
+    createRoadPlacementGroup(coords, onclick = null, attributes = {}, classList = [], hexSize = HEX_SIZE) {
         const roadPlacementGroup = HtmlUtils.createSvgGroup(null, ["road-placement-group", "placement-mode"]);
         coords.forEach(eCoord => {
-            const edgeLine = HtmlUtils.createRoadElement(eCoord, attributes, hexSize);
+            const edgeLine = HtmlUtils.createRoadElement(eCoord, attributes, classList, hexSize);
             roadPlacementGroup.appendChild(edgeLine);
         });
         roadPlacementGroup.id = 'road-placement-group';
@@ -131,10 +131,10 @@ export const HtmlUtils = Object.freeze({
         return roadPlacementGroup;
     },
 
-    createSettlementPlacementGroup(coords, onclick = null, attributes = {}, hexSize = HEX_SIZE) {
+    createSettlementPlacementGroup(coords, onclick = null, attributes = {}, classList = [], hexSize = HEX_SIZE) {
         const settlementPlacementGroup = HtmlUtils.createSvgGroup(null, ["settlement-placement-group", "placement-mode"]);
         coords.forEach(coord => {
-            const settlementCircle = HtmlUtils.createSettlementElement(coord, attributes, hexSize);
+            const settlementCircle = HtmlUtils.createSettlementElement(coord, attributes, classList, hexSize);
             settlementPlacementGroup.appendChild(settlementCircle);
         });
         settlementPlacementGroup.id = 'settlement-placement-group';
@@ -142,14 +142,14 @@ export const HtmlUtils = Object.freeze({
         return settlementPlacementGroup;
     },
 
-    createCityPlacementGroup(coords, onclick = null, color = 'green', hexSize = HEX_SIZE) {
+    createCityPlacementGroup(coords, onclick = null, attributes = {}, classList = [], hexSize = HEX_SIZE) {
         const cityPlacementGroup = HtmlUtils.createSvgGroup(null, ["city-placement-group", "placement-mode"]);
         coords.forEach(coord => {
             const p = HexUtils.vertexToPixel(coord, hexSize);
-            const cityCircle = HtmlUtils.createSvgCircle(p.x, p.y, 12, ["available-city"]);
-            cityCircle.style.fill = color;
+            const cityCircle = HtmlUtils.createSvgCircle(p.x, p.y, 12, classList);
+            cityCircle.style.fill = attributes.color;
             cityPlacementGroup.appendChild(cityCircle);
-        }); s
+        });
         cityPlacementGroup.onclick = onclick;
         return cityPlacementGroup;
     },
@@ -162,7 +162,7 @@ export const HtmlUtils = Object.freeze({
         const roadLayer = document.getElementById('road-layer');
         if (!roadLayer) {
             console.error("Renderer: Road layer not found in SVG. Cannot render road.");
-            return;z
+            return; z
         }
 
         // get the two vertex coordinates from edgeCoord
@@ -221,7 +221,7 @@ export const HtmlUtils = Object.freeze({
         };
     },
 
-    createRoadElement(eCoord, attributes = {}, hexSize = HEX_SIZE) {
+    createRoadElement(eCoord, attributes = {}, classList = [], hexSize = HEX_SIZE) {
         const edgeId = HexUtils.coordToId(eCoord);
         const [v1Coord, v2Coord] = HexUtils.getVerticesFromEdge(eCoord);
         const [x1, y1] = HexUtils.vertexToPixel(v1Coord, hexSize);
@@ -229,7 +229,7 @@ export const HtmlUtils = Object.freeze({
 
         // Use your shortening logic for a better look
         const shortened = HtmlUtils.getShortenedLine(x1, y1, x2, y2, 0.2);
-        const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, ["available-road"]);
+        const edgeLine = HtmlUtils.createSvgLine(shortened.x1, shortened.y1, shortened.x2, shortened.y2, classList);
         edgeLine.dataset.id = edgeId;
         if (attributes.color) {
             edgeLine.style.stroke = attributes.color;
@@ -237,14 +237,14 @@ export const HtmlUtils = Object.freeze({
         return edgeLine;
     },
 
-    createSettlementElement(vCoord, attributes = {}, hexSize = HEX_SIZE) {
+    createSettlementElement(vCoord, attributes = {}, classList = [], hexSize = HEX_SIZE) {
         const vertexId = HexUtils.coordToId(vCoord);
         const [x, y] = HexUtils.vertexToPixel(vCoord, hexSize);
-        const settlementCircle = HtmlUtils.createSvgCircle(x, y, 10, ["available-settlement"]);
+        const settlementCircle = HtmlUtils.createSvgCircle(x, y, 10, classList);
         settlementCircle.dataset.id = vertexId;
         if (attributes.color) {
             settlementCircle.style.fill = attributes.color;
-        }  
+        }
         return settlementCircle;
     }
 });

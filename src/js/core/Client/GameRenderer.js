@@ -1,15 +1,14 @@
-import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
-import { HexUtils } from "../utils/hex-utils.js";
-import { TEXTURE_PATHS } from "../constants/GameConstants.js";
-import { TERRAIN_TYPES } from "../constants/TerrainTypes.js";
-import { Player } from "../models/Player.js";
-import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../constants/DevCardTypes.js";
-import { StatusCodes } from "../constants/StatusCodes.js";
-import { DebugDashboard } from "./DebugDashboard.js";
-import { GameUtils } from "../utils/game-utils.js";
-import { HtmlUtils } from "../utils/html-utils.js";
-import { MapInteractionRenderer } from "./MapInteractionRenderer.js";
-import { StatusCodesUtils } from "../utils/status-code-utils.js";
+import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
+import { HexUtils } from "../../utils/hex-utils.js";
+import { TEXTURE_PATHS } from "../../constants/GameRuleConstants.js";
+import { TERRAIN_TYPES } from "../../constants/TerrainTypes.js";
+import { Player } from "../../models/Player.js";
+import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../../constants/DevCardTypes.js";
+import { StatusCodes } from "../../constants/StatusCodes.js";
+import { DebugDashboard } from "../../debug/DebugDashboard.js";
+import { GameUtils } from "../../utils/game-utils.js";
+import { HtmlUtils } from "../../utils/html-utils.js";
+import { StatusCodesUtils } from "../../utils/status-code-utils.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -17,7 +16,7 @@ const RAD60 = Math.PI / 3; // 60 degrees in radians
 const SQRT3 = Math.sqrt(3);
 const SQRT3_HALF = SQRT3 / 2;
 // take care of all UI rendering and user interactions
-export class Renderer {
+export class GameRenderer {
     constructor(controller, debugController) {
         // references to game controller and debug controller (for cheat commands)
         this.controller = controller;
@@ -30,9 +29,33 @@ export class Renderer {
         this.hexSize = 50; // default hex this.hexSize
 
         this.gameMap = null; // a client-side copy of the game map for rendering
-
-        this.MapInteractionRenderer = new MapInteractionRenderer(this.controller);
     }
+
+    drawMap(gameMap) {
+        const { clone, layers } = this.setupTemplate(); // get cloned template and layers
+
+        // set up defs for patterns
+        this.setupPatterns(layers.defs);
+
+        // draw tiles
+        // draw tiles
+        for (const tile of Object.values(gameMap.tiles)) {
+            this.drawHex(layers.static, tile);
+            this.drawToken(layers.static, tile);
+        }
+
+        // draw trading posts
+        for (const tp of Object.values(gameMap.tradingPosts)) {
+            this.drawTradingPost(layers.static, tp);
+        }
+
+        // draw robber
+        this.drawRobber(layers.robber, gameMap.robberCoord);
+
+        this.updateDOM(clone);
+    }
+
+
 
     updateDebugDashboard(gameContext, logMessage = null) {
         if (this.debugdashboard) {

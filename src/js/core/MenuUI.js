@@ -32,4 +32,9 @@ export class MenuUI {
         console.log("Start Game button clicked.");
     }
 
+    removeMenu() {
+        const menuDiv = document.getElementById('game-menu');
+        menuDiv.remove();
+    }
+
 }

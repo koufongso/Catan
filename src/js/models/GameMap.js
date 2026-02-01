@@ -197,7 +197,7 @@ export class GameMap {
      */
     getRoad(location) {
         const id = typeof location === 'string' ? location : HexUtils.coordToId(location);
-        return this.roads.get(id);
+        return this.roads[id];
     }
 
     /**
@@ -205,7 +205,7 @@ export class GameMap {
      * @returns {Array<Road>} an array of all road objects
      */
     getAllRoads() {
-        return Array.from(this.roads.values());
+        return Object.values(this.roads);
     }
 
 
@@ -237,7 +237,7 @@ export class GameMap {
      */
     removeRoad(location) {
         const id = typeof location === 'string' ? location : HexUtils.coordToId(location);
-        this.roads.delete(id);
+        delete this.roads[id];
     }
 
     /*-------------------------------------------- Settlements -------------------------------------------- */
@@ -249,7 +249,7 @@ export class GameMap {
      */
     getSettlement(location) {
         const id = typeof location === 'string' ? location : HexUtils.coordToId(location);
-        return this.settlements.get(id);
+        return this.settlements[id];
     }
 
     /**
@@ -257,7 +257,7 @@ export class GameMap {
      * @returns {Array<Settlement>} an array of all settlement objects
      */
     getAllSettlements() {
-        return Array.from(this.settlements.values());
+        return Object.values(this.settlements);
     }
 
     /**
@@ -292,7 +292,7 @@ export class GameMap {
      */
     removeSettlement(location) {
         const id = typeof location === 'string' ? location : HexUtils.coordToId(location);
-        this.settlements.delete(id);
+        delete this.settlements[id];
     }
 
     /*-------------------------------------------- Trading Posts -------------------------------------------- */
@@ -304,7 +304,7 @@ export class GameMap {
      */
     getTradingPost(location) {
         const id = typeof location === 'string' ? location : HexUtils.coordToId(location);
-        return this.tradingPosts.get(id);
+        return this.tradingPosts[id];
     }
 
     /**
@@ -364,6 +364,29 @@ export class GameMap {
             }
         }
         return results;
+    }
+
+    /* -------------------------------------------- Ownership Queries -------------------------------------------- */
+    /**
+     * Get the owner id of a settlement at the specified location
+     * @param {*} settlementLocation 
+     * @returns {number|null} playerId of the owner, or null if no settlement there
+     */
+    getSettlementOwner(settlementLocation) {
+        const id = typeof settlementLocation === 'string' ? settlementLocation : HexUtils.coordToId(settlementLocation);
+        const settlement = this.settlements[id];
+        return settlement ? settlement.ownerId : null;
+    }
+
+    /**
+     * Get the owner id of a road at the specified location
+     * @param {*} roadLocation 
+     * @returns {number|null} playerId of the owner, or null if no road theres
+     */
+    getRoadOwner(roadLocation) {
+        const id = typeof roadLocation === 'string' ? roadLocation : HexUtils.coordToId(roadLocation);
+        const road = this.roads[id];
+        return road ? road.ownerId : null;
     }
 
 

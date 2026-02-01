@@ -4,6 +4,7 @@
 import { GameMap } from "../models/GameMap.js";
 import { Player } from "../models/Player.js";
 import { HexUtils } from "./hex-utils.js";
+import { MapUtils } from "./map-utils.js";
 
 export const GameUtils = Object.freeze({
     /**
@@ -12,13 +13,13 @@ export const GameUtils = Object.freeze({
      * - The coordinate must not be occupied by another settlement.
      * - If a player is provided, the settlement must be connected to that player's existing roads. (This is ignored during initial placement)
      * @param {GameMap} gameMap - The game map object containing current settlements and roads.
-     * @param {Player} [player=null] - The player object for whom the settlement is being placed.
-     * @returns {Array} - An array of valid coordinates for settlement placements
+     * @param {numbers} [playerId] - The player id for whom the settlement is being placed.
+     * @returns {Set} - A set of valid id for settlement placements
      */
-    getValidSettlementCoords(gameMap, playerId = null) {
-        const allVertexSet = gameMap.getAllVertexIdSet();
-        const occupiedSet = gameMap.getAllSettlementIdSet();
-        const adjacentToOccupiedSet = gameMap.getAllSettlementNeighborIdSet();
+    getValidSettlementSpots(gameMap, playerId = null) {
+        const allVertexSet = MapUtils.getAllVertexIdSet(gameMap);
+        const occupiedSet = MapUtils.getAllSettlementIdSet(gameMap);
+        const adjacentToOccupiedSet = MapUtils.getAllSettlementNeighborIdSet(gameMap);
 
         // remove occupied vertices
         const nonOccupiedSet = allVertexSet.difference(occupiedSet);
@@ -28,12 +29,12 @@ export const GameUtils = Object.freeze({
 
         if (playerId === null) {
             // No player specified, return any valid settlement spot
-            return HexUtils.idSetToCoordsArray(validSet)
+            return validSet;
         } else {
             // Player specified, filter further based on connectivity to player's roads
-            const playerRoadCoords = gameMap.getPlayerRoadVerticesIdSet(playerId);
+            const playerRoadCoords = MapUtils.getPlayerRoadVerticesIdSet(gameMap, playerId);
             const connectedValidSet = validSet.intersection(playerRoadCoords);
-            return HexUtils.idSetToCoordsArray(connectedValidSet);
+            return connectedValidSet
         }
     },
 
@@ -41,20 +42,22 @@ export const GameUtils = Object.freeze({
      * Get the valid road coordinates for placing a road from a vertex:
      *  - The road must start from the input vertex. This vertex must be connected to one of the player's existing roads or settlements
      *  - The road must not already be occupied.
-     * @param {*} gameMap 
-     * @param {*} player 
-     * @returns an array of valid road coordinates
+     * @param {GameMap} gameMap 
+     * @param {number} playerId 
+     * @param {Set} playerSettlementIdSet (optional), usefull for initial placement (road must connect to settlement just placed)
+     * if not provided, will compute all from all settlements owned by the player
+     * @returns {Set} a set of valid road coordinates
      */
-    getValidRoadFromSettlementIds(gameMap, playerId, playerSettlementSet = null) {
+    getValidRoadFromSettlementIds(gameMap, playerId, playerSettlementIdSet = null) {
         // first get all settlments
-        if (playerSettlementSet === null) {
-            playerSettlementSet = gameMap.getPlayerSettlementVerticesIdSet(playerId);
+        if (playerSettlementIdSet === null) {
+            playerSettlementIdSet = MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
         }
 
         const visitedVertexIds = new Set();
         const validRoadIds = new Set();
 
-        for (let settlementId of playerSettlementSet) {
+        for (let settlementId of playerSettlementIdSet) {
             // skip settlement if already visited to avoid redundant BFS
             if (visitedVertexIds.has(settlementId)) continue;
             // BFS from this settlement
@@ -78,7 +81,7 @@ export const GameUtils = Object.freeze({
                     const edgeCoord = HexUtils.getEdgeFromVertices(vCoord0, vCoord1);
                     const vId1 = HexUtils.coordToId(vCoord1);
 
-                    if (!gameMap.isRoadInMap(edgeCoord)) continue; // skip if edge not in map (out of bounds)
+                    if (!gameMap.hasEdge(edgeCoord)) continue; // skip if edge not in map (out of bounds)
 
                     // check the ownership of this road
                     const edgeOwner = gameMap.getRoadOwner(edgeCoord);
@@ -97,11 +100,17 @@ export const GameUtils = Object.freeze({
             }
         }
 
-        return HexUtils.idSetToCoordsArray(validRoadIds);
+        return validRoadIds;
     },
 
+    /**
+     * Get valid city coordinates for a player. Valid city spots are simply existing settlements owned by the player.
+     * @param {*} gameMap 
+     * @param {*} playerId 
+     * @returns 
+     */
     getValidCityCoords(gameMap, playerId) {
         // valid city spots are simply existing settlements owned by the player
-        return gameMap.getPlayerSettlementVerticesIdSet(playerId).map(id => HexUtils.idToCoord(id));
+        return MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
     }
 });

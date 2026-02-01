@@ -35,7 +35,6 @@ export class RoadBuildingPredictor {
         // rest all states
         this.playerId = playerId;
         // start with player's existing settlementss
-        const playerSettlementSet = this.gameMap.getPlayerSettlementVerticesIdSet(playerId);
         this.validRoadCoords = GameUtils.getValidRoadFromSettlementIds(this.gameMap, playerId);
         this.validRoadIds = HexUtils.coordsArrayToIdSet(this.validRoadCoords);
         return {

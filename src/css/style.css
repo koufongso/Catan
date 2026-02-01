@@ -70,12 +70,13 @@ body {
 /* 2. THE "GHOST" ROAD (Selected/Placed) */
 .placed-road {
     /* Slightly thicker and more transparent to indicate ghost road */
-    stroke-width: 14px; 
+    stroke-width: 8px; 
     opacity: 1.0;  
     stroke-linecap: round;
     filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
     transition: all 0.2s ease;
+    /* animation: smooth-blink 2s infinite; */
 }
  
 
@@ -97,6 +98,16 @@ body {
     filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
     transition: all 0.2s ease;
+    /* animation: smooth-blink 2s infinite; */
+}
+
+@keyframes smooth-blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 
@@ -263,7 +274,7 @@ body {
 }
 
 /* for interaction layer svg buttons */
-.svg-btn-primary {
+.svg-btn-confirm {
     border: #000000 2px solid;
     border-radius: 8px;
     fill: #0056b3;
@@ -271,7 +282,7 @@ body {
     user-select: none;
 }
 
-.svg-btn-primary:hover {
+.svg-btn-confirm:hover {
     fill: #007bff;
 }
 
@@ -287,6 +298,14 @@ body {
     fill: #dc3545;
 }
 
+.svg-btn-undo {
+    border: #000000 2px solid;
+    border-radius: 8px;
+    fill: #F1C40F;
+    cursor: pointer;
+    user-select: none;
+}
+
 .svg-btn text {
     fill: #ffffff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -298,6 +317,7 @@ body {
 .svg-btn-disabled {
     fill: #444444;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
 
