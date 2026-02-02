@@ -370,13 +370,13 @@ export class GameMap {
     filter(type, predicate) {
         // 1. Safety Check: Does this map exist?
         const targetMap = this[type];
-        if (!targetMap || !(targetMap instanceof Map)) {
+        if (!targetMap || !(targetMap instanceof Object)) {
             throw new Error(`GameMap.filter: Invalid entity type '${type}'`);
         }
 
         // 2. Run the Filter
         const results = [];
-        for (const item of targetMap.values()) {
+        for (const item of Object.values(targetMap)) {
             if (predicate(item)) {
                 results.push(item);
             }

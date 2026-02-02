@@ -21,10 +21,11 @@ export class Player {
         };
 
 
-        // asset ownership
-        this.settlements = data.settlements || new Set();
-        this.roads = data.roads || new Set();
-        this.devCards = data.devCards || []; // array of DevCard objects
+        // asset ownership (ids)
+        this.settlements = data.settlements || new Set();   // set of settlement id
+        this.roads = data.roads || new Set();               // set of road id
+        this.cities = data.cities || new Set();                 // set of city id
+        this.devCards = data.devCards || [];                // array of DevCard objects
 
         // Achievement/Special Status (Data only, logic handled by ScoreService)
         this.achievements = data.achievements || {
@@ -64,16 +65,42 @@ export class Player {
         }
     }
 
+    /**
+     * Check if player can build a building of given type
+     * Note: this only checks the remaining building count, not resource cost or placement rules
+     * @param {*} buildingType 
+     * @returns 
+     */
+    canBuild(buildingType) {
+        switch(buildingType) {
+            case 'SETTLEMENT':
+                return this.settlementsLeft > 0;
+            case 'CITY':
+                return this.citiesLeft > 0;
+            case 'ROAD':
+                return this.roadsLeft > 0;
+            default:
+                throw new Error(`Invalid building type in canBuild: ${buildingType}`);
+        }
+    }
+
     // add a settlement object to player's list
-    addSettlement(settlement) {
+    addSettlement(settlementId) {
         this.settlementsLeft--;
-        this.settlements.add(settlement);
+        this.settlements.add(settlementId);
+    }
+
+    addCity(cityId) {
+        this.citiesLeft--;
+        // we assume the city replaces a settlement
+        this.settlements.delete(cityId);
+        this.settlements.add(cityId); 
     }
 
     // add a road object to player's list
-    addRoad(road) {
+    addRoad(roadId) {
         this.roadsLeft--;
-        this.roads.add(road);
+        this.roads.add(roadId);
     }
 
     // add a dev card object to player's list
@@ -138,13 +165,13 @@ export class Player {
     getVictoryPoints() {
         let vp = 0;
         // settlements
-        for (let settlement of this.settlements) {
-            vp += settlement.level; // 1 for settlement, 2 for city
-        }
+        vp += this.settlements.size;
+        vp += this.cities.size * 2;
+        
         // cities - assuming cityIds is a Set similar to settlementIds
         // vp += this.cityIds.size * 2; // Uncomment if city logic is added
         // victory point cards
-        vp += this.achievements.victoryPointCards;
+        vp += this.devCards.filter(card => card.type === 'VICTORY_POINT').length;
         // longest road
         if (this.achievements.hasLongestRoad) vp += 2;
         // largest army

@@ -15,5 +15,16 @@ export const PlayerUtils = Object.freeze({
 
     getTotalDevCardCount(player){
         return player.devCards.length;
+    },
+
+    distributeResourceToPlayer(gameContext, playerId, resourceType, amount) {
+        // first check if bank has enough resources
+        const returnedResources = this.getResourceFromBank({ [resourceType]: amount });
+
+        // find the player in the game context and give them the resource
+        const player = gameContext.players[playerId];
+        if (player) {
+            player.addResources(returnedResources);
+        }
     }
 });

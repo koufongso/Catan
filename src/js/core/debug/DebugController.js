@@ -1,7 +1,7 @@
-import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
-import { DevCard } from "../models/devCards/DevCard.js";
-import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
-import { StatusCodes } from "../constants/StatusCodes.js";
+import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
+import { DevCard } from "../../models/devCards/DevCard.js";
+import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
+import { StatusCodes } from "../../constants/StatusCodes.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
@@ -187,7 +187,7 @@ export class DebugController {
 
 
 
-    parse(input) {
+    execute(input) {
         const [cmd, ...args] = input.trim().split(/\s+/);
         const action = this.commands[cmd.toLowerCase()];
         console.log("Executing cheat command:", cmd, args);

@@ -1,11 +1,11 @@
-import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
-import { StatusCodes } from "../constants/StatusCodes.js";
+import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
+import { StatusCodes } from "../../constants/StatusCodes.js";
+import { Player } from "../../models/Player.js";
 
 export class DebugDashboard {
 
-    constructor(debugController, renderer) {
+    constructor(debugController) {
         this.debugController = debugController;
-        this.renderer = renderer;
 
         this.resourceIcons = {
             brick: '🧱',
@@ -28,30 +28,24 @@ export class DebugDashboard {
 
 
     initDebugConsole() {
-        const input = document.getElementById('debug-input');
-        const submit = document.getElementById('debug-submit');
+        console.log("Initializing Debug Dashboard UI components.");
+        this.input = document.getElementById('debug-input');
+        this.submit = document.getElementById('debug-submit');
+        this.debugWrapper = document.getElementById('debug-wrapper');
+        this.debugBtn = document.getElementById('debug-toggle-btn');
 
         const handleCommand = () => {
-            const commandText = input.value.trim();
+            const commandText = this.input.value.trim();
             if (commandText) {
-                const res = this.debugController.parse(commandText);
-                if (res.status !== StatusCodes.SUCCESS) {
-                    this.renderer.updateDebugDashboard(this.debugController.gameContext, `Error: ${res.error_message}`);
-                } else {
-                    const logMsg = res.message || `Executed command: ${commandText}`;
-                    this.renderer.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-                    this.renderer.updateDebugDashboard(this.debugController.gameContext, logMsg);
-                    this.renderer.renderInteractionHints(res.interaction);
-                }
-
-                input.value = ''; // Clear after use
+                const res = this.debugController.execute(commandText);
+                this.input.value = ''; // Clear after use
             }
         };
 
-        submit.addEventListener('click', handleCommand);
+        this.submit.addEventListener('click', handleCommand);
 
         // Add "Ctrl+Enter" support for the textarea
-        input.addEventListener('keydown', (e) => {
+        this.input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleCommand();
@@ -59,16 +53,15 @@ export class DebugDashboard {
         });
 
         // add toggle button
-        const debugWrapper = document.getElementById('debug-wrapper');
-        const debugBtn = document.getElementById('debug-toggle-btn');
 
-        function toggleDebug() {
-            debugWrapper.classList.toggle('hidden');
+        const toggleDebug = () => {
+            console.log("Toggling Debug Dashboard visibility.");
+            console.log("this.debugWrapper:", this.debugWrapper);
+            this.debugWrapper.classList.toggle('hidden');
         }
 
         // Click listener
-        debugBtn.addEventListener('click', toggleDebug);
-
+        this.debugBtn.addEventListener('click', toggleDebug);       
         // Keyboard listener (Tilde/Backtick key)
         window.addEventListener('keydown', (e) => {
             if (e.key === '`') { // The key below ESC
@@ -77,6 +70,7 @@ export class DebugDashboard {
             }
         });
     }
+
 
     getResourceIcon(type) {
         if (!type) return '❓';
@@ -126,7 +120,7 @@ export class DebugDashboard {
                 <span class="cell-id">Bank</span>
                 <span class="cell-val">--</span> 
                 ${resourceList.map(type => {
-            const amount = gameContext.bankResources.get(type) || 0;
+            const amount = gameContext.bankResources[type] || 0;
             return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
         }).join('')}
             </div>
@@ -135,12 +129,13 @@ export class DebugDashboard {
 
         // player info table
         const playersHtml = gameContext.players.map((p, idx) => {
+            const playerInstance = new Player(p); // create a Player instance from raw data
             const isCurrent = idx === gameContext.currentPlayerIndex;
-            const totalVP = p.getVictoryPoints();
-            const devCardCount = p.devCards.length;
+            const totalVP = playerInstance.getVictoryPoints();
+            const devCardCount = playerInstance.devCards.length;
 
             // prepare dev card summary
-            const devCardSummary = p.devCards.reduce((acc, card) => {
+            const devCardSummary = playerInstance.devCards.reduce((acc, card) => {
                 // Group by type
                 if (!acc[card.type]) acc[card.type] = { count: 0, playable: 0, played: 0, locked: 0 };
                 acc[card.type].count++;
@@ -177,12 +172,12 @@ export class DebugDashboard {
                 <div class="res-grid-row ${isCurrent ? 'current-player' : ''}" 
                     onclick="this.parentElement.classList.toggle('expanded')"
                     style="cursor: pointer;">
-                    <span class="cell-id" style="color: ${p.color}">
-                        ${isCurrent ? '▶' : '&nbsp;'} P${p.id}
+                    <span class="cell-id" style="color: ${playerInstance.color}">
+                        ${isCurrent ? '▶' : '&nbsp;'} P${playerInstance.id}
                     </span>
                     <span class="cell-val has-res">${totalVP}</span> 
                     ${resourceList.map(type => {
-                const amount = p.resources[type] || 0;
+                const amount = playerInstance.resources[type] || 0;
                 return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
             }).join('')}
                     <span class="cell-val ${devCardCount > 0 ? 'has-cards' : 'is-zero'}">${devCardCount}</span>
@@ -190,7 +185,7 @@ export class DebugDashboard {
                 
                 <div class="debug-details">
                     <div class="dev-card-inventory">
-                        ${p.devCards.length > 0 ? devCardsHtml : '<small>No cards</small>'}
+                        ${playerInstance.devCards.length > 0 ? devCardsHtml : '<small>No cards</small>'}
                     </div>
                 </div>
             </div>

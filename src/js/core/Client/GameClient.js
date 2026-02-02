@@ -2,6 +2,8 @@ import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
 import { DEBUG_FLAGS } from "../../constants/Config.js";
 import { Player } from "../../models/Player.js";
+import { DebugController } from "../debug/DebugController.js";
+import { DebugDashboard } from "../debug/DebugDashboard.js";
 
 export class GameClient {
     constructor(id, name, color, isHuman) {

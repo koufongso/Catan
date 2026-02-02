@@ -1,4 +1,4 @@
-import { HexUtils } from "../utils/hex-utils.js";
+import { HexUtils } from "./hex-utils.js";
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 import { TERRAIN_TYPES } from '../constants/TerrainTypes.js';
 

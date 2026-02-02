@@ -5,7 +5,7 @@ import { TERRAIN_TYPES } from "../../constants/TerrainTypes.js";
 import { Player } from "../../models/Player.js";
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../../constants/DevCardTypes.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
-import { DebugDashboard } from "../../debug/DebugDashboard.js";
+import { DebugDashboard } from "../debug/DebugDashboard.js";
 import { GameUtils } from "../../utils/game-utils.js";
 import { HtmlUtils } from "../../utils/html-utils.js";
 import { StatusCodesUtils } from "../../utils/status-code-utils.js";
@@ -75,11 +75,7 @@ export class GameRenderer {
     }
 
 
-    updateDebugDashboard(gameContext, logMessage = null) {
-        if (this.debugdashboard) {
-            this.debugdashboard.renderDebugHUD(gameContext, logMessage);
-        }
-    }
+
 
 
     drawHex(tileLayer, tile) {

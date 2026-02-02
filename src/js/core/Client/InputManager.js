@@ -11,7 +11,6 @@
 //  - allow user to click one vertex to build a settlement
 import { HEX_SIZE } from "../../constants/RenderingConstants.js";
 import { HtmlUtils } from "../../utils/html-utils.js";
-import { RoadBuildingPredictor } from "../../utils/road-building-predictor.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
 import { GameUtils } from "../../utils/game-utils.js";
 import { HexUtils } from "../../utils/hex-utils.js";

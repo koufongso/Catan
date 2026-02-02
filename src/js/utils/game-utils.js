@@ -1,6 +1,7 @@
 /**
  * Utility functions for game-related operations.
  */
+import { MapRules } from "./MapRules.js";
 import { GameMap } from "../models/GameMap.js";
 import { Player } from "../models/Player.js";
 import { HexUtils } from "./hex-utils.js";
@@ -112,5 +113,6 @@ export const GameUtils = Object.freeze({
     getValidCityCoords(gameMap, playerId) {
         // valid city spots are simply existing settlements owned by the player
         return MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
-    }
+    },
+
 });

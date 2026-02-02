@@ -2,7 +2,7 @@ import { MenuUI } from "./MenuUI.js";
 import { RNG } from "../utils/rng.js";
 import { MapGenerator } from "../utils/map-generator.js";
 import { GameMap } from "../models/GameMap.js";
-import { GameClient } from "./Client/GameClient.js";
+import { GameClient } from "./client/GameClient.js";
 import { GameControllerV2 } from "./GameControllerV2.js";
 import { PLAYER_COLORS } from "../constants/RenderingConstants.js";
 import { DEBUG_FLAGS } from "../constants/Config.js";
@@ -10,7 +10,6 @@ import { DEBUG_FLAGS } from "../constants/Config.js";
 export class GameServer {
     constructor() {
         this.gameController = null;
-        this.ui = new MenuUI(this); // Manage settings/buttons via DOM
         this.rng = null;
         this.map = null;
         this.clients = [];
