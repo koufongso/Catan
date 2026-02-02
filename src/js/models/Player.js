@@ -3,16 +3,16 @@ import {PLAYER_ASSET_LIMITS} from '../constants/GameRuleConstants.js';
 import { HexUtils } from '../utils/hex-utils.js';
 
 export class Player {
-    constructor(id, name, color) {
-        this.id = id;
-        this.name = name;
-        this.color = color;
-        this.roadsLeft = PLAYER_ASSET_LIMITS.roads;
-        this.settlementsLeft = PLAYER_ASSET_LIMITS.settlements;
-        this.citiesLeft = PLAYER_ASSET_LIMITS.cities;
+    constructor(data = {}) {
+        this.id = data.id;
+        this.name = data.name;
+        this.color = data.color;
+        this.roadsLeft = data.roadsLeft || PLAYER_ASSET_LIMITS.roads;
+        this.settlementsLeft = data.settlementsLeft || PLAYER_ASSET_LIMITS.settlements;
+        this.citiesLeft = data.citiesLeft || PLAYER_ASSET_LIMITS.cities;
 
         // resource inventory
-        this.resources = {
+        this.resources = data.resources || {
             [RESOURCE_TYPES.ORE]: 0,
             [RESOURCE_TYPES.WOOL]: 0,
             [RESOURCE_TYPES.LUMBER]: 0,
@@ -22,12 +22,12 @@ export class Player {
 
 
         // asset ownership
-        this.settlements = new Set();
-        this.roads = new Set();
-        this.devCards = []; // array of DevCard objects
+        this.settlements = data.settlements || new Set();
+        this.roads = data.roads || new Set();
+        this.devCards = data.devCards || []; // array of DevCard objects
 
         // Achievement/Special Status (Data only, logic handled by ScoreService)
-        this.achievements = {
+        this.achievements = data.achievements || {
             hasLongestRoad: false,
             hasLargestArmy: false,
             knightsPlayed: 0,
@@ -35,7 +35,11 @@ export class Player {
         };
     }
 
-    // cost is an object {RESOURCE_TYPES: amount, ...}
+    /**
+     * Check if player can afford the cost
+     * @param {Object} cost an object {resourceType: amount, ...}
+     * @returns {boolean} true if player can afford, false otherwise
+     */
     canAfford(cost) {
         for (let [type, amount] of Object.entries(cost)) {
             if (this.resources[type] + amount < 0) {
@@ -46,12 +50,16 @@ export class Player {
     }
 
 
-    // add resource count (can be negative, which means removing resources)
-    addResources(resources) {
+    /**
+     * Add resources to player's resource hand
+     * @param {Object} resources an object {resourceType: amount, ...}
+     * @param {boolean} allowNegative whether to allow negative resources (default: false)
+     */
+    addResources(resources, allowNegative = false) {
         for (let [type, amount] of Object.entries(resources)) {
             if (this.resources[type] !== undefined) {
                 // Prevents resources from dropping below zero
-                this.resources[type] = Math.max(0, this.resources[type] + amount);
+                this.resources[type] = allowNegative ? this.resources[type] + amount : Math.max(0, this.resources[type] + amount);
             }
         }
     }
@@ -102,12 +110,13 @@ export class Player {
 
     /**
      * Discard resources from player
-     * @param {*} resources the resources to discard {resourceType: amount, ...}
+     * @param {Object} resources the resources to discard {resourceType: amount, ...}
+     * @param {boolean} allowNegative whether to allow negative resources (default: false)
      */
-    discardResources(resources) {
+    discardResources(resources, allowNegative = false) {
         for (let [type, amount] of Object.entries(resources)) {
             if (this.resources[type] !== undefined) {
-                this.resources[type] = Math.max(0, this.resources[type] - amount);
+                this.resources[type] = allowNegative ? this.resources[type] - amount : Math.max(0, this.resources[type] - amount);
             }
         }
     }

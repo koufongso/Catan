@@ -104,7 +104,6 @@ export const MapGenerator = Object.freeze({
         let move = null;
         // assume we start at a corner
         while (true) {
-            console.log("Current Coord in Spiral:", coord);
             if (HexUtils.areCoordsEqual(coord, coordEnd)) {
                 // reached the end
                 results.push(coord);

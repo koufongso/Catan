@@ -128,6 +128,24 @@ export class GameMap {
         return HexUtils.getAdjVerticesFromVertex(vertexCoord);
     }
 
+    /**
+     * Get all tiles adjacent to a given vertex
+     * @param {*} location 
+     * @returns {Array<Tile>} Array of Tile objects adjacent to the vertex
+     */
+    getTilesOfVertex(location) {
+        const vertexCoord = typeof location === 'string' ? HexUtils.idToCoord(location) : location;
+        const adjacentHexCoords = HexUtils.getAdjHexesFromVertex(vertexCoord);
+        const tiles = [];
+        for (const hexCoord of adjacentHexCoords) {
+            const tile = this.getTile(hexCoord);
+            if (tile) {
+                tiles.push(tile);
+            }
+        }
+        return tiles;
+    }
+
 
     /* -------------------------------------------- Tiles -------------------------------------------- */
 

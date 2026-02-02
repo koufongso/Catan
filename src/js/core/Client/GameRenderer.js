@@ -51,21 +51,28 @@ export class GameRenderer {
         // draw robber
         this.drawRobber(layers.robber, gameMap.robberCoord);
 
+        // add layers to DOM
+        this.updateDOM(clone);
+
         // draw existing settlements and roads
+        // note: this should be done after updating the DOM so that the layers exist
+        this.drawExistingBuildings(gameMap, playerColors);        
+    }
+
+    drawExistingBuildings(gameMap, playerColors = {}) {
+        const settlementLayer = document.getElementById('settlement-layer');
+        const roadLayer = document.getElementById('road-layer');
         
         for (const settlement of Object.values(gameMap.settlements)) {
-           const settlementElement = HtmlUtils.createSettlementElement( settlement.coord, {color: playerColors[settlement.ownerId]}, ["settlement"], this.hexSize);
-            layers.settlement.appendChild(settlementElement);
+            const settlementElement = HtmlUtils.createSettlementElement(settlement.coord, { color: playerColors[settlement.ownerId] }, ["settlement"], this.hexSize);
+            settlementLayer.appendChild(settlementElement);
         }
 
         for (const road of Object.values(gameMap.roads)) {
-            const roadElement = HtmlUtils.createRoadElement(road.coord,{color: playerColors[road.ownerId]}, ["road"], this.hexSize);
-            layers.road.appendChild(roadElement);
+            const roadElement = HtmlUtils.createRoadElement(road.coord, { color: playerColors[road.ownerId] }, ["road"], this.hexSize);
+            roadLayer.appendChild(roadElement);
         }
-
-        this.updateDOM(clone);
     }
-
 
 
     updateDebugDashboard(gameContext, logMessage = null) {

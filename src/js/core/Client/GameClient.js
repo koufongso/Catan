@@ -1,6 +1,7 @@
 import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
 import { DEBUG_FLAGS } from "../../constants/Config.js";
+import { Player } from "../../models/Player.js";
 
 export class GameClient {
     constructor(id, name, color, isHuman) {
@@ -36,12 +37,37 @@ export class GameClient {
             return;
         }
 
+        const activePlayerId = updatePacket.event.payload.activePlayerId;
+        console.log(`Active Player ID: ${activePlayerId}, This Client ID: ${this.id}`);
+
+        // draw (static) map for initial placement
+        if (activePlayerId !== this.id) {
+            // use hotseat mode, and not the active palyer, skip drawing the map
+            console.log("HOTSEAT MODE: Drawing map for all players on one machine.");
+        } else {
+            let playerColors = {};
+            for (let player of this.gameContext.players) {
+                playerColors[player.id] = player.color;
+            }
+            this.uiRenderer.drawMap(this.gameContext.gameMap, playerColors);
+            this.mapInitialized = true;
+        }
+
+        // draw player assets (hands, dev cards, resources, etc.)
+        for (let player of this.gameContext.players) {
+            if (player.id === this.id && activePlayerId === this.id) {
+                // only active player needs to see their own assets
+                const playerInstance = new Player(player); // create a Player instance from raw data   
+                this.uiRenderer.renderPlayerAssets(playerInstance, this.gameContext.turnNumber);
+            }
+        }
+
         // For human players, render according to the event type
         switch (updatePacket.event.type) {
             case 'WAITING_FOR_INPUT':
                 this.handleWaitingForInput(updatePacket.event.payload);
                 break;
-            case 'WAITING_FOR_PLAYER_0_ROLL':
+            case 'WAITING_FOR_ACTION':
                 // roll, play dev card
                 break;
             case 'WAITING_FOR_PLAYER_1_ACTION':
@@ -57,22 +83,7 @@ export class GameClient {
     /* ----------------------------------------------------Handle updates from GameController---------------------------------------------------- */
     handleWaitingForInput(payload) {
         switch (payload.phase) {
-            case 'INITIAL_PLACEMENT1':
-                // draw map for initial placement
-                if (!this.mapInitialized) {
-                    if (DEBUG_FLAGS.HOTSEAT_MODE && payload.activePlayerId !== this.id) {
-                        // use hotseat mode, and not the active palyer, skip drawing the map
-                        console.log("HOTSEAT MODE: Drawing map for all players on one machine.");
-                    } else {
-                        let playerColors = {};
-                        for (let player of this.gameContext.players) {
-                            playerColors[player.id] = player.color;
-                        }
-                        this.uiRenderer.drawMap(this.gameContext.gameMap, playerColors);
-                        this.mapInitialized = true;
-                    }
-                }
-
+            case 'INITIAL_PLACEMENT':
                 // only activate input for the active player
                 if (payload.activePlayerId === this.id) {
                     // start initial placement process
@@ -105,9 +116,30 @@ export class GameClient {
 
         // 3. (Skip for now) check if the locations are valid according to game rules
 
-        this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT1', payload: { playerId: this.id, buildStack: buildStack } });
+        this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT', payload: { playerId: this.id, buildStack: buildStack } });
     }
 
+
+
+    /* ---------------------------------------------------- button handlers ---------------------------------------------------- */
+    btnRollOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.gameController.inputEvent({ type: 'ROLL', payload: { playerId: this.id } });
+    }
+
+
+    btnBuildOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.inputManager.activateBuildInteractionLayer(this.id, this.gameContext.gameMap, this.color);
+    }
 
 
 
