@@ -42,27 +42,23 @@ export class GameClient {
         const activePlayerId = updatePacket.event.payload.activePlayerId;
         console.log(`Active Player ID: ${activePlayerId}, This Client ID: ${this.id}`);
 
-        // draw (static) map for initial placement
+        // update UI if this is the active player
         if (activePlayerId !== this.id) {
-            // use hotseat mode, and not the active palyer, skip drawing the map
-            console.log("HOTSEAT MODE: Drawing map for all players on one machine.");
-        } else {
-            let playerColors = {};
-            for (let player of this.gameContext.players) {
-                playerColors[player.id] = player.color;
-            }
-            this.uiRenderer.drawMap(this.gameContext.gameMap, playerColors);
+            return;
+        }
+
+        
+        if (!this.mapInitialized) {// draw static board only once
+            this.uiRenderer.initializeUI();
+            this.uiRenderer.drawStaticBoard(this.gameContext.gameMap);
             this.mapInitialized = true;
         }
 
-        // draw player assets (hands, dev cards, resources, etc.)
-        for (let player of this.gameContext.players) {
-            if (player.id === this.id && activePlayerId === this.id) {
-                // only active player needs to see their own assets
-                const playerInstance = new Player(player); // create a Player instance from raw data   
-                this.uiRenderer.renderPlayerAssets(playerInstance, this.gameContext.turnNumber);
-            }
-        }
+        // update gameState
+        this.uiRenderer.refreshGameState(this.gameContext, this.id);
+
+
+
 
         // For human players, render according to the event type
         switch (updatePacket.event.type) {
@@ -86,11 +82,7 @@ export class GameClient {
     handleWaitingForInput(payload) {
         switch (payload.phase) {
             case 'INITIAL_PLACEMENT':
-                // only activate input for the active player
-                if (payload.activePlayerId === this.id) {
-                    // start initial placement process
-                    this.inputManager.activateInitialPlacementInteractionLayer(this.id, this.gameContext.gameMap, this.color);
-                }
+                this.inputManager.activateInitialPlacementInteractionLayer(this.id, this.gameContext.gameMap, this.color);
                 break;
 
             default:

@@ -30,52 +30,93 @@ export class GameRenderer {
         this.gameMap = null; // a client-side copy of the game map for rendering
     }
 
-    drawMap(gameMap, playerColors = {}) {
-        const { clone, layers } = this.setupTemplate(); // get cloned template and layers
-
-        // set up defs for patterns
-        this.setupPatterns(layers.defs);
-
-        // draw tiles
-        // draw tiles
-        for (const tile of Object.values(gameMap.tiles)) {
-            this.drawHex(layers.static, tile);
-            this.drawToken(layers.static, tile);
+    /**
+     * Draw the game UI components and set up the DOM
+     */
+    initializeUI() {
+        const wrapper = document.getElementById('main-wrapper');
+        console.log(wrapper.innerHTML.trim() )
+        if (wrapper.innerHTML.trim() === "") { // only initialize if empty
+            wrapper.innerHTML = ''; // clear existing content
+            const temp = document.getElementById('game-template');
+            if (!temp) throw new Error("Game template not found in DOM");
+            const clone = temp.content.cloneNode(true);
+            wrapper.appendChild(clone); // add the new one
         }
 
-        // draw trading posts
-        for (const tp of Object.values(gameMap.tradingPosts)) {
-            this.drawTradingPost(layers.static, tp);
-        }
+        // Group the layers into a clean object
+        this.layers = {
+            defs: document.getElementById('defs-layer'),
+            static: document.getElementById('static-layer'),
+            settlement: document.getElementById('settlement-layer'),
+            road: document.getElementById('road-layer'),
+            robber: document.getElementById('robber-layer')
+        };
 
-        // draw robber
-        this.drawRobber(layers.robber, gameMap.robberCoord);
-
-        // add layers to DOM
-        this.updateDOM(clone);
-
-        // draw existing settlements and roads
-        // note: this should be done after updating the DOM so that the layers exist
-        this.drawExistingBuildings(gameMap, playerColors);        
+        console.log("Game UI initialized with layers:", this.layers);
     }
 
+
+    /**
+     * Draw the static board elements (hexes, tokens, trading posts)
+     * @param {*} gameMap 
+     */
+    drawStaticBoard(gameMap) {
+        this.setupPatterns(this.layers.defs);
+
+        // Draw Hexes and Tokens once
+        for (const tile of Object.values(gameMap.tiles)) {
+            this.drawHex(this.layers.static, tile);
+            this.drawToken(this.layers.static, tile);
+        }
+
+        for (const tp of Object.values(gameMap.tradingPosts)) {
+            this.drawTradingPost(this.layers.static, tp);
+        }
+    }
+
+    /**
+     * Draw the dynamic game state (robber, buildings, etc.)
+     * @param {*} gameMap 
+     * @param {*} playerId current player (viewing the UI) 
+     */
+    refreshGameState(gameContext, playerId) {
+        const playerColors = {};
+        for (let player of gameContext.players) {
+            playerColors[player.id] = player.color;
+        }
+        const gameMap = gameContext.gameMap;
+        // Clear dynamic layers if needed
+        this.layers.settlement.innerHTML = '';
+        this.layers.road.innerHTML = '';
+        this.layers.robber.innerHTML = '';
+
+        this.drawRobber(this.layers.robber, gameMap.robberCoord);
+        this.drawExistingBuildings(gameMap, playerColors);
+
+        // draw current player hands, dev cards, resources, etc.
+        // find the current player
+        for (const p of gameContext.players) {
+            if (p.id === playerId) {
+                const playerInstance = new Player(p); // create a Player instance from raw data   
+                this.renderPlayerAssets(playerInstance, gameContext.turnNumber);
+            }
+        }
+    }
+
+
     drawExistingBuildings(gameMap, playerColors = {}) {
-        const settlementLayer = document.getElementById('settlement-layer');
-        const roadLayer = document.getElementById('road-layer');
-        
+
         for (const settlement of Object.values(gameMap.settlements)) {
             const settlementElement = HtmlUtils.createSettlementElement(settlement.coord, { color: playerColors[settlement.ownerId] }, ["settlement"], this.hexSize);
-            settlementLayer.appendChild(settlementElement);
+            this.layers.settlement.appendChild(settlementElement);
         }
 
         for (const road of Object.values(gameMap.roads)) {
             const roadElement = HtmlUtils.createRoadElement(road.coord, { color: playerColors[road.ownerId] }, ["road"], this.hexSize);
-            roadLayer.appendChild(roadElement);
+            this.layers.road.appendChild(roadElement);
         }
     }
-
-
-
 
 
     drawHex(tileLayer, tile) {
@@ -138,30 +179,6 @@ export class GameRenderer {
         const circle = HtmlUtils.createSvgCircle(x, y, this.hexSize / 2 * 0.9, ["token-circle"], "robber-token");
         circle.setAttribute("fill", `url(#pattern-robber)`);
         layer.appendChild(circle);
-    }
-
-    setupTemplate() {
-        const temp = document.getElementById('game-template');
-        if (!temp) throw new Error("Game template not found in DOM");
-
-        const clone = temp.content.cloneNode(true);
-
-        // Group the layers into a clean object
-        const layers = {
-            defs: clone.getElementById('defs-layer'),
-            static: clone.getElementById('static-layer'),
-            settlement: clone.getElementById('settlement-layer'),
-            road: clone.getElementById('road-layer'),
-            robber: clone.getElementById('robber-layer')
-        };
-
-        return { clone, layers };
-    }
-
-    updateDOM(clone) {
-        const wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = ''; // clear existing content
-        wrapper.appendChild(clone); // add the new one
     }
 
     setupPatterns(layer) {
