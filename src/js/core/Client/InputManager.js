@@ -226,7 +226,7 @@ export class InputManager {
      * @param {BuildingPredictor} buildingPredictor
      * @returns 
      */
-    _drawFromBuildingPredictor(buildingPredictor) {
+    _drawFromBuildingPredictor(buildingPredictor, skipPlacedBuildings = false, skipValidSpots = false) {
         if (!buildingPredictor.initialized) {
             console.error("BuildingPredictor not initialized. Cannot draw interaction layer.");
             return;
@@ -246,30 +246,31 @@ export class InputManager {
         console.log("Start drawing interaction layer from BuildingPredictor.");
 
         // redraw valid spots
-        if (buildingType === 'SETTLEMENT' && validBuildingSpots.size > 0) {
+        if (!skipValidSpots && buildingType === 'SETTLEMENT' && validBuildingSpots.size > 0) {
             const validSettlementCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
             const settlementPlacementGroup = HtmlUtils.createSettlementPlacementGroup(validSettlementCoords, this.handleVertexClick.bind(this), { color: this.playerColor }, ["available-settlement"], HEX_SIZE);
             settlementPlacementGroup.classList.add('valid-settlement-group');
             this.interactionLayer.appendChild(settlementPlacementGroup);
         }
 
-        if (buildingType === 'ROAD' && validBuildingSpots.size > 0) {
+        if (!skipValidSpots && buildingType === 'ROAD' && validBuildingSpots.size > 0) {
             const validRoadCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
             const roadPlacementGroup = HtmlUtils.createRoadPlacementGroup(validRoadCoords, this.handleEdgeClick.bind(this), { color: this.playerColor }, ["available-road"], HEX_SIZE);
             this.interactionLayer.appendChild(roadPlacementGroup);
         }
 
         // redraw placed buildings
-        for (let building of placedBuildings) {
-            if (building.type === 'SETTLEMENT') {
-                const settlementElement = HtmlUtils.createSettlementElement(building.coord, { color: this.playerColor }, ["placed-settlement"], HEX_SIZE);
-                this.interactionLayer.appendChild(settlementElement);
-            } else if (building.type === 'ROAD') {
-                const roadElement = HtmlUtils.createRoadElement(building.coord, { color: this.playerColor }, ["placed-road"], HEX_SIZE);
-                this.interactionLayer.appendChild(roadElement);
+        if (!skipPlacedBuildings) {
+            for (let building of placedBuildings) {
+                if (building.type === 'SETTLEMENT') {
+                    const settlementElement = HtmlUtils.createSettlementElement(building.coord, { color: this.playerColor }, ["placed-settlement"], HEX_SIZE);
+                    this.interactionLayer.appendChild(settlementElement);
+                } else if (building.type === 'ROAD') {
+                    const roadElement = HtmlUtils.createRoadElement(building.coord, { color: this.playerColor }, ["placed-road"], HEX_SIZE);
+                    this.interactionLayer.appendChild(roadElement);
+                }
             }
         }
-        console.log("Drew interaction layer from BuildingPredictor.");
         return;
     }
 
@@ -414,15 +415,16 @@ export class InputManager {
             return;
         }
 
+        this.clearInteractionLayer();
         if (res.result === null) {
             // all buildings placed, wait for confirm
             console.log("All settlements placed, waiting for confirm.");
-            return;
+            // stop here, skip redraw valid spots
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
+        }else{
+            // redraw interaction layer with new valid spots and placed buildings
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
         }
-
-        // redraw interaction layer with new valid spots and placed buildings
-        this.clearInteractionLayer();
-        this._drawFromBuildingPredictor(this.buildingPredictor);
 
         switch (this.currentMode) {
             case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
@@ -531,10 +533,16 @@ export class InputManager {
             return;
         }
 
-
-        // redraw interaction layer with new valid spots and placed buildings
         this.clearInteractionLayer();
-        this._drawFromBuildingPredictor(this.buildingPredictor);
+        if (res.result === null) {
+            // all buildings placed, wait for confirm
+            console.log("All settlements placed, waiting for confirm.");
+            // stop here, skip redraw valid spots
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
+        }else{
+            // redraw interaction layer with new valid spots and placed buildings
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
+        }
 
         switch (this.currentMode) {
             case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
