@@ -35,8 +35,65 @@ export class InputManager {
         this.btnUndoId = 'map-interaction-undo-btn';
     }
 
-    getInteractionLayer() {
-        return document.getElementById(this.interactionLayerId);
+    initalize(){
+        this.bindInteractionLayer();
+        this.bindBtnHandlers();
+    }
+
+
+    bindBtnHandlers() {
+        this.btnGroup = {
+            btnRoll: document.getElementById('btn-roll'),
+            btnBuildRoad: document.getElementById('btn-build-road'),
+            btnBuildSettlement: document.getElementById('btn-build-settlement'),
+            btnBuildCity: document.getElementById('btn-build-city'),
+            btnBuyDevCard: document.getElementById('btn-buy-dev-card'),
+            btnCancel: document.getElementById('btn-cancel'),
+            btnEndTurn: document.getElementById('btn-end-turn')
+        };
+
+        this.deactivateAllBtns(); // start with all buttons deactivated
+    }
+
+    clearBtnHandlers() {
+        for (let btn of Object.values(this.btnGroup)) {
+            btn.onclick = null;
+        }
+    }
+
+
+
+    activateBtn(name){
+        if (this.btnGroup[name]) {
+            this.btnGroup[name].disabled = false;
+            this.btnGroup[name].classList.remove('btn-disabled');
+        }else{
+            console.warn(`Button ${name} not found in btnGroup.`);
+        }
+    }
+
+    deactivateBtn(name){
+        if (this.btnGroup[name]) {
+            this.btnGroup[name].disabled = true;
+            this.btnGroup[name].classList.add('btn-disabled');
+        }else{
+            console.warn(`Button ${name} not found in btnGroup.`);
+        }
+    }
+
+    deactivateAllBtns(){
+        for (let btn of Object.values(this.btnGroup)) {
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+        }
+    }
+
+    bindInteractionLayer() {
+        this.interactionLayer = document.getElementById(this.interactionLayerId);
+        if (!this.interactionLayer) {
+            console.error("Interaction layer not found!");
+            return;
+        }
     }
 
     setMode(mode) {
@@ -175,7 +232,6 @@ export class InputManager {
         this.setMode('INITIAL_PLACEMENT');
         console.log("Activating initial placement interaction layer for player:", playerId);
 
-        this.interactionLayer = this.getInteractionLayer();
         if (!this.interactionLayer) {
             console.error("Interaction layer not found!");
             return;
@@ -183,7 +239,7 @@ export class InputManager {
 
         // clear/reset interaction layer
         this.clearInteractionLayer();
-        this.clearInitialPlacementContext();        
+        this.clearInitialPlacementContext();
         this.setInitialPlacementContext(playerId, gameMap, playerColor);
 
         // show all valid settlement spots for the player
@@ -236,7 +292,6 @@ export class InputManager {
 
     activateSettlementInteractionLayer(playerId, placementPhase, gameMap, playerColor) {
         console.log("Activating settlement interaction layer for player:", playerId, "phase:", placementPhase);
-        this.interactionLayer = this.getInteractionLayer();
         if (!this.interactionLayer) {
             console.error("Interaction layer not found!");
             return;
@@ -362,7 +417,6 @@ export class InputManager {
     }
 
     activateRoadBuildingInteractionLayer(playerId, numberOfRoads, gameMap, playerColor) {
-        this.interactionLayer = this.getInteractionLayer();
         if (!this.interactionLayer) {
             console.error("Interaction layer not found!");
             return;
@@ -453,7 +507,7 @@ export class InputManager {
         switch (this.currentMode) {
             case "INITIAL_PLACEMENT":
                 // remove last selected building
-                if(!this.buildingPredictor.rollback()){
+                if (!this.buildingPredictor.rollback()) {
                     console.warn("No more buildings to undo in initial placement.");
                     return;
                 }

@@ -50,6 +50,7 @@ export class GameClient {
         
         if (!this.mapInitialized) {// draw static board only once
             this.uiRenderer.initializeUI();
+            this.inputManager.initalize();
             this.uiRenderer.drawStaticBoard(this.gameContext.gameMap);
             this.mapInitialized = true;
         }
