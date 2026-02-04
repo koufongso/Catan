@@ -155,6 +155,15 @@ export class GameClient {
     }
 
 
+    btnEndTurnOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+        this.gameController.inputEvent({ type: 'END_TURN', payload: { playerId: this.id } });
+    }
+
+
 
 
 }

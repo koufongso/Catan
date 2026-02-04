@@ -201,6 +201,11 @@ export class GameControllerV2 {
                 // handle roll events
                 res = this.handleStateRoll(event);
                 break;
+            case GameState.MAIN:
+                // handle main game loop events
+                // res = this.handleStateMain(event);
+                res = this.handleStateMain(event);
+                break;
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
@@ -368,6 +373,57 @@ export class GameControllerV2 {
             };
             this._broadcast(newEvent);
         }
+    }
+
+    handleStateMain(event) {
+        if (event.type !== 'BUILD' && event.type !== 'TRADE' && event.type !== 'END_TURN' && event.type !== 'ACTIVATE_DEV_CARD') {
+            return {   
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid event type, expected BUILD, TRADE, END_TURN, or ACTIVATE_DEV_CARD, received ${event.type}`
+            };
+        }
+    
+        const playerId = event.payload.playerId;
+        if (!this._isActivePlayer(playerId)) {
+            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} is not the active player.`
+            };
+        }
+
+        switch (event.type) {
+            case 'BUILD':
+                // handle build logic
+                console.warn(`Player ${playerId} BUILD action not implemented yet.`);
+                break;
+            case 'TRADE':
+                // handle trade logic
+                console.warn(`Player ${playerId} TRADE action not implemented yet.`);
+                break;
+            case 'ACTIVATE_DEV_CARD':
+                // handle dev card activation logic
+                console.warn(`Player ${playerId} ACTIVATE_DEV_CARD action not implemented yet.`);
+                break;
+            case 'END_TURN':
+                // handle end turn logic
+                this._handleStateMainEndTurn(event);
+            default:    
+                break;
+        }
+    }
+
+    
+    _handleStateMainEndTurn(event) {
+        this._nextPlayer();
+        this.gameContext.currentState = GameState.ROLL;
+        this._broadcast({
+            type: 'WAITING_FOR_ACTION',
+            payload: {
+                phase: 'ROLL',
+                activePlayerId: this.gameContext.currentPlayerId,
+            }
+        });
     }
 
 

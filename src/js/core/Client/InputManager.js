@@ -51,6 +51,9 @@ export class InputManager {
             btnRoll: (event) => {
                 this.gameClient.btnRollOnClick(event);
             },
+            btnEndTurn: (event) => {
+                this.gameClient.btnEndTurnOnClick(event);
+            },
 
         }
 
