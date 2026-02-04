@@ -202,12 +202,6 @@ body {
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.9);
 }
 
-.btn-disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    filter: grayscale(1);
-}
-
 
 /* interaction overlay (rob, select)*/
 .robbable-tile {

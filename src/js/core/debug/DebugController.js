@@ -5,9 +5,10 @@ import { StatusCodes } from "../../constants/StatusCodes.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
-    constructor(gameController) {
-        this.controller = gameController; // reference to the main game controller
-        this.gameContext = gameController.gameContext; // shared game state
+    constructor(debugClient) {
+        this.debugClient = debugClient;
+        this.controller = debugClient.gameController; // reference to the main game controller
+        this.gameContext = this.controller.gameContext; // shared game state
 
         this.CHEAT_CARD_MAP = {
             "kt": DEV_CARD_TYPES.KNIGHT,
@@ -180,7 +181,7 @@ export class DebugController {
              * @param {*} args 
              */
             refresh: (args) => {
-                this.renderer.renderDebugHUD(this.gameContext, `Refreshed Debug HUD`);
+                this.debugClient.updateDashboard(`Refreshed Debug HUD`);
             }
         };
     }

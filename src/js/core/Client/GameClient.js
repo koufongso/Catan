@@ -63,14 +63,14 @@ export class GameClient {
 
         // For human players, render according to the event type
         switch (updatePacket.event.type) {
-            case 'WAITING_FOR_INPUT':
+            case 'WAITING_FOR_INPUT': // we define input as some request from the controller/server that user need to respond to like initial placement, discarding cards, etc
                 this.handleWaitingForInput(updatePacket.event.payload);
                 break;
-            case 'WAITING_FOR_ACTION':
-                // roll, play dev card
-                break;
-            case 'WAITING_FOR_PLAYER_1_ACTION':
-                // build, trade, play dev card, end turn, etc.
+            case 'WAITING_FOR_ACTION': // we deinfe action as click btuttons like roll, build, play card, trade etc
+                // ROLL phase: roll, play dev card
+                // MAIN phase: build, trade, play dev card, end turn
+                console.log(`Client ${this.id} handling WAITING_FOR_ACTION phase: ${updatePacket.event.payload.phase}`);
+                this.handleWaitingForAction(updatePacket.event.payload);
                 break;
             default:
                 // maybe waiting for other players
@@ -88,6 +88,24 @@ export class GameClient {
 
             default:
                 console.warn(`Unhandled phase in handleWaitingForInput: ${payload.phase}`);
+        }
+    }
+
+
+    handleWaitingForAction(payload) {
+        switch (payload.phase) {
+            case 'ROLL':
+                this.inputManager.deactivateAllBtns(); // clear all buttons first
+                this.inputManager.activateBtn('btnRoll');
+                this.inputManager.activateDevCards();
+                break;  
+            case 'MAIN':    
+                this.inputManager.deactivateAllBtns();
+                this.inputManager.activateBtn('btnBuild');
+                this.inputManager.activateBtn('btnEndTurn');
+                break;
+            default:
+                console.warn(`Unhandled phase in handleWaitingForAction: ${payload.phase}`);
         }
     }
 
@@ -122,7 +140,7 @@ export class GameClient {
             console.error("GameController not connected.");
             return;
         }
-
+        console.log(`Client ${this.id} clicked Roll Dice button.`);
         this.gameController.inputEvent({ type: 'ROLL', payload: { playerId: this.id } });
     }
 

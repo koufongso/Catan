@@ -22,79 +22,137 @@ export class InputManager {
         this.gameClient = gameClient; // reference to the parent GameClient
         this.playerId = null; // the id of the player using this input manager
         this.gameMap = null; // a snapshot of the game map before input begins
-        this.interactionLayerId = 'interaction-layer'; // the id of the interaction layer canvas
-        this.interactionLayer = document.getElementById(this.interactionLayerId);
+        this.interactionLayer = null; // the interaction layer DOM element
 
         this.buildingPredictor = new BuildingPredictor(); // a helper class to predict building placements (before submit to server)
 
         this.currentMode = 'IDLE'; // IDLE, INITIAL_PLACEMENT, BUILD_ROAD, BUILD_SETTLEMENT, BUILD_CITY, TRADE, DISCARD, ROBBER, etc.
 
-        // btn id
-        this.btnConfirmId = 'map-interaction-confirm-btn';
-        this.btnCancelId = 'map-interaction-cancel-btn';
-        this.btnUndoId = 'map-interaction-undo-btn';
+        // 
+        this.elementIds = {
+            btnRoll: 'btn-roll',
+            btnBuildRoad: 'btn-build-road',
+            btnBuildSettlement: 'btn-build-settlement',
+            btnBuildCity: 'btn-build-city',
+            btnBuyDevCard: 'btn-buy-dev-card',
+            // btnCancel: 'btn-cancel',
+            btnEndTurn: 'btn-end-turn',
+
+            devCardsGroup: 'player-hands-devcards-container',
+
+            interactionLayer: 'interaction-layer',
+            interactionBtnConfirm: 'map-interaction-confirm-btn',
+            interactionBtnCancel: 'map-interaction-cancel-btn',
+            interactionBtnUndo: 'map-interaction-undo-btn',
+        }
+
+        // button onclick handlers
+        this.onclickHandler = {
+            btnRoll: (event) => {
+                this.gameClient.btnRollOnClick(event);
+            },
+
+        }
+
+
+
     }
 
-    initalize(){
+    initalize() {// bind all interactable elements
         this.bindInteractionLayer();
         this.bindBtnHandlers();
+        this.bindDevCardHandlers();
     }
 
+    bindInteractionLayer() {
+        console.log("Binding interaction layer:", this.elementIds.interactionLayer);
+        this.interactionLayer = document.getElementById(this.elementIds.interactionLayer);
+        if (!this.interactionLayer) {
+            throw new Error("Interaction layer not found!");
+        }
+    }
 
     bindBtnHandlers() {
-        this.btnGroup = {
-            btnRoll: document.getElementById('btn-roll'),
-            btnBuildRoad: document.getElementById('btn-build-road'),
-            btnBuildSettlement: document.getElementById('btn-build-settlement'),
-            btnBuildCity: document.getElementById('btn-build-city'),
-            btnBuyDevCard: document.getElementById('btn-buy-dev-card'),
-            btnCancel: document.getElementById('btn-cancel'),
-            btnEndTurn: document.getElementById('btn-end-turn')
+        this.interactionBtnGroup = {
+            btnRoll: document.getElementById(this.elementIds.btnRoll),
+            btnBuildRoad: document.getElementById(this.elementIds.btnBuildRoad),
+            btnBuildSettlement: document.getElementById(this.elementIds.btnBuildSettlement),
+            btnBuildCity: document.getElementById(this.elementIds.btnBuildCity),
+            btnBuyDevCard: document.getElementById(this.elementIds.btnBuyDevCard),
+            //btnCancel: document.getElementById(this.elementIds.btnCancel),
+            btnEndTurn: document.getElementById(this.elementIds.btnEndTurn)
         };
 
+        for (let [name, btn] of Object.entries(this.interactionBtnGroup)) {
+            if (!btn) {
+                throw new Error(`Button ${name} not found in btnGroup!`);
+            }
+        }
         this.deactivateAllBtns(); // start with all buttons deactivated
     }
 
+    bindDevCardHandlers() {
+        // bind dev card buttons here
+        this.devCardsGroup = document.getElementById(this.elementIds.devCardsGroup);
+        if (!this.devCardsGroup) {
+            throw new Error("Dev cards layer not found!");
+        }
+    }
+
+    /*--------------------------------------------Activate/Deactivate handler ------------------------------------------------------- */
     clearBtnHandlers() {
-        for (let btn of Object.values(this.btnGroup)) {
+        for (let btn of Object.values(this.interactionBtnGroup)) {
             btn.onclick = null;
         }
     }
 
-
-
-    activateBtn(name){
-        if (this.btnGroup[name]) {
-            this.btnGroup[name].disabled = false;
-            this.btnGroup[name].classList.remove('btn-disabled');
-        }else{
+    activateBtn(name) {
+        if (this.interactionBtnGroup[name]) {
+            const btn = this.interactionBtnGroup[name];
+            btn.onclick = this.onclickHandler[name];
+            btn.disabled = false;
+            btn.classList.remove('btn-disabled');
+        } else {
             console.warn(`Button ${name} not found in btnGroup.`);
         }
     }
 
-    deactivateBtn(name){
-        if (this.btnGroup[name]) {
-            this.btnGroup[name].disabled = true;
-            this.btnGroup[name].classList.add('btn-disabled');
-        }else{
+    deactivateBtn(name) {
+        if (this.interactionBtnGroup[name]) {
+            const btn = this.interactionBtnGroup[name];
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+        } else {
             console.warn(`Button ${name} not found in btnGroup.`);
         }
     }
 
-    deactivateAllBtns(){
-        for (let btn of Object.values(this.btnGroup)) {
+    deactivateAllBtns() {
+        for (let btn of Object.values(this.interactionBtnGroup)) {
             btn.disabled = true;
             btn.classList.add('btn-disabled');
         }
     }
 
-    bindInteractionLayer() {
-        this.interactionLayer = document.getElementById(this.interactionLayerId);
-        if (!this.interactionLayer) {
-            console.error("Interaction layer not found!");
-            return;
-        }
+    activateDevCards() {
+        // enable dev card buttons
+        this.devCardsGroup.onclick = (event) => {
+            const cardType = event.target.dataset.cardType;
+            if (cardType) {
+                this.gameClient.submitPlayDevCard(cardType);
+            }
+        };
     }
+
+    deactivateDevCards() {
+        // disable dev card clicking
+        this.devCardsGroup.onclick = null;
+    }
+
+
+
+
+
 
     setMode(mode) {
         this.currentMode = mode;
@@ -102,7 +160,7 @@ export class InputManager {
 
     clearInteractionLayer() {
         console.warn("Clearing interaction layer.");
-        HtmlUtils.clearElementById(this.interactionLayerId);
+        HtmlUtils.clearElementById(this.elementIds.interactionLayer);
     }
 
 
@@ -125,7 +183,7 @@ export class InputManager {
             const confirmBtn = HtmlUtils.createSvgButton(x0, y0, width, height, "Confirm", () => {
                 this.handleConfirmBtnClick.bind(this)();
             });
-            confirmBtn.id = this.btnConfirmId;
+            confirmBtn.id = this.elementIds.interactionBtnConfirm;
             confirmBtn.classList.add('svg-btn-confirm');
             btnGroup.push(confirmBtn);
             x += width + spacing;
@@ -137,7 +195,7 @@ export class InputManager {
             const cancelBtn = HtmlUtils.createSvgButton(x, y, width, height, "Cancel", () => {
                 this.handleCancelBtnClick.bind(this)();
             });
-            cancelBtn.id = this.btnCancelId;
+            cancelBtn.id = this.elementIds.interactionBtnCancel;
             cancelBtn.classList.add('svg-btn-cancel');
             btnGroup.push(cancelBtn);
             x += width + spacing;
@@ -149,7 +207,7 @@ export class InputManager {
             const undoBtn = HtmlUtils.createSvgButton(x, y, width, height, "Undo", () => {
                 this.handleUndoBtnClick.bind(this)();
             });
-            undoBtn.id = this.btnUndoId;
+            undoBtn.id = this.elementIds.interactionBtnUndo;
             undoBtn.classList.add('svg-btn-undo');
             btnGroup.push(undoBtn);
             x += width + spacing;
@@ -261,9 +319,9 @@ export class InputManager {
 
         // check btn state
         if (res.result === null) {
-            document.getElementById(this.btnConfirmId).classList.remove('svg-btn-disabled');
+            document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
         } else {
-            document.getElementById(this.btnConfirmId).classList.add('svg-btn-disabled');
+            document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
         }
     }
 
@@ -372,9 +430,9 @@ export class InputManager {
                 // check btn state
                 // if all buildings placed, enable confirm button
                 if (res.result === null) {
-                    document.getElementById(this.btnConfirmId).classList.remove('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
                 } else {
-                    document.getElementById(this.btnConfirmId).classList.add('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
                 }
                 break;
             case 'BUILD_SETTLEMENT':
@@ -484,9 +542,9 @@ export class InputManager {
                 // check btn state
                 // if all buildings placed, enable confirm button
                 if (res.result === null) {
-                    document.getElementById(this.btnConfirmId).classList.remove('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
                 } else {
-                    document.getElementById(this.btnConfirmId).classList.add('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
                 }
                 break;
             case 'BUILD_SETTLEMENT':
@@ -528,16 +586,16 @@ export class InputManager {
                 }
                 // check btn state
                 if (res.result === null) {
-                    document.getElementById(this.btnConfirmId).classList.remove('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
                 } else {
-                    document.getElementById(this.btnConfirmId).classList.add('svg-btn-disabled');
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
                 }
                 break;
             case 'BUILD_ROAD':
                 // remove last selected road
                 if (this.clickedEdge.length > 0) {
                     this.clickedEdge.pop();
-                    const res = this.roadBuildingPredictor.rollbackLastRoad();
+                    const res = this.buildingPredictor.rollbackLastRoad();
                     if (res.status !== StatusCodes.SUCCESS) {
                         console.error("Failed to rollback last road:", res);
                         return;
@@ -546,7 +604,7 @@ export class InputManager {
 
                     // redraw interaction layer
                     this.clearInteractionLayer();
-                    this._drawFromBuildingPredictor(this.roadBuildingPredictor);
+                    this._drawFromBuildingPredictor(this.buildingPredictor);
                     const btnGroup = this.createBtnGroup(0b111);
                     for (let btn of btnGroup) {
                         this.interactionLayer.appendChild(btn);

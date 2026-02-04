@@ -197,6 +197,10 @@ export class GameControllerV2 {
                 // handle second settlement placement events
                 res = this.handleStateInitialPlacement2(event);
                 break;
+            case GameState.ROLL:
+                // handle roll events
+                res = this.handleStateRoll(event);
+                break;
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
         }
@@ -213,6 +217,13 @@ export class GameControllerV2 {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Invalid event type, expected INITIAL_PLACEMENT1, received ${event.type}`
+            };
+        }
+
+        if (!this._isActivePlayer(event.payload.playerId)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${event.payload.playerId} is not the active player.`
             };
         }
 
@@ -259,6 +270,14 @@ export class GameControllerV2 {
         const playerId = event.payload.playerId;
         const buildStack = event.payload.buildStack; // array of build actions
 
+        if (!this._isActivePlayer(playerId)) {
+            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} is not the active player.`
+            };
+        }
+
         // validate buildStack
         const validationRes = this._validateAndApplyBuildStack(playerId, buildStack, "INITIAL_PLACEMENT");
         if (validationRes.status !== StatusCodes.SUCCESS) {
@@ -286,7 +305,7 @@ export class GameControllerV2 {
             this.gameContext.currentPlayerId = this.gameContext.players[this.gameContext.currentPlayerIndex].id;
 
             const newEvent = {
-                type: 'WAITINIG_FOR_ACTION',
+                type: 'WAITING_FOR_ACTION',
                 payload: {
                     phase: 'ROLL',
                     activePlayerId: this.gameContext.currentPlayerId,
@@ -305,9 +324,54 @@ export class GameControllerV2 {
             };
             this._broadcast(newEvent);
         }
-
-
     }
+
+
+    handleStateRoll(event) {
+        if (event.type !== 'ROLL' && event.type !== 'ACTIVATE_DEV_CARD') {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid event type, expected ROLL or ACTIVATE_DEV_CARD, received ${event.type}`
+            };
+        }
+
+        const playerId = event.payload.playerId;
+        if (!this._isActivePlayer(playerId)) {
+            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
+
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} is not the active player.`
+            };
+        }
+
+        // roll dice
+        const rollResult = this.dice.roll();
+        console.log(`Player ${playerId} rolled a ${rollResult.sum} (${rollResult.values.join(' + ')})`);
+
+        if (rollResult.sum === 7) {
+            // TODO: handle rolling a 7
+            console.warn(`Player ${playerId} rolled a 7 - logic not implemented yet.`);
+        } else {
+            // distribute resources
+            console.log(`Distributing resources for roll ${rollResult.sum}`);
+            this.distributeResourcesByRoll(rollResult.sum);
+            this.gameContext.currentState = GameState.MAIN;
+
+            // broadcast turn change to MAIN phase
+            const newEvent = {
+                type: 'WAITING_FOR_ACTION',
+                payload: {
+                    phase: 'MAIN',
+                    activePlayerId: this.gameContext.currentPlayerId,
+                }
+            };
+            this._broadcast(newEvent);
+        }
+    }
+
+
+
 
 
 
@@ -328,6 +392,10 @@ export class GameControllerV2 {
 
     _getCurrentPlayer() {
         return this.gameContext.players[this.gameContext.currentPlayerIndex];
+    }
+
+    _isActivePlayer(playerId) {
+        return this.gameContext.currentPlayerId === playerId;
     }
 
     /**
