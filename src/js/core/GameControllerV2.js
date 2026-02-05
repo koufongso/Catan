@@ -11,7 +11,6 @@ import { DevCardDeck } from "../models/devCards/DevCardDeck.js";
 
 import { HexUtils } from "../utils/hex-utils.js";
 import { GameUtils } from "../utils/game-utils.js";
-import { PlayerUtils } from "../utils/player-utils.js";
 
 
 export const GameState = Object.freeze({
@@ -132,19 +131,9 @@ export class GameControllerV2 {
         // replace with count only
         gameContextCopy.devCardDeckCount = this.gameContext.devCardDeck.getRemainingCardCount();
 
-        // Sanitize player hands
-        gameContextCopy.players = gameContextCopy.players.map(player => {
-            const sanitizedPlayer = structuredClone(player);
-            if (!showAll && player.id !== viewingPlayerId) {
-                // Hide resource cards and dev cards from other players
-                sanitizedPlayer.resources = null;
-                sanitizedPlayer.devCards = null;
-
-                // replace with counts only
-                sanitizedPlayer.resourceCount = PlayerUtils.getTotalResourceCount(player);
-                sanitizedPlayer.devCardCount = PlayerUtils.getTotalDevCardCount(player);
-            }
-            return sanitizedPlayer;
+        // replaced with Sanitize player info
+        gameContextCopy.players = this.gameContext.players.map(player => {
+            return player.serialize(!showAll && player.id !== viewingPlayerId);
         });
 
         return gameContextCopy;
@@ -377,12 +366,12 @@ export class GameControllerV2 {
 
     handleStateMain(event) {
         if (event.type !== 'BUILD' && event.type !== 'TRADE' && event.type !== 'END_TURN' && event.type !== 'ACTIVATE_DEV_CARD') {
-            return {   
+            return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Invalid event type, expected BUILD, TRADE, END_TURN, or ACTIVATE_DEV_CARD, received ${event.type}`
             };
         }
-    
+
         const playerId = event.payload.playerId;
         if (!this._isActivePlayer(playerId)) {
             console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
@@ -408,12 +397,12 @@ export class GameControllerV2 {
             case 'END_TURN':
                 // handle end turn logic
                 this._handleStateMainEndTurn(event);
-            default:    
+            default:
                 break;
         }
     }
 
-    
+
     _handleStateMainEndTurn(event) {
         this._nextPlayer();
         this.gameContext.currentState = GameState.ROLL;
@@ -424,6 +413,31 @@ export class GameControllerV2 {
                 activePlayerId: this.gameContext.currentPlayerId,
             }
         });
+    }
+
+
+    /*------------------------------------------------------- Robber subroutine -------------------------------------------------------*/
+    /**
+     * Check all player's hands and if larger than 7, send request to client to discard half (round down) of the hands
+     */
+    _checkAndDiscardResources() {
+        // check who needs to discard
+        let playerIdsToDiscard = []
+        this.gameContext.players.forEach(player => {
+            if (player.resources.length > 7) {
+                playerIdsToDiscard.push(player.id);
+            }
+        });
+        if (playerIdsToDiscard.length > 0) {
+            this._broadcast({
+                type: 'REQUEST_DISCARD_RESOURCES',
+                payload: {
+                    playerIds: playerIdsToDiscard
+                }
+            });
+        }
+
+
     }
 
 

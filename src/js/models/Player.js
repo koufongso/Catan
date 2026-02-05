@@ -1,5 +1,5 @@
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
-import {PLAYER_ASSET_LIMITS} from '../constants/GameRuleConstants.js';
+import { PLAYER_ASSET_LIMITS } from '../constants/GameRuleConstants.js';
 import { HexUtils } from '../utils/hex-utils.js';
 
 export class Player {
@@ -72,7 +72,7 @@ export class Player {
      * @returns 
      */
     canBuild(buildingType) {
-        switch(buildingType) {
+        switch (buildingType) {
             case 'SETTLEMENT':
                 return this.settlementsLeft > 0;
             case 'CITY':
@@ -94,7 +94,7 @@ export class Player {
         this.citiesLeft--;
         // we assume the city replaces a settlement
         this.settlements.delete(cityId);
-        this.settlements.add(cityId); 
+        this.settlements.add(cityId);
     }
 
     // add a road object to player's list
@@ -110,15 +110,15 @@ export class Player {
 
 
     getSettlements(level = null) {
-        switch(level) {
-        case null: // all settlements
-            return Array.from(this.settlements);
-        case 0:
-        case 1:
-        case 2:
-            return Array.from(this.settlements).filter(s => s.level === level);
-        default:
-            throw new Error("Invalid settlement level filter");
+        switch (level) {
+            case null: // all settlements
+                return Array.from(this.settlements);
+            case 0:
+            case 1:
+            case 2:
+                return Array.from(this.settlements).filter(s => s.level === level);
+            default:
+                throw new Error("Invalid settlement level filter");
         }
     }
 
@@ -130,7 +130,7 @@ export class Player {
         return this.devCards;
     }
 
-    getResources(){
+    getResources() {
         return this.resources;
     }
 
@@ -149,8 +149,8 @@ export class Player {
     }
 
 
-    getHands(){
-        return {'resources':this.getResources(), 'devCards':this.getDevCards()};
+    getHands() {
+        return { 'resources': this.getResources(), 'devCards': this.getDevCards() };
     }
 
     // helper function to get all owned assets ids
@@ -167,7 +167,7 @@ export class Player {
         // settlements
         vp += this.settlements.size;
         vp += this.cities.size * 2;
-        
+
         // cities - assuming cityIds is a Set similar to settlementIds
         // vp += this.cityIds.size * 2; // Uncomment if city logic is added
         // victory point cards
@@ -189,11 +189,11 @@ export class Player {
     removeResourceByIndicies(indicies) {
         // determine resources to remove
         const resourceTypes = Object.keys(this.resources);
-        
+
         // compute the bounary indicies for each resource type
         // e.g., [0, 3, 5, 8, 10, 12] means:
         // 0-2: type0, 3-4: type1, 5-7: type2, 8-9: type3, 10-11: type4
-        let boundaries = [];                 
+        let boundaries = [];
         let cumulative = 0;
         let toRemove = {};
         for (let type of resourceTypes) {
@@ -204,7 +204,7 @@ export class Player {
         boundaries.push(cumulative); // add the total count as the final boundary
 
         // remove resources by indicies
-        
+
         for (let index of indicies) {
             if (index < 0 || index >= cumulative) {
                 throw new Error(`Invalid resource index: ${index}`);
@@ -216,7 +216,7 @@ export class Player {
                 typeIndex++;
             }
             const type = resourceTypes[typeIndex];
-            toRemove[type] ++;
+            toRemove[type]++;
         }
 
         // actually remove the resources
@@ -227,7 +227,7 @@ export class Player {
         return toRemove;
     }
 
-    getSettlementVerticesIdSet(){
+    getSettlementVerticesIdSet() {
         const vertexSet = new Set();
         for (let settlement of this.settlements) {
             const vertexId = HexUtils.coordToId(settlement.coord);
@@ -241,7 +241,7 @@ export class Player {
      * Get a Set of vertex IDs connected to player's roads
      * @returns {Set} - A set of vertex IDs
      */
-    getRoadVerticesIdSet(){
+    getRoadVerticesIdSet() {
         const vertexSet = new Set();
         for (let road of this.roads) {
             const vertices = HexUtils.getVerticesFromEdge(road.coord);
@@ -250,5 +250,36 @@ export class Player {
             }
         }
         return vertexSet;
+    }
+
+    getTotalResourceCount(type = null) {
+        // if type is specified, return count of that resource
+        if (type) {
+            return this.resources[type] || 0;
+        }
+
+        // else return total count of all resources
+        return Object.values(this.resources).reduce((a, b) => a + b, 0);
+    }
+
+    getTotalDevCardCount() {
+        return this.devCards.length;
+    }
+
+
+    /**
+     * Safe way to serialize player data
+     * @param {*} isPrivate - If true, only include public information (e.g., for other players)
+     * @returns {Object} - The serialized player data
+     */
+    serialize(isPrivate = true) {
+        return {
+            id: this.id,
+            color: this.color,
+            resourceCount: this.getTotalResourceCount(),
+            devCardCount: this.getTotalDevCardCount(),
+            resources: isPrivate ? null : this.resources,
+            devCards: isPrivate ? null : this.devCards
+        };
     }
 }
