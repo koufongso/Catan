@@ -4,6 +4,7 @@ import { DEBUG_FLAGS } from "../../constants/Config.js";
 import { Player } from "../../models/Player.js";
 import { DebugController } from "../debug/DebugController.js";
 import { DebugDashboard } from "../debug/DebugDashboard.js";
+import { GameUtils } from "../../utils/game-utils.js";
 
 export class GameClient {
     constructor(id, name, color, isHuman) {
@@ -85,7 +86,10 @@ export class GameClient {
             case 'INITIAL_PLACEMENT':
                 this.inputManager.activateInitialPlacementInteractionLayer(this.id, this.gameContext.gameMap, this.color);
                 break;
-
+            case 'DISCARD':
+                const currentResources = this.gameContext.players.find(p => p.id === this.id).resources;
+                this.inputManager.activateDiscardInteractionLayer(this.id, currentResources, payload.numberToDiscard);
+                break;
             default:
                 console.warn(`Unhandled phase in handleWaitingForInput: ${payload.phase}`);
         }
@@ -130,6 +134,19 @@ export class GameClient {
         // 3. (Skip for now) check if the locations are valid according to game rules
 
         this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT', payload: { playerId: this.id, buildStack: buildStack } });
+    }
+
+    submitDiscardResources(selectedResources) {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+        
+        if(GameUtils.isDiscardValid(this.gameContext.players.find(p => p.id === this.id).resources, selectedResources)){
+            this.gameController.inputEvent({ type: 'DISCARD', payload: { playerId: this.id, discardedResources: selectedResources } });
+        }else{
+            throw new Error("Invalid discard resources submitted.");
+        }
     }
 
 

@@ -2,6 +2,7 @@ import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
 import { DevCard } from "../../models/devCards/DevCard.js";
 import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
+import { GameUtils } from "../../utils/game-utils.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
@@ -38,11 +39,12 @@ export class DebugController {
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 const player = this.gameContext.players[playerIndex];
                 player.addResources({ [type]: parseInt(qty) });
-
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext
-                }
+                this.controller._broadcast({
+                    type: 'CHEAT_RESOURCES_ADDED',
+                    payload: {
+                        activePlayerId: player.id,
+                    }
+                });
             },
 
             /**
@@ -64,11 +66,12 @@ export class DebugController {
                 for (const type of Object.values(RESOURCE_TYPES)) {
                     player.addResources({ [type]: amount });
                 }
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext,
-                    message: `Added ${amount} of all resources to Player ${playerIndex}`
-                }
+                this.controller._broadcast({
+                    type: 'CHEAT_RESOURCES_ADDED',
+                    payload: {
+                        activePlayerId: player.id,
+                    }
+                });
             },
 
             /**
@@ -88,11 +91,12 @@ export class DebugController {
                 }
                 const player = this.gameContext.players[playerIndex];
                 player.achievements.cheatVP += parseInt(amount);
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext,
-                    message: `Added ${amount} cheat VP to Player ${playerIndex}`
-                }
+                this.controller._broadcast({
+                    type: 'CHEAT_VICTORY_POINTS_ADDED',
+                    payload: {
+                        activePlayerId: player.id,
+                    }
+                });
             },
 
             /**
@@ -112,14 +116,18 @@ export class DebugController {
                 }
 
                 if (diceValue === 7) {
-                    return this.controller.discardCardAndActivateRobber(this.gameContext.currentState); // this will not change state after robber
+                    this.controller.returnStateAfterRob = this.controller.gameContext.currentState;
+                    this.controller.discardInfo = []; // reset discard info
+                    this.controller.discardInfo = GameUtils.getDiscardInfo(this.controller.gameContext);
+                    this.controller._handleDiscardOrMoveRobber();
                 } else {
-                    this.controller.distributeResourcesByRoll(diceValue);
-                    return {
-                        status: StatusCodes.SUCCESS,
-                        gameContext: this.gameContext,
-                        message: `Forced dice roll to ${diceValue}`
-                    }
+                    this.controller._distributeResourcesByRoll(diceValue);
+                    this.controller._broadcast({
+                        type: 'CHEAT_DICE_ROLLED',
+                        payload: {
+                            rolledValue: diceValue
+                        }
+                    });
                 }
             },
 
@@ -169,11 +177,14 @@ export class DebugController {
                     player.addDevCard(new DevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
                 }
 
-                return {
-                    status: StatusCodes.SUCCESS,
-                    gameContext: this.gameContext,
-                    message: `Added ${amount} ${resolvedCardType} dev card(s) to Player ${playerIndex}`
-                }
+                this.controller._broadcast({
+                    type: 'CHEAT_DEV_CARD_ADDED',
+                    payload: {
+                        activePlayerId: player.id,
+                        cardType: resolvedCardType,
+                        amount: amountInt
+                    }
+                });
             },
 
             /**
@@ -192,9 +203,9 @@ export class DebugController {
         const [cmd, ...args] = input.trim().split(/\s+/);
         const action = this.commands[cmd.toLowerCase()];
         console.log("Executing cheat command:", cmd, args);
-        if (action){
+        if (action) {
             return action(args);
-        }else{
+        } else {
             return {
                 status: StatusCodes.ERROR,
                 error_message: `Unknown command: ${cmd}`

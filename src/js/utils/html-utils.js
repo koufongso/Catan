@@ -1,5 +1,5 @@
 import { HexUtils } from "../utils/hex-utils.js";
-import { SVG_NAMESPACE, HEX_SIZE } from "../constants/RenderingConstants.js";
+import { SVG_NAMESPACE, HEX_SIZE, TEXTURE_PATHS } from "../constants/RenderingConstants.js";
 
 export const HtmlUtils = Object.freeze({
 
@@ -246,5 +246,23 @@ export const HtmlUtils = Object.freeze({
             settlementCircle.style.fill = attributes.color;
         }
         return settlementCircle;
+    },
+
+
+    /**
+     * Create a resource card HTML element
+     * @param {RESOURCE_TYPES} type 
+     */
+    createResourceCardHtml(type) {
+        const template = document.getElementById('card-template');
+        const clone = template.content.cloneNode(true);
+        const cardDiv = clone.querySelector('.card-container');
+        cardDiv.dataset.type = type;
+        const img = clone.querySelector('.card-image');
+
+        img.src = TEXTURE_PATHS.CARDS[type];
+        img.alt = `${type} Card`;
+        cardDiv.classList.add('resource-card');
+        return clone;
     }
 });

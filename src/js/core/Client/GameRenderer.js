@@ -1,6 +1,6 @@
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
 import { HexUtils } from "../../utils/hex-utils.js";
-import { TEXTURE_PATHS } from "../../constants/GameRuleConstants.js";
+import { TEXTURE_PATHS } from "../../constants/RenderingConstants.js";
 import { TERRAIN_TYPES } from "../../constants/TerrainTypes.js";
 import { Player } from "../../models/Player.js";
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../../constants/DevCardTypes.js";

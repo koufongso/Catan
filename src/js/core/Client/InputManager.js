@@ -421,7 +421,7 @@ export class InputManager {
             console.log("All settlements placed, waiting for confirm.");
             // stop here, skip redraw valid spots
             this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
-        }else{
+        } else {
             // redraw interaction layer with new valid spots and placed buildings
             this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
         }
@@ -539,7 +539,7 @@ export class InputManager {
             console.log("All settlements placed, waiting for confirm.");
             // stop here, skip redraw valid spots
             this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
-        }else{
+        } else {
             // redraw interaction layer with new valid spots and placed buildings
             this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
         }
@@ -656,6 +656,30 @@ export class InputManager {
                 // submit the selected buildings to server/controller
                 this.gameClient.submitInitialPlacement(buildStack);
                 break;
+            case 'DISCARD':
+                // gather selected resources from modal
+                const modalBody = document.querySelector('#resource-selection-modal-overlay #modal-body');
+                const selectedCards = modalBody.querySelectorAll('.card-selected');
+                const resourcesToDiscard = {};
+                selectedCards.forEach(cardDiv => {
+                    const type = cardDiv.dataset.type;
+                    if (!resourcesToDiscard[type]) {
+                        resourcesToDiscard[type] = 0;
+                    }
+                    resourcesToDiscard[type] += 1;
+                });
+
+                // remove the modal
+                const modalOverlay = document.getElementById('resource-selection-modal-overlay');
+                if (modalOverlay) {
+                    modalOverlay.remove();
+                } else {
+                    console.warn("Resource selection modal overlay not found during discard confirm.");
+                }
+
+                // submit discard event to client
+                this.gameClient.submitDiscardResources(resourcesToDiscard);
+                break;
 
             case 'BUILD_ROAD':
                 // submit the selected roads to server/controller
@@ -668,6 +692,7 @@ export class InputManager {
                 // submit the selected settlement to server/controller
                 this.controller.inputEvent({ type: 'BUILD_SETTLEMENT', vertexCoord: this.clickedVertex[0] });
                 break;
+            
             default:
                 console.warn("Confirm button clicked in unknown mode:", this.currentMode);
         }
@@ -675,6 +700,108 @@ export class InputManager {
 
 
     /*---------------------------------------------------------------Robber Mode----------------------------------------------------------------*/
+
+    activateDiscardInteractionLayer(playerId, currentResources, numberToDiscard) {
+        this.setMode('DISCARD');
+        this.activateResourcesSelectionMode(
+            currentResources,
+            numberToDiscard,
+            playerId ? `Player ${playerId} Select Resources to Discard` : `Select Resources to Discard`,
+        );
+    }
+
+
+    /**
+     * Let the player select cards to discard
+     * @param {Object} resources resource type to count
+     * @param {*} numToSelect number of cards to select
+     * @param {*} msg message to display in modal title
+     * @param {*} confirmEventName event name to emit when selection is confirmed
+     */
+    activateResourcesSelectionMode(resources, numToSelect, msg) {
+        // render text (not implemented yet)
+        // TODO: prompt/notify the player to discard cards
+
+        // render player's hands with selectable cards (only show the resources for now)
+        // grab the overlay template
+        const modalWindowTemplate = document.getElementById('universal-modal-template');
+        const clone = modalWindowTemplate.content.cloneNode(true);
+
+        const overlay = clone.querySelector('.modal-overlay');
+        overlay.id = 'resource-selection-modal-overlay';
+        const modalCard = clone.querySelector('.modal-card');
+        const numCardsToSelect = numToSelect;
+
+        const modelTitle = modalCard.querySelector('#modal-title')
+        modelTitle.textContent = `${msg} (0/${numCardsToSelect})`;
+
+        // add confirm button (disable when not enough cards selected, enable when enough)
+        const btns = clone.querySelector('#modal-btns');
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Confirm Selection';
+        confirmBtn.classList.add('btn-disabled');
+        confirmBtn.disabled = true; // initially disabled
+        btns.appendChild(confirmBtn);
+        // render player's resource cards into the modal body
+        const modalBody = modalCard.querySelector('#modal-body');
+        this._renderResourceCards(resources, modalBody, (clickedType, cardDiv) => {
+            // card clicked, first check how many are selected
+            const selectedCards = modalBody.querySelectorAll('.card-selected');
+            if (selectedCards.length >= numCardsToSelect && !cardDiv.classList.contains('card-selected')) {
+                // already selected enough and trying to select more (is not selected yet)
+                return;
+            }
+
+            // can be selected/deselected
+            cardDiv.classList.toggle('card-selected');
+
+            // update the title with current count
+            const newSelectedCards = modalBody.querySelectorAll('.card-selected');
+            modelTitle.textContent = `${msg} (${newSelectedCards.length}/${numCardsToSelect})`;
+
+            // update the confirm button state
+            confirmBtn.disabled = newSelectedCards.length < numCardsToSelect;
+            if (confirmBtn.disabled) {
+                confirmBtn.classList.add('btn-disabled');
+                confirmBtn.classList.remove('btn-primary');
+            } else {
+                confirmBtn.classList.remove('btn-disabled');
+                confirmBtn.classList.add('btn-primary');
+            }
+        });
+
+        // send selected cards with action, this is action cannot be cancelled
+        confirmBtn.onclick = this.handleConfirmBtnClick.bind(this);
+
+        // append to main wrapper
+        document.getElementById('main-wrapper').appendChild(clone);
+    }
+
+
+    /**
+     * Generic helper to render resources into ANY container.
+     * @param {Object} resources player object
+     * @param {*} container the target container to render into
+     * @param {*} onCardClick callback when a card is clicked (optional)
+     */
+    _renderResourceCards(resources, container, onCardClick = null) {
+        container.innerHTML = ''; // clear existing content
+
+        // resource resources
+        for (const [type, amount] of Object.entries(resources)) {
+            for (let i = 0; i < amount; i++) {
+                const cardHtml = HtmlUtils.createResourceCardHtml(type);
+                const cardDiv = cardHtml.querySelector('.card-container');
+                if (onCardClick) {
+                    cardDiv.onclick = () => onCardClick(type, cardDiv);
+                }
+                container.appendChild(cardHtml);
+            }
+        }
+    }
+
+
+
     handleTileClick(tCoord) {
         if (this.currentMode !== 'ROBBER') {
             return; // ignore if not in robber mode

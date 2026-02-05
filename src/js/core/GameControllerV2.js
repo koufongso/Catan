@@ -181,7 +181,6 @@ export class GameControllerV2 {
                 // handle first settlement placement events
                 res = this.handleStateInitialPlacement1(event);
                 break;
-
             case GameState.INITIAL_PLACEMENT2:
                 // handle second settlement placement events
                 res = this.handleStateInitialPlacement2(event);
@@ -194,6 +193,13 @@ export class GameControllerV2 {
                 // handle main game loop events
                 // res = this.handleStateMain(event);
                 res = this.handleStateMain(event);
+                break;
+            case GameState.DISCARD:
+                res = this.handleStateDiscard(event);
+                break;
+            case GameState.MOVE_ROBBER:
+                // handle move robber events
+                res = this.handleStateMoveRobber(event);
                 break;
             default:
                 throw new Error(`Unknown game state: ${this.gameContext.currentState}`);
@@ -344,12 +350,15 @@ export class GameControllerV2 {
         console.log(`Player ${playerId} rolled a ${rollResult.sum} (${rollResult.values.join(' + ')})`);
 
         if (rollResult.sum === 7) {
-            // TODO: handle rolling a 7
-            console.warn(`Player ${playerId} rolled a 7 - logic not implemented yet.`);
+            // start robber sequence
+            this.returnStateAfterRob = GameState.MAIN;
+            this.discardInfo = []; // reset discard list
+            this.discardInfo = GameUtils.getDiscardInfo(this.gameContext);
+            this._handleDiscardOrMoveRobber();
         } else {
             // distribute resources
             console.log(`Distributing resources for roll ${rollResult.sum}`);
-            this.distributeResourcesByRoll(rollResult.sum);
+            this._distributeResourcesByRoll(rollResult.sum);
             this.gameContext.currentState = GameState.MAIN;
 
             // broadcast turn change to MAIN phase
@@ -417,27 +426,50 @@ export class GameControllerV2 {
 
 
     /*------------------------------------------------------- Robber subroutine -------------------------------------------------------*/
-    /**
-     * Check all player's hands and if larger than 7, send request to client to discard half (round down) of the hands
-     */
-    _checkAndDiscardResources() {
-        // check who needs to discard
-        let playerIdsToDiscard = []
-        this.gameContext.players.forEach(player => {
-            if (player.resources.length > 7) {
-                playerIdsToDiscard.push(player.id);
-            }
-        });
-        if (playerIdsToDiscard.length > 0) {
-            this._broadcast({
-                type: 'REQUEST_DISCARD_RESOURCES',
-                payload: {
-                    playerIds: playerIdsToDiscard
-                }
-            });
+    handleStateDiscard(event) {
+        //TODO: implement discard handling
+        console.warn(`handleStateDiscard not implemented yet.`);
+        if (event.type !== 'DISCARD') {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid event type, expected DISCARD, received ${event.type}`
+            };
         }
 
+        // check if player is current discard player
+        const requestDiscardPlayerId = event.payload.playerId;
+        const currentDiscardPlayerId = this.discardInfo[0].playerId;
+        if (requestDiscardPlayerId !== currentDiscardPlayerId) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${requestDiscardPlayerId} is not the current discard player.`
+            };
+        }
 
+        // process discard
+        // get the player instance
+        const player = this.gameContext.players.find(p => p.id === requestDiscardPlayerId);
+        const discardedResources = event.payload.discardedResources; // { 'WOOD': 2, 'BRICK': 1, ...}
+
+        // validate discard
+        if (!GameUtils.isDiscardValid(player.resources, discardedResources)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid discard resources submitted by Player ${requestDiscardPlayerId}.`
+            };
+        }
+
+        // apply discard
+        player.discardResources(discardedResources);
+
+        // return resources to bank
+        this._addBankResource(discardedResources);
+
+        // remove player from discard list
+        this.discardInfo.shift();
+
+        // check if more players need to discard
+        this._handleDiscardOrMoveRobber();
     }
 
 
@@ -541,7 +573,7 @@ export class GameControllerV2 {
      * Distribute resources to players based on the rolled number.
      * @param {*} rolledNumber 
      */
-    distributeResourcesByRoll(rolledNumber) {
+    _distributeResourcesByRoll(rolledNumber) {
         // get all the tile ids with the rolled number token
         const filteredTiles = this.gameContext.gameMap.filter('tiles', (tile) => tile.numberToken === rolledNumber)
         filteredTiles.forEach(tile => {
@@ -558,24 +590,16 @@ export class GameControllerV2 {
                     const ownerId = settlement.ownerId;
                     const amount = (settlement.level === 1) ? 1 : 2; // settlement gives 1, city gives 2
                     // distribute resource to player with ownerId
-                    this.distributeResourceToPlayer(ownerId, resourceType, amount);
+                    this._distributeResourceToPlayer(ownerId, resourceType, amount);
                 }
             });
-        });
-
-        // broadcast
-        this._broadcast({
-            type: 'RESOURCE_DISTRIBUTION',
-            payload: {
-                rolledNumber: rolledNumber
-            }
         });
     }
 
 
-    distributeResourceToPlayer(playerId, resourceType, amount) {
+    _distributeResourceToPlayer(playerId, resourceType, amount) {
         // first check if bank has enough resources
-        const returnedResources = this.getResourceFromBank({ [resourceType]: amount });
+        const returnedResources = this._getResourceFromBank({ [resourceType]: amount });
 
         // find the player in the game context and give them the resource
         console.log(`Distributing to Player ${playerId}:`, returnedResources);
@@ -593,7 +617,7 @@ export class GameControllerV2 {
      * @param {Object} requestResources a resource request object {RESOURCE_TYPES: amount, ...}
      * @returns the actual resources taken from bank
      */
-    getResourceFromBank(requestResources) {
+    _getResourceFromBank(requestResources) {
         let returnedResources = {};
         for (let [type, amount] of Object.entries(requestResources)) {
             const currentResource = this.gameContext.bankResources[type];
@@ -609,6 +633,52 @@ export class GameControllerV2 {
         }
         return returnedResources;
     }
+
+
+    /**
+     * 
+     * @param {Object} resources resources to update {RESOURCE_TYPES: amount, ...}
+     */
+    _addBankResource(resources) {
+        for (let [type, amount] of Object.entries(resources)) {
+            const current = this.gameContext.bankResources[type];
+            if (current) {
+                this.gameContext.bankResources[type] = current + amount;
+            } else {
+                throw new Error(`Non-existent resource type (should not happen): ${type}`);
+            }
+        }
+    }
+
+
+    _handleDiscardOrMoveRobber() {
+    // 1. If there are still people left to discard
+    if (this.discardInfo.length > 0) {
+        const nextDiscard = this.discardInfo[0];
+        this.gameContext.currentState = GameState.DISCARD;
+        
+        this._broadcast({
+            type: 'WAITING_FOR_INPUT',
+            payload: {
+                phase: 'DISCARD',
+                activePlayerId: nextDiscard.playerId,
+                numberToDiscard: nextDiscard.numberToDiscard
+            }
+        });
+    } 
+    // 2. Everyone is finished, time to move the robber
+    else {
+        this.gameContext.currentState = GameState.MOVE_ROBBER;
+        
+        this._broadcast({
+            type: 'WAITING_FOR_INPUT',
+            payload: {
+                phase: 'MOVE_ROBBER',
+                activePlayerId: this.gameContext.currentPlayerId
+            }
+        });
+    }
+}
 
 
 }

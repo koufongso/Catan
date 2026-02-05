@@ -115,4 +115,48 @@ export const GameUtils = Object.freeze({
         return MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
     },
 
+
+
+    /* -----------------------------------------------------Discard Helpers----------------------------------------------------- */
+
+    isDiscardValid(playerResource, discardResources) {
+        console.log("Validating discard:", playerResource, discardResources);
+        // check if player has enough resources to discard
+        for (let [type, amount] of Object.entries(discardResources)) {
+            const playerAmount = playerResource[type] || 0;
+            if (amount > playerAmount) {
+                console.error(`Player does not have enough ${type} to discard. Has: ${playerAmount}, Trying to discard: ${amount}`);
+                return false; // trying to discard more than owned
+            }
+        }
+
+        // check total discard amount
+        const totalOwned = Object.values(playerResource).reduce((a, b) => a + b, 0);
+        const totalToDiscard = Object.values(discardResources).reduce((a, b) => a + b, 0);
+        if (totalToDiscard > Math.floor(totalOwned / 2)) {
+            console.error(`Player does not have enough resources to discard. Has: ${totalOwned}, Trying to discard: ${totalToDiscard}`);
+            return false; // trying to discard more than half of owned resources
+        }
+
+        return true;
+    },
+
+    /**
+     * Get a list of players who need to discard and the amount they need to discard
+     * @param {*} gameContext 
+     * @returns 
+     */
+    getDiscardInfo(gameContext) {
+        const playersNeedToDiscard = [];
+        for (let player of gameContext.players) {
+            const totalResources = Object.values(player.resources).reduce((a, b) => a + b, 0);
+            if (totalResources > 7) {
+                playersNeedToDiscard.push({
+                    playerId: player.id,
+                    numberToDiscard: Math.floor(totalResources / 2)
+                });
+            }
+        }
+        return playersNeedToDiscard;
+    }
 });
