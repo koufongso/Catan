@@ -213,18 +213,9 @@ export class GameControllerV2 {
     /*-------------------------------------------------------State Handlers-------------------------------------------------------*/
 
     handleStateInitialPlacement1(event) {
-        if (event.type !== 'INITIAL_PLACEMENT') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid event type, expected INITIAL_PLACEMENT1, received ${event.type}`
-            };
-        }
-
-        if (!this._isActivePlayer(event.payload.playerId)) {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Player ${event.payload.playerId} is not the active player.`
-            };
+        const validationResult = this._validateRequest(event, 'INITIAL_PLACEMENT');
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
         }
 
         const playerId = event.payload.playerId;
@@ -260,23 +251,13 @@ export class GameControllerV2 {
 
 
     handleStateInitialPlacement2(event) {
-        if (event.type !== 'INITIAL_PLACEMENT') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid event type, expected INITIAL_PLACEMENT2, received ${event.type}`
-            };
+        const validationResult = this._validateRequest(event, 'INITIAL_PLACEMENT');
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
         }
 
-        const playerId = event.payload.playerId;
+            const playerId = event.payload.playerId;
         const buildStack = event.payload.buildStack; // array of build actions
-
-        if (!this._isActivePlayer(playerId)) {
-            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Player ${playerId} is not the active player.`
-            };
-        }
 
         // validate buildStack
         const validationRes = this._validateAndApplyBuildStack(playerId, buildStack, "INITIAL_PLACEMENT");
@@ -328,22 +309,12 @@ export class GameControllerV2 {
 
 
     handleStateRoll(event) {
-        if (event.type !== 'ROLL' && event.type !== 'ACTIVATE_DEV_CARD') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid event type, expected ROLL or ACTIVATE_DEV_CARD, received ${event.type}`
-            };
+        const validationResult = this._validateRequest(event, ['ROLL','ACTIVATE_DEV_CARD']);
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
         }
 
         const playerId = event.payload.playerId;
-        if (!this._isActivePlayer(playerId)) {
-            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
-
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Player ${playerId} is not the active player.`
-            };
-        }
 
         // roll dice
         const rollResult = this.dice.roll();
@@ -374,22 +345,12 @@ export class GameControllerV2 {
     }
 
     handleStateMain(event) {
-        if (event.type !== 'BUILD' && event.type !== 'TRADE' && event.type !== 'END_TURN' && event.type !== 'ACTIVATE_DEV_CARD') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid event type, expected BUILD, TRADE, END_TURN, or ACTIVATE_DEV_CARD, received ${event.type}`
-            };
+        const validationResult = this._validateRequest(event, ['BUILD', 'TRADE', 'ACTIVATE_DEV_CARD', 'END_TURN']);
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
         }
 
         const playerId = event.payload.playerId;
-        if (!this._isActivePlayer(playerId)) {
-            console.log(`Player ${playerId} is not the active player, expected current active player ${this.gameContext.currentPlayerId}`);
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Player ${playerId} is not the active player.`
-            };
-        }
-
         switch (event.type) {
             case 'BUILD':
                 // handle build logic
@@ -427,24 +388,15 @@ export class GameControllerV2 {
 
     /*------------------------------------------------------- Robber subroutine -------------------------------------------------------*/
     handleStateDiscard(event) {
-        //TODO: implement discard handling
-        console.warn(`handleStateDiscard not implemented yet.`);
-        if (event.type !== 'DISCARD') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid event type, expected DISCARD, received ${event.type}`
-            };
+        const validationResult = this._validateRequest(event, 'DISCARD');
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
         }
 
         // check if player is current discard player
         const requestDiscardPlayerId = event.payload.playerId;
         const currentDiscardPlayerId = this.discardInfo[0].playerId;
-        if (requestDiscardPlayerId !== currentDiscardPlayerId) {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Player ${requestDiscardPlayerId} is not the current discard player.`
-            };
-        }
+
 
         // process discard
         // get the player instance
@@ -509,15 +461,6 @@ export class GameControllerV2 {
      * @returns 
      */
     _validateAndApplyBuildStack(playerId, buildStack, mode) {
-        // verify player
-        if (playerId !== this.gameContext.currentPlayerId) {
-            console.error(`It's not player ${playerId}'s turn.`);
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `It's not player ${playerId}'s turn.`
-            };
-        }
-
         // verify buildStack
         // 1. must have length 2
         if (buildStack.length !== 2) {
@@ -652,33 +595,73 @@ export class GameControllerV2 {
 
 
     _handleDiscardOrMoveRobber() {
-    // 1. If there are still people left to discard
-    if (this.discardInfo.length > 0) {
-        const nextDiscard = this.discardInfo[0];
-        this.gameContext.currentState = GameState.DISCARD;
-        
-        this._broadcast({
-            type: 'WAITING_FOR_INPUT',
-            payload: {
-                phase: 'DISCARD',
-                activePlayerId: nextDiscard.playerId,
-                numberToDiscard: nextDiscard.numberToDiscard
-            }
-        });
-    } 
-    // 2. Everyone is finished, time to move the robber
-    else {
-        this.gameContext.currentState = GameState.MOVE_ROBBER;
-        
-        this._broadcast({
-            type: 'WAITING_FOR_INPUT',
-            payload: {
-                phase: 'MOVE_ROBBER',
-                activePlayerId: this.gameContext.currentPlayerId
-            }
-        });
+        // 1. If there are still people left to discard
+        if (this.discardInfo.length > 0) {
+            const nextDiscard = this.discardInfo[0];
+            this.gameContext.currentState = GameState.DISCARD;
+
+            this._broadcast({
+                type: 'WAITING_FOR_INPUT',
+                payload: {
+                    phase: 'DISCARD',
+                    activePlayerId: nextDiscard.playerId,
+                    numberToDiscard: nextDiscard.numberToDiscard
+                }
+            });
+        }
+        // 2. Everyone is finished, time to move the robber
+        else {
+            this.gameContext.currentState = GameState.MOVE_ROBBER;
+
+            this._broadcast({
+                type: 'WAITING_FOR_INPUT',
+                payload: {
+                    phase: 'MOVE_ROBBER',
+                    activePlayerId: this.gameContext.currentPlayerId
+                }
+            });
+        }
     }
-}
+
+    /**
+     * Validate an incoming event request.
+     * @param {Object} event - The incoming event object
+     * @param {String|String[]} allowedTypes - A single type or an array of valid types
+     */
+    _validateRequest(event, allowedTypes) {
+        // 1. Normalize allowedTypes to an array
+        const types = Array.isArray(allowedTypes) ? allowedTypes : [allowedTypes];
+
+        // 2. Check Event Type
+        if (!types.includes(event.type)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid event: expected [${types.join(', ')}], received ${event.type}`
+            };
+        }
+
+        // 3. Check Player Authorization
+        const playerId = event.payload.playerId;
+        if (!this._isActivePlayer(playerId)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} is not authorized for this action.`
+            };
+        }
+
+        return { status: StatusCodes.SUCCESS };
+    }
+
+    __isAuthorizedPlayer(playerId) {
+        if (this.gameContext.currentState === GameState.DISCARD && this.discardInfo.length > 0) {
+            // during DISCARD phase, only the first player in the queue is authorized
+            return this.discardInfo[0].playerId === playerId;
+        }
+        
+        // otherwise, only the current active player is authorized
+
+        return this.gameContext.currentPlayerId === playerId;
+    }
 
 
 }
