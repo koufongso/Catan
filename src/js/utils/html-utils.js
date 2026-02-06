@@ -1,6 +1,9 @@
 import { HexUtils } from "../utils/hex-utils.js";
 import { SVG_NAMESPACE, HEX_SIZE, TEXTURE_PATHS } from "../constants/RenderingConstants.js";
 
+const RAD60 = Math.PI / 3;
+const RAD30 = Math.PI / 6;
+
 export const HtmlUtils = Object.freeze({
 
     // --- DOM MANIPULATION ---
@@ -30,6 +33,34 @@ export const HtmlUtils = Object.freeze({
     },
 
     // --- SVG FACTORY (Namespace: http://www.w3.org/2000/svg) ---
+
+    /**
+ * Create a hex polygon SVG element (this will only set points and id, no styling)
+ * @param {*} coord 
+ * @param {*} id 
+ * @param {*} hexSize 
+ * @returns {SVGPolygonElement} the created polygon element
+ */
+    createSvgPolygon(coord, classList = [], id = null, hexSize = HEX_SIZE) {
+        let SVG_NS = "http://www.w3.org/2000/svg";
+        const poly = document.createElementNS(SVG_NS, "polygon");
+        // calculate points based on axial coordinates
+        const points = [];
+        const [x0, y0] = HexUtils.hexToPixel(coord, hexSize);
+        const renderHexSize = 0.94 * hexSize; // slightly smaller for better visuals
+        for (let i = 0; i < 6; i++) {
+            const angle = RAD60 * i + RAD30; // 30 degree offset
+            const x = renderHexSize * Math.cos(angle) + x0;
+            const y = - renderHexSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
+            points.push(`${x},${y}`);
+        }
+        poly.setAttribute("points", points.join(" "));
+
+        // set id
+        this._applyAttributes(poly, classList, id);
+
+        return poly;
+    },
 
     createSvgCircle(cx, cy, r, classList = [], id = null) {
         const circle = document.createElementNS(SVG_NAMESPACE, "circle");

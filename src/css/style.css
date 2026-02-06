@@ -234,6 +234,12 @@ body {
     fill: red;
 }
 
+.robber-settlement-mask {
+    fill: red;
+    opacity: 0.5;
+    cursor: default;
+}
+
 
 /* for development card action menu */
 .card-popover {

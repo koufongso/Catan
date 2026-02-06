@@ -158,5 +158,42 @@ export const GameUtils = Object.freeze({
             }
         }
         return playersNeedToDiscard;
+    },
+
+    getRobbableTiles(gameMap) {
+        if (!(gameMap instanceof GameMap)) {
+            gameMap = new GameMap(gameMap); // in case a plain object is passed, convert to GameMap instance
+        }
+        return gameMap.filter('tiles', (tile) => !HexUtils.areCoordsEqual(tile.coord, gameMap.robberCoord));
+    },
+
+    /**
+     * Get the settlement that can be robbed on a tile. Following rules must be observed:
+     * - The settlement must be adjacent to the tile where the robber is moved to.
+     * - The settlement must not be owned by the player moving the robber.
+     * @param {*} playerId - the player id of the player moving the robber
+     * @param {*} tileLocation - the location where the robber is moved to
+     * @param {*} gameMap 
+     */
+    getRobbableSettlementIds(playerId, tileLocation, gameMap){
+        // convert tile location to tile id
+        const tileId = typeof tileLocation === 'string' ? tileLocation : HexUtils.coordToId(tileLocation);
+        const tileCoord = HexUtils.idToCoord(tileId);
+
+        // convert gameMap to GameMap instance if it's a plain object
+        if (!(gameMap instanceof GameMap)) {
+            gameMap = new GameMap(gameMap);
+        }
+
+        // get adjacent vertices to this tile
+        const adjacentVertexIds = HexUtils.getVerticesFromHex(tileCoord).map(vCoord => HexUtils.coordToId(vCoord));
+
+        // filter for settlements owned by other players
+        const robbableSettlementIds = adjacentVertexIds.filter(vId => {
+            const settlementOwner = gameMap.getSettlementOwner(vId);
+            return settlementOwner !== null && settlementOwner !== playerId;
+        });
+
+        return robbableSettlementIds;
     }
 });

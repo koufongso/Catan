@@ -35,7 +35,6 @@ export class GameRenderer {
      */
     initializeUI() {
         const wrapper = document.getElementById('main-wrapper');
-        console.log(wrapper.innerHTML.trim() )
         if (wrapper.innerHTML.trim() === "") { // only initialize if empty
             wrapper.innerHTML = ''; // clear existing content
             const temp = document.getElementById('game-template');
@@ -120,8 +119,9 @@ export class GameRenderer {
 
 
     drawHex(tileLayer, tile) {
-        const hexPoly = this.createPolygon(
+        const hexPoly = HtmlUtils.createSvgPolygon(
             tile.coord,
+            [], // no additional classes for now, styling is done through patterns
             tile.id,
             this.hexSize
         );
@@ -247,33 +247,7 @@ export class GameRenderer {
 
 
 
-    /**
-     * Create a hex polygon SVG element (this will only set points and id, no styling)
-     * @param {*} coord 
-     * @param {*} id 
-     * @param {*} hexSize 
-     * @returns {SVGPolygonElement} the created polygon element
-     */
-    createPolygon(coord, id, hexSize = this.hexSize) {
-        let SVG_NS = "http://www.w3.org/2000/svg";
-        const poly = document.createElementNS(SVG_NS, "polygon");
-        // calculate points based on axial coordinates
-        const points = [];
-        const [x0, y0] = HexUtils.hexToPixel(coord, hexSize);
-        const renderHexSize = 0.94 * hexSize; // slightly smaller for better visuals
-        for (let i = 0; i < 6; i++) {
-            const angle = RAD60 * i + RAD30; // 30 degree offset
-            const x = renderHexSize * Math.cos(angle) + x0;
-            const y = - renderHexSize * Math.sin(angle) + y0; // negate it since SVG y-axis is inverted (down is positive)
-            points.push(`${x},${y}`);
-        }
-        poly.setAttribute("points", points.join(" "));
 
-        // set id
-        poly.dataset.id = id;
-
-        return poly;
-    }
 
     renderGameOver(winners) {
         const temp = document.getElementById('game-over-template');
@@ -654,7 +628,7 @@ export class GameRenderer {
         // create "virtual" hitboxes over the valid tiles and add event listeners
         robbableTileCoords.forEach(hCoord => {
             const tileId = HexUtils.coordToId(hCoord);
-            const hexHitbox = this.createPolygon(hCoord, tileId, this.hexSize);
+            const hexHitbox = HtmlUtils.createSvgPolygon(hCoord, tileId, this.hexSize);
             hexHitbox.dataset.tileId = tileId;
             hexHitbox.classList.add('robbable-tile'); // this should highlight the tile visually
             robberPlacementGroup.appendChild(hexHitbox);
@@ -735,7 +709,7 @@ export class GameRenderer {
 
         // draw a mask to highlight the tile with robber
         const [robTileX, robTileY] = HexUtils.hexToPixel(robTileCoord, this.hexSize);
-        const robTileHex = this.createPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
+        const robTileHex = HtmlUtils.createSvgPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
         robTileHex.classList.add('robber-tile-mask');
         robSelectionGroup.appendChild(robTileHex);
 

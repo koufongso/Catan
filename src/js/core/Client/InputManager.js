@@ -62,12 +62,12 @@ export class InputManager {
     }
 
     initalize() {// bind all interactable elements
-        this.bindInteractionLayer();
-        this.bindBtnHandlers();
-        this.bindDevCardHandlers();
+        this._bindInteractionLayer();
+        this._bindBtnHandlers();
+        this._bindDevCardHandlers();
     }
 
-    bindInteractionLayer() {
+    _bindInteractionLayer() {
         console.log("Binding interaction layer:", this.elementIds.interactionLayer);
         this.interactionLayer = document.getElementById(this.elementIds.interactionLayer);
         if (!this.interactionLayer) {
@@ -75,7 +75,7 @@ export class InputManager {
         }
     }
 
-    bindBtnHandlers() {
+    _bindBtnHandlers() {
         this.interactionBtnGroup = {
             btnRoll: document.getElementById(this.elementIds.btnRoll),
             btnBuildRoad: document.getElementById(this.elementIds.btnBuildRoad),
@@ -94,7 +94,7 @@ export class InputManager {
         this.deactivateAllBtns(); // start with all buttons deactivated
     }
 
-    bindDevCardHandlers() {
+    _bindDevCardHandlers() {
         // bind dev card buttons here
         this.devCardsGroup = document.getElementById(this.elementIds.devCardsGroup);
         if (!this.devCardsGroup) {
@@ -161,7 +161,7 @@ export class InputManager {
         this.currentMode = mode;
     }
 
-    clearInteractionLayer() {
+    _clearInteractionLayer() {
         console.warn("Clearing interaction layer.");
         HtmlUtils.clearElementById(this.elementIds.interactionLayer);
     }
@@ -184,7 +184,7 @@ export class InputManager {
         if ((mode & 1 << 2) >> 2 === 1) {
             // confirm button
             const confirmBtn = HtmlUtils.createSvgButton(x0, y0, width, height, "Confirm", () => {
-                this.handleConfirmBtnClick.bind(this)();
+                this._handleConfirmBtnClick.bind(this)();
             });
             confirmBtn.id = this.elementIds.interactionBtnConfirm;
             confirmBtn.classList.add('svg-btn-confirm');
@@ -196,7 +196,7 @@ export class InputManager {
         if ((mode & 1 << 1) >> 1 === 1) {
             // cancel button
             const cancelBtn = HtmlUtils.createSvgButton(x, y, width, height, "Cancel", () => {
-                this.handleCancelBtnClick.bind(this)();
+                this._handleCancelBtnClick.bind(this)();
             });
             cancelBtn.id = this.elementIds.interactionBtnCancel;
             cancelBtn.classList.add('svg-btn-cancel');
@@ -208,7 +208,7 @@ export class InputManager {
         if ((mode & 1 << 0) === 1) {
             // undo button
             const undoBtn = HtmlUtils.createSvgButton(x, y, width, height, "Undo", () => {
-                this.handleUndoBtnClick.bind(this)();
+                this._handleUndoBtnClick.bind(this)();
             });
             undoBtn.id = this.elementIds.interactionBtnUndo;
             undoBtn.classList.add('svg-btn-undo');
@@ -219,6 +219,25 @@ export class InputManager {
         return btnGroup;
     }
 
+    _enableConfirmBtn() {
+        const confirmBtn = document.getElementById(this.elementIds.interactionBtnConfirm);
+        if (confirmBtn) {
+            confirmBtn.classList.remove('svg-btn-disabled');
+        } else {
+            console.warn("Confirm button not found during tile selection in robber placement.");
+        }
+        return;
+    }
+
+    _disableConfirmBtn() {
+        const confirmBtn = document.getElementById(this.elementIds.interactionBtnConfirm);
+        if (confirmBtn) {
+            confirmBtn.classList.add('svg-btn-disabled');
+        } else {
+            console.warn("Confirm button not found during tile selection in robber placement.");
+        }
+        return;
+    }
 
     /**
      * Helper function to draw from building predictor and update interaction layer
@@ -242,20 +261,20 @@ export class InputManager {
         const placedBuildings = buildingPredictor.buildStack;   // Array of placed buildings {type, coord}
 
         // clear interaction layer
-        this.clearInteractionLayer();
+        this._clearInteractionLayer();
         console.log("Start drawing interaction layer from BuildingPredictor.");
 
         // redraw valid spots
         if (!skipValidSpots && buildingType === 'SETTLEMENT' && validBuildingSpots.size > 0) {
             const validSettlementCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
-            const settlementPlacementGroup = HtmlUtils.createSettlementPlacementGroup(validSettlementCoords, this.handleVertexClick.bind(this), { color: this.playerColor }, ["available-settlement"], HEX_SIZE);
+            const settlementPlacementGroup = HtmlUtils.createSettlementPlacementGroup(validSettlementCoords, this._handleVertexClick.bind(this), { color: this.playerColor }, ["available-settlement"], HEX_SIZE);
             settlementPlacementGroup.classList.add('valid-settlement-group');
             this.interactionLayer.appendChild(settlementPlacementGroup);
         }
 
         if (!skipValidSpots && buildingType === 'ROAD' && validBuildingSpots.size > 0) {
             const validRoadCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
-            const roadPlacementGroup = HtmlUtils.createRoadPlacementGroup(validRoadCoords, this.handleEdgeClick.bind(this), { color: this.playerColor }, ["available-road"], HEX_SIZE);
+            const roadPlacementGroup = HtmlUtils.createRoadPlacementGroup(validRoadCoords, this._handleEdgeClick.bind(this), { color: this.playerColor }, ["available-road"], HEX_SIZE);
             this.interactionLayer.appendChild(roadPlacementGroup);
         }
 
@@ -275,14 +294,14 @@ export class InputManager {
     }
 
     /*----------------------------------------------------------------Initial Placement Mode----------------------------------------------------------------*/
-    clearInitialPlacementContext() {
+    _clearInitialPlacementContext() {
         this.gameMap = null;
         this.playerColor = null;
         this.playerId = null;
         this.buildingPredictor.clear();
     }
 
-    setInitialPlacementContext(playerId, gameMap, playerColor) {
+    _setInitialPlacementContext(playerId, gameMap, playerColor) {
         this.gameMap = gameMap;
         this.playerColor = playerColor;
         this.playerId = playerId;
@@ -290,7 +309,7 @@ export class InputManager {
     }
 
 
-    activateInitialPlacementInteractionLayer(playerId, gameMap, playerColor) {
+    activateInitialPlacementMode(playerId, gameMap, playerColor) {
         this.setMode('INITIAL_PLACEMENT');
         console.log("Activating initial placement interaction layer for player:", playerId);
 
@@ -300,9 +319,9 @@ export class InputManager {
         }
 
         // clear/reset interaction layer
-        this.clearInteractionLayer();
-        this.clearInitialPlacementContext();
-        this.setInitialPlacementContext(playerId, gameMap, playerColor);
+        this._clearInteractionLayer();
+        this._clearInitialPlacementContext();
+        this._setInitialPlacementContext(playerId, gameMap, playerColor);
 
         // show all valid settlement spots for the player
         const res = this.buildingPredictor.getNextValidSpots();
@@ -332,7 +351,7 @@ export class InputManager {
 
     /*----------------------------------------------------------------Settlement/City Building Mode----------------------------------------------------------------*/
 
-    clearSettlementBuildingContext() {
+    _clearSettlementBuildingContext() {
         this.clickedVertex = [];
         this.numberOfSettlements = 0;
         this.gameMap = null;
@@ -341,7 +360,7 @@ export class InputManager {
         this.placementPhase = null;
     }
 
-    setSettlementBuildingContext(playerId, numberOfSettlements, placementPhase, gameMap, playerColor) {
+    _setSettlementBuildingContext(playerId, numberOfSettlements, placementPhase, gameMap, playerColor) {
         this.clickedVertex = [];
         this.gameMap = gameMap;
         this.playerColor = playerColor;
@@ -360,9 +379,9 @@ export class InputManager {
         }
 
         // clear existing layer
-        this.clearInteractionLayer();
-        this.clearSettlementBuildingContext();
-        this.setSettlementBuildingContext(playerId, 1, placementPhase, gameMap, playerColor);
+        this._clearInteractionLayer();
+        this._clearSettlementBuildingContext();
+        this._setSettlementBuildingContext(playerId, 1, placementPhase, gameMap, playerColor);
 
         // show all valid settlement spots for the player
         const validSettlementSpots = GameUtils.getValidSettlementSpots(gameMap, null); // use playerId = null to show all valid spots
@@ -387,15 +406,45 @@ export class InputManager {
 
 
 
-    handleVertexClick(event) {
+    _handleVertexClick(event) {
         console.log("Vertex clicked:", event.target.dataset.id);
-        if (this.currentMode !== 'BUILD_SETTLEMENT' && this.currentMode !== 'BUILD_CITY' && this.currentMode !== 'INITIAL_PLACEMENT') {
-            console.warn("Ignoring vertex click, current mode:", this.currentMode);
-            return; // ignore if not in build settlement mode
+
+        switch (this.currentMode) {
+            case 'INITIAL_PLACEMENT':
+            case 'BUILD_SETTLEMENT':
+                this._handleVertexClickBuildSettlement(event);
+                break;
+            case 'ROBBER_PLACEMENT':
+                this._handleVertexClickRob(event);
+                break;
+            default:
+                return; // ignore if not in settlement building mode
+        }
+    }
+
+    _handleVertexClickRob(event) {
+        if (this.robStack.length === 2) {
+            return; // already selected a vertex for robbing, ignore further clicks
+        }
+        const vertexId = event.target.dataset.id;
+        this.robStack.push({ type: 'SETTLEMENT', id: vertexId });
+
+        // highlight the selected vertex
+        event.target.classList.add('robber-settlement-mask');
+
+        // enable confirm button if we have selected a settlement to rob
+        if (this.robStack.length === 2) {
+            this._enableConfirmBtn();
+        } else {
+            // otherwise, wait for player to select a settlement to rob before enabling confirm button
+            console.error("Unexpected state: wrong number of selected elements for robbing:", this.robStack);
+            this._disableConfirmBtn();
         }
 
-        const settlementId = event.target.dataset.id;
+    }
 
+    _handleVertexClickBuildSettlement(event) {
+        const settlementId = event.target.dataset.id;
         // add class to indicate selection
         if (event.target.classList.contains("placed-settlement")) {
             console.warn("Settlement already placed at:", settlementId);
@@ -415,7 +464,7 @@ export class InputManager {
             return;
         }
 
-        this.clearInteractionLayer();
+        this._clearInteractionLayer();
         if (res.result === null) {
             // all buildings placed, wait for confirm
             console.log("All settlements placed, waiting for confirm.");
@@ -454,7 +503,7 @@ export class InputManager {
 
 
     /*----------------------------------------------------------------Road Building Mode----------------------------------------------------------------*/
-    clearRoadBuildingContext() {
+    _clearRoadBuildingContext() {
         this.clickedEdge = [];
         this.buildingPredictor.clear();
         this.numberOfRoads = 0;
@@ -470,7 +519,7 @@ export class InputManager {
      * @param {GameMap} gameMap - the current game map object
      * @param {string} playerColor - optional color for the player's roads default to 'rgba(0,255,0,0.5)'
      */
-    setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
+    _setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
         this.clickedEdge = []; // reset clicked edges
         this.buildingPredictor.init(gameMap, playerId, "ROAD_ONLY");
         this.numberOfRoads = numberOfRoads;
@@ -486,9 +535,9 @@ export class InputManager {
         }
 
         // clear existing layer
-        this.clearInteractionLayer();
-        this.clearRoadBuildingContext();
-        this.setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor); // example setup
+        this._clearInteractionLayer();
+        this._clearRoadBuildingContext();
+        this._setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor); // example setup
         // show all valid road spots for the player
         const res = this.buildingPredictor.getNextValidSpots();
         if (res.status !== StatusCodes.SUCCESS) {
@@ -507,7 +556,7 @@ export class InputManager {
     }
 
 
-    handleEdgeClick(event) {
+    _handleEdgeClick(event) {
         if (this.currentMode !== 'BUILD_ROAD' && this.currentMode !== 'INITIAL_PLACEMENT') {
             return; // ignore if not in build road mode
         }
@@ -533,7 +582,7 @@ export class InputManager {
             return;
         }
 
-        this.clearInteractionLayer();
+        this._clearInteractionLayer();
         if (res.result === null) {
             // all buildings placed, wait for confirm
             console.log("All settlements placed, waiting for confirm.");
@@ -572,7 +621,7 @@ export class InputManager {
     }
 
     /*---------------------------------------------------------------Button Handlers----------------------------------------------------------------*/
-    handleUndoBtnClick() {
+    _handleUndoBtnClick() {
         switch (this.currentMode) {
             case "INITIAL_PLACEMENT":
                 // remove last selected building
@@ -587,7 +636,7 @@ export class InputManager {
                     return;
                 }
                 // redraw interaction layer
-                this.clearInteractionLayer();
+                this._clearInteractionLayer();
                 this._drawFromBuildingPredictor(this.buildingPredictor);
 
                 // recreate button group
@@ -614,7 +663,7 @@ export class InputManager {
                     const validRoadSpots = res.result;
 
                     // redraw interaction layer
-                    this.clearInteractionLayer();
+                    this._clearInteractionLayer();
                     this._drawFromBuildingPredictor(this.buildingPredictor);
                     const btnGroup = this.createBtnGroup(0b111);
                     for (let btn of btnGroup) {
@@ -623,35 +672,68 @@ export class InputManager {
                 }
                 break;
             case 'BUILD_SETTLEMENT':
+                console.warn("Undo not implemented for settlement building mode yet.");
+                break;
+            case 'ROBBER_PLACEMENT':
+                if (this.robStack.length === 2) {
+                    // back to select settlement for robbing
+                    this.robStack.pop();
+                    // removed all robber settlement masks
+                    const maskedSettlements = document.querySelectorAll('.robber-settlement-mask');
+                    maskedSettlements.forEach(elem => {
+                        elem.classList.remove('robber-settlement-mask');
+                        elem.classList.add('robbable-settlement');
+                    });
+                } else if (this.robStack.length === 1) {
+                    // back to select tile for robber placement
+                    this.robStack.pop();
+                    // remove all settlement masks and add back robbable tile masks
+                    const allrobbableSettlement = document.querySelectorAll('.robbable-settlement');
+                    allrobbableSettlement.forEach(elem => {
+                        elem.remove();
+                    });
 
+                    // removed all robber tile masks                    
+                    const maskedSettlements = document.querySelectorAll('.robber-tile-mask');
+                    maskedSettlements.forEach(elem => {
+                        elem.classList.remove('robber-tile-mask');
+                        elem.classList.add('robbable-tile');
+                    });
 
+                } else {
+                    console.warn("No more selections to undo in robber placement mode.");
+                }
 
+                // disable confirm button until player selects a settlement to rob again
+                this._disableConfirmBtn();
+                
+                break;
             default:
                 console.warn("Undo button clicked in unknown mode:", this.currentMode);
         }
     }
 
-    handleCancelBtnClick() {
+    _handleCancelBtnClick() {
         switch (this.currentMode) {
             case 'BUILD_ROAD':
                 // clear interaction layer
                 this.clearRoadBuildingContext();
-                this.clearInteractionLayer();
+                this._clearInteractionLayer();
                 break;
             default:
                 console.warn("Cancel button clicked in unknown mode:", this.currentMode);
         }
     }
 
-    handleConfirmBtnClick() {
+    _handleConfirmBtnClick() {
         switch (this.currentMode) {
             case 'INITIAL_PLACEMENT':
                 const buildStack = structuredClone(this.buildingPredictor.buildStack); // deep clone to avoid mutation after clear
 
                 // clear interaction layer no matter success or fail at the server side
                 // do this first to avoid async call so it clear after server response
-                this.clearInitialPlacementContext();
-                this.clearInteractionLayer();
+                this._clearInitialPlacementContext();
+                this._clearInteractionLayer();
 
                 // submit the selected buildings to server/controller
                 this.gameClient.submitInitialPlacement(buildStack);
@@ -686,13 +768,20 @@ export class InputManager {
                 this.controller.inputEvent({ type: 'BUILD_ROAD', playerId: this.playerId, roadCoords: this.clickedEdge });
                 // clear interaction layer
                 this.clearRoadBuildingContext();
-                this.clearInteractionLayer();
+                this._clearInteractionLayer();
                 break;
             case 'BUILD_SETTLEMENT':
                 // submit the selected settlement to server/controller
                 this.controller.inputEvent({ type: 'BUILD_SETTLEMENT', vertexCoord: this.clickedVertex[0] });
                 break;
-            
+
+            case 'ROBBER_PLACEMENT':
+                const robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
+                this._clearRobberPlacementContext();
+                this._clearInteractionLayer();
+                this.gameClient.submitRobberPlacement(robStackCopy);
+                break;
+
             default:
                 console.warn("Confirm button clicked in unknown mode:", this.currentMode);
         }
@@ -701,9 +790,9 @@ export class InputManager {
 
     /*---------------------------------------------------------------Robber Mode----------------------------------------------------------------*/
 
-    activateDiscardInteractionLayer(playerId, currentResources, numberToDiscard) {
+    activateDiscardMode(playerId, currentResources, numberToDiscard) {
         this.setMode('DISCARD');
-        this.activateResourcesSelectionMode(
+        this._activateResourcesSelectionMode(
             currentResources,
             numberToDiscard,
             playerId ? `Player ${playerId} Select Resources to Discard` : `Select Resources to Discard`,
@@ -718,7 +807,7 @@ export class InputManager {
      * @param {*} msg message to display in modal title
      * @param {*} confirmEventName event name to emit when selection is confirmed
      */
-    activateResourcesSelectionMode(resources, numToSelect, msg) {
+    _activateResourcesSelectionMode(resources, numToSelect, msg) {
         // render text (not implemented yet)
         // TODO: prompt/notify the player to discard cards
 
@@ -771,7 +860,7 @@ export class InputManager {
         });
 
         // send selected cards with action, this is action cannot be cancelled
-        confirmBtn.onclick = this.handleConfirmBtnClick.bind(this);
+        confirmBtn.onclick = this._handleConfirmBtnClick.bind(this);
 
         // append to main wrapper
         document.getElementById('main-wrapper').appendChild(clone);
@@ -801,28 +890,143 @@ export class InputManager {
     }
 
 
+    _clearRobberPlacementContext() {
+        this.gameMap = null;
+        this.playerId = null;
+        this.robbableTiles = null;
+        this.robStack = [];
+    }
 
-    handleTileClick(tCoord) {
-        if (this.currentMode !== 'ROBBER') {
-            return; // ignore if not in robber mode
-        }
-        this.clickedTile.push(tCoord);
+    _setRobberPlacementContext(playerId, gameMap) {
+        this.playerId = playerId;
+        this.gameMap = gameMap;
+        this.playerId = playerId;
+        this.robbableTiles = GameUtils.getRobbableTiles(gameMap);
+        this.robStack = []; // use a simple stack to keep track of the current highlighted tile and player (if any)
+        this.robbableSettlementIds = []; // keep track of the currently highlighted robbable settlements for easy cleanup when user change tile selection
     }
 
 
+    activateRobberPlacementMode(playerId, gameMap) {
+        this._setRobberPlacementContext(playerId, gameMap); // set up context first (robbable tiles, etc.)
+        this.setMode('ROBBER_PLACEMENT');
+
+        // phase 1: click on a tile to move the robber there, highlight the robbable players on that tile (if any)
+        // group for easier cleanup later
+        this.robTileSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.robTileSelectionGroup.id = 'rob-tile-selection-group';
+        this.interactionLayer.appendChild(this.robTileSelectionGroup);
+
+        // create "virtual" hitboxes over the valid tiles and add event listeners
+        this.robbableTiles.forEach(tile => {
+            console.log("Creating robber hitbox for tile:", tile);
+            const hCoord = tile.coord;
+            const tileId = HexUtils.coordToId(hCoord);
+            const hexHitbox = HtmlUtils.createSvgPolygon(hCoord, ['robbable-tile'], tileId, HEX_SIZE);
+            hexHitbox.dataset.tileId = tileId;
+            this.robTileSelectionGroup.appendChild(hexHitbox);
+        });
+
+        this.robTileSelectionGroup.onclick = this._handleTileClick.bind(this);
+
+        // create button group for confirm and undo (no cancel during robber placement)
+        const btnGroup = this.createBtnGroup(0b101);
+        for (let btn of btnGroup) {
+            this.interactionLayer.appendChild(btn);
+        }
+    }
 
 
+    _moveRobberToTile(tileLocation) {
+        const tileCoord = typeof tileLocation === 'string' ? HexUtils.idToCoord(tileLocation) : tileLocation;
+
+        // animate the robber moving to the new tile
+        const robberLayer = document.getElementById('robber-layer');
+        if (!robberLayer) {
+            throw new Error("Robber layer not found in SVG");
+        }
+
+        const circle = robberLayer.querySelector('#robber-token');
+
+        if (!circle) {
+            throw new Error("Robber token not found in SVG");
+        }
+
+        const [newX, newY] = HexUtils.hexToPixel(tileCoord, HEX_SIZE);
+
+        const animation = circle.animate(
+            [
+                // Keyframes
+                { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
+                { cx: newX, cy: newY } // End point
+            ],
+            {
+                // Timing options
+                duration: 1000, // seconds
+                iterations: 1, // Run once
+                fill: 'both', // Keep the final state after animation
+                easing: 'ease-in-out'
+            }
+        );
+
+        animation.onfinish = () => {
+            // ensure final position is set
+            circle.setAttribute('cx', newX);
+            circle.setAttribute('cy', newY);
+        }
+
+        // start the animation
+        animation.play();
+    }
 
 
+    _handleTileClick(event) {
+        if (this.currentMode !== 'ROBBER_PLACEMENT') {
+            return; // ignore if not in robber placement mode
+        }
+
+        if (this.robStack.length > 0) {
+            // if there is already a selection, ignore further clicks until user undo the selection
+            return;
+        }
+
+        // click a tile to move the robber
+        const tileId = event.target.dataset.tileId;
+        const tileCoord = HexUtils.idToCoord(tileId);
+        console.log("Robber tile clicked:", tileId);
+
+        this.robStack.push({ type: 'TILE', tileId: tileId }); // push the selected tile to the stack
+
+        // highlight the selected tile (can be undone)
+        event.target.classList.remove('robbable-tile');
+        event.target.classList.add('robber-tile-mask');
+
+        // highlight the robable player
+        this.robbableSettlementIds = GameUtils.getRobbableSettlementIds(this.playerId, tileId, this.gameMap);
+        if (this.robbableSettlementIds.length === 0) {
+            this._enableConfirmBtn(); // if no players to rob, enable confirm button immediately
+        } else {
+            this._disableConfirmBtn(); // otherwise, wait for player to select a settlement to rob before enabling confirm button
+        }
+        this._highlightRobbablePlayers(tileId);
+    }
 
 
+    _highlightRobbablePlayers(tileId) {
+        // get the players that can be robbed on this tile
+        this.robSettlementSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.robSettlementSelectionGroup.id = 'rob-settlement-selection-group';
+        this.interactionLayer.appendChild(this.robSettlementSelectionGroup);
 
+        this.robbableSettlementIds.forEach(settlementId => {
+            const settlementCoord = HexUtils.idToCoord(settlementId);
+            const [x, y] = HexUtils.vertexToPixel(settlementCoord, HEX_SIZE);
 
+            const robableCircle = HtmlUtils.createSvgCircle(x, y, 20, ["robbable-settlement"], null);
+            robableCircle.dataset.id = settlementId; // use dataset to store the settlement id to avoid id conflict in setttlement layer
+            this.robSettlementSelectionGroup.appendChild(robableCircle);
+        });
 
-
-
-
-
-
-
+        this.robSettlementSelectionGroup.onclick = this._handleVertexClick.bind(this);
+    };
 }

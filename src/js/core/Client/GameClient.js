@@ -84,11 +84,15 @@ export class GameClient {
     handleWaitingForInput(payload) {
         switch (payload.phase) {
             case 'INITIAL_PLACEMENT':
-                this.inputManager.activateInitialPlacementInteractionLayer(this.id, this.gameContext.gameMap, this.color);
+                this.inputManager.activateInitialPlacementMode(this.id, this.gameContext.gameMap, this.color);
                 break;
             case 'DISCARD':
                 const currentResources = this.gameContext.players.find(p => p.id === this.id).resources;
-                this.inputManager.activateDiscardInteractionLayer(this.id, currentResources, payload.numberToDiscard);
+                this.inputManager.activateDiscardMode(this.id, currentResources, payload.numberToDiscard);
+                break;
+            case 'MOVE_ROBBER':
+                // compute robbable tiles
+                this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap);
                 break;
             default:
                 console.warn(`Unhandled phase in handleWaitingForInput: ${payload.phase}`);
@@ -147,6 +151,15 @@ export class GameClient {
         }else{
             throw new Error("Invalid discard resources submitted.");
         }
+    }
+
+    submitRobberPlacement(robStack) {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.gameController.inputEvent({ type: 'MOVE_ROBBER', payload: { playerId: this.id, robStack: robStack } });
     }
 
 

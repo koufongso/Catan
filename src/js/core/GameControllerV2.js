@@ -424,6 +424,16 @@ export class GameControllerV2 {
         this._handleDiscardOrMoveRobber();
     }
 
+    handleStateMoveRobber(event) {
+        const validationResult = this._validateRequest(event, 'MOVE_ROBBER');
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
+        }
+
+        console.warn(`Player ${event.payload.playerId} MOVE_ROBBER action not implemented yet.`);
+        // after implementing move robber logic, remember to call this._handleStateMainEndTurn() to advance the turn after robber sequence is done
+    }
+
 
 
 
