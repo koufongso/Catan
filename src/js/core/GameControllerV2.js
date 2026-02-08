@@ -158,7 +158,7 @@ export class GameControllerV2 {
 
         // broadcast initial state
         const event = {
-            type: 'WAITING_FOR_INPUT',
+            type: 'WAITING_FOR_ACTION',
             payload: {
                 phase: 'INITIAL_PLACEMENT',
                 activePlayerId: this.gameContext.currentPlayerId,
@@ -239,7 +239,7 @@ export class GameControllerV2 {
         }
 
         const newEvent = {
-            type: 'WAITING_FOR_INPUT',
+            type: 'WAITING_FOR_ACTION',
             payload: {
                 phase: 'INITIAL_PLACEMENT',
                 activePlayerId: this.gameContext.currentPlayerId,
@@ -256,7 +256,7 @@ export class GameControllerV2 {
             return validationResult;
         }
 
-            const playerId = event.payload.playerId;
+        const playerId = event.payload.playerId;
         const buildStack = event.payload.buildStack; // array of build actions
 
         // validate buildStack
@@ -297,7 +297,7 @@ export class GameControllerV2 {
             // 2. else, move to previous player (update index and id)
             this._previousPlayer();
             const newEvent = {
-                type: 'WAITING_FOR_INPUT',
+                type: 'WAITING_FOR_ACTION',
                 payload: {
                     phase: 'INITIAL_PLACEMENT',
                     activePlayerId: this.gameContext.currentPlayerId,
@@ -309,7 +309,7 @@ export class GameControllerV2 {
 
 
     handleStateRoll(event) {
-        const validationResult = this._validateRequest(event, ['ROLL','ACTIVATE_DEV_CARD']);
+        const validationResult = this._validateRequest(event, ['ROLL', 'ACTIVATE_DEV_CARD']);
         if (validationResult.status === StatusCodes.ERROR) {
             return validationResult;
         }
@@ -434,7 +434,7 @@ export class GameControllerV2 {
         // validate input tile for robber placement
         // expected format: [{type: 'TILE', id: tileId}, {type: 'SETTLEMENT', id: vertexId}]
         // or [{type: 'TILE', id: tileId}] if no robbable settlement to rob on that tile
-        const robStack = event.payload.robStack; 
+        const robStack = event.payload.robStack;
         if (!robStack || robStack.length < 1 || robStack[0].type !== 'TILE') {
             console.error("Invalid robStack format for MOVE_ROBBER:", robStack);
             return {
@@ -493,12 +493,13 @@ export class GameControllerV2 {
             const ownerId = this.gameContext.gameMap.settlements[vertexId].ownerId;
             const targetPlayer = this.gameContext.players.find(p => p.id === ownerId);
             const stolenResources = this._randomStealFromPlayer(targetPlayer, this._getCurrentPlayer());
-
-            // complete, broadcast
-            this.gameContext.currentState = this.returnStateAfterRob;
-            this.returnStateAfterRob = null; // clear
-            console.log("Rob complete. Stolen resources:", stolenResources);
         }
+
+
+        // complete, broadcast
+        console.log(`change state to ${this.returnStateAfterRob}`);
+        this.gameContext.currentState = this.returnStateAfterRob;
+        this.returnStateAfterRob = null; // clear
         
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
@@ -686,7 +687,7 @@ export class GameControllerV2 {
             this.gameContext.currentState = GameState.DISCARD;
 
             this._broadcast({
-                type: 'WAITING_FOR_INPUT',
+                type: 'WAITING_FOR_ACTION',
                 payload: {
                     phase: 'DISCARD',
                     activePlayerId: nextDiscard.playerId,
@@ -699,7 +700,7 @@ export class GameControllerV2 {
             this.gameContext.currentState = GameState.MOVE_ROBBER;
 
             this._broadcast({
-                type: 'WAITING_FOR_INPUT',
+                type: 'WAITING_FOR_ACTION',
                 payload: {
                     phase: 'MOVE_ROBBER',
                     activePlayerId: this.gameContext.currentPlayerId
@@ -742,7 +743,7 @@ export class GameControllerV2 {
             // during DISCARD phase, only the first player in the queue is authorized
             return this.discardInfo[0].playerId === playerId;
         }
-        
+
         // otherwise, only the current active player is authorized
 
         return this.gameContext.currentPlayerId === playerId;

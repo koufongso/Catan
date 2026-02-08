@@ -908,6 +908,7 @@ export class InputManager {
 
 
     activateRobberPlacementMode(playerId, gameMap) {
+        console.log("Activating robber placement mode for player:", playerId);
         this._setRobberPlacementContext(playerId, gameMap); // set up context first (robbable tiles, etc.)
         this.setMode('ROBBER_PLACEMENT');
 

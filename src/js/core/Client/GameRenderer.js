@@ -612,7 +612,7 @@ export class GameRenderer {
             if (!circle) {
                 throw new Error("Robber token not found in SVG");
             }
-            
+
             const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
 
             const animation = circle.animate(
@@ -634,6 +634,7 @@ export class GameRenderer {
                 // ensure final position is set
                 circle.setAttribute('cx', newX);
                 circle.setAttribute('cy', newY);
+                resolve();
             });
 
             // start the animation

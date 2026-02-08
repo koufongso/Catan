@@ -39,10 +39,11 @@ export class GameClient {
             console.warn(`AI Client ${this.id} logic not implemented yet.`);
             return;
         }
-
+        console.log(`client ${this.id} this.pendingRobberResultCallback: ${this.pendingRobberResultCallback}`);
         if (this.pendingRobberResultCallback) {
             // If there is a pending callback for robber placement result, call it with the update packet
             await this.pendingRobberResultCallback(updatePacket);
+            console.log(`client ${this.id} finished handling pending robber result callback.`);
         }
 
 
@@ -71,9 +72,6 @@ export class GameClient {
 
         // For human players, render according to the event type
         switch (updatePacket.event.type) {
-            case 'WAITING_FOR_INPUT': // we define input as some request from the controller/server that user need to respond to like initial placement, discarding cards, etc
-                this.handleWaitingForInput(updatePacket.event.payload);
-                break;
             case 'WAITING_FOR_ACTION': // we deinfe action as click btuttons like roll, build, play card, trade etc
                 // ROLL phase: roll, play dev card
                 // MAIN phase: build, trade, play dev card, end turn
@@ -88,8 +86,12 @@ export class GameClient {
 
 
     /* ----------------------------------------------------Handle updates from GameController---------------------------------------------------- */
-    handleWaitingForInput(payload) {
+
+
+    handleWaitingForAction(payload) {
         switch (payload.phase) {
+            case 'INITIAL_PLACEMENT1':
+            case 'INITIAL_PLACEMENT2':
             case 'INITIAL_PLACEMENT':
                 this.inputManager.activateInitialPlacementMode(this.id, this.gameContext.gameMap, this.color);
                 break;
@@ -101,14 +103,6 @@ export class GameClient {
                 // compute robbable tiles
                 this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap);
                 break;
-            default:
-                console.warn(`Unhandled phase in handleWaitingForInput: ${payload.phase}`);
-        }
-    }
-
-
-    handleWaitingForAction(payload) {
-        switch (payload.phase) {
             case 'ROLL':
                 this.inputManager.deactivateAllBtns(); // clear all buttons first
                 this.inputManager.activateBtn('btnRoll');
