@@ -937,49 +937,6 @@ export class InputManager {
     }
 
 
-    _moveRobberToTile(tileLocation) {
-        const tileCoord = typeof tileLocation === 'string' ? HexUtils.idToCoord(tileLocation) : tileLocation;
-
-        // animate the robber moving to the new tile
-        const robberLayer = document.getElementById('robber-layer');
-        if (!robberLayer) {
-            throw new Error("Robber layer not found in SVG");
-        }
-
-        const circle = robberLayer.querySelector('#robber-token');
-
-        if (!circle) {
-            throw new Error("Robber token not found in SVG");
-        }
-
-        const [newX, newY] = HexUtils.hexToPixel(tileCoord, HEX_SIZE);
-
-        const animation = circle.animate(
-            [
-                // Keyframes
-                { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
-                { cx: newX, cy: newY } // End point
-            ],
-            {
-                // Timing options
-                duration: 1000, // seconds
-                iterations: 1, // Run once
-                fill: 'both', // Keep the final state after animation
-                easing: 'ease-in-out'
-            }
-        );
-
-        animation.onfinish = () => {
-            // ensure final position is set
-            circle.setAttribute('cx', newX);
-            circle.setAttribute('cy', newY);
-        }
-
-        // start the animation
-        animation.play();
-    }
-
-
     _handleTileClick(event) {
         if (this.currentMode !== 'ROBBER_PLACEMENT') {
             return; // ignore if not in robber placement mode
@@ -995,7 +952,7 @@ export class InputManager {
         const tileCoord = HexUtils.idToCoord(tileId);
         console.log("Robber tile clicked:", tileId);
 
-        this.robStack.push({ type: 'TILE', tileId: tileId }); // push the selected tile to the stack
+        this.robStack.push({ type: 'TILE', id: tileId }); // push the selected tile to the stack
 
         // highlight the selected tile (can be undone)
         event.target.classList.remove('robbable-tile');

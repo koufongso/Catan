@@ -28,6 +28,8 @@ export class GameRenderer {
         this.hexSize = HEX_SIZE; // default hex this.hexSize
 
         this.gameMap = null; // a client-side copy of the game map for rendering
+
+        this.isRobberAnimating = false; // flag to indicate if robber animation is in progress
     }
 
     /**
@@ -514,24 +516,6 @@ export class GameRenderer {
         );
     }
 
-    /**
-     * Activate discard selection UI
-     * @param {Object} resourcesToDiscard map of resource type to count
-     * @param {*} numToDiscard number of cards to discard
-     * @param {*} playerId player id (optional)
-     */
-    activateDiscardSelectionMode(resourcesToDiscard, numToDiscard, playerId = null) {
-        this.activateResourcesSelectionMode(
-            resourcesToDiscard,
-            numToDiscard,
-            playerId ? `Player ${playerId} Select Resources to Discard` : `Select Resources to Discard`,
-            "CONFIRM_DISCARD"
-        );
-    }
-
-    deactivateDiscardSelectionMode() {
-        HtmlUtils.removeElementById('resource-selection-modal-overlay');
-    }
 
     /**
      * Let the player select cards to discard
@@ -615,49 +599,7 @@ export class GameRenderer {
     }
 
 
-    activateRobberPlacementMode(robbableTileCoords) {
-        // get the tile layer
-        const tileLayer = document.getElementById('interaction-layer');
-        if (!tileLayer) return;
-
-        // group for easier cleanup later
-        const robberPlacementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        robberPlacementGroup.id = 'robber-placement-group';
-        tileLayer.appendChild(robberPlacementGroup);
-
-        // create "virtual" hitboxes over the valid tiles and add event listeners
-        robbableTileCoords.forEach(hCoord => {
-            const tileId = HexUtils.coordToId(hCoord);
-            const hexHitbox = HtmlUtils.createSvgPolygon(hCoord, tileId, this.hexSize);
-            hexHitbox.dataset.tileId = tileId;
-            hexHitbox.classList.add('robbable-tile'); // this should highlight the tile visually
-            robberPlacementGroup.appendChild(hexHitbox);
-
-            // add click event listener to the hitbox
-            hexHitbox.addEventListener('click', async (event) => {
-                const res = await this.controller.inputEvent({ type: 'PLACE_ROBBER', tileId: tileId });
-                if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                    throw new Error("Failed to place robber.");
-                }
-
-                // clean up
-                this.deactivateRobberPlacementMode();
-
-                // animate the robber moving to the new tile
-                this.moveRobberToTile(hCoord);
-
-                this.renderInteractionHints(res.interaction);
-
-                // update debug dashboard
-                this.updateDebugDashboard(res.gameContext, `Robber moved to tile ${tileId}`);
-
-            });
-        });
-    }
-
-
-    moveRobberToTile(tileCoord) {
-
+    animateMoveRobberToTile(tileCoord) {
         // animate the robber moving to the new tile
         const robberLayer = document.getElementById('robber-layer');
         if (!robberLayer) {
@@ -669,6 +611,8 @@ export class GameRenderer {
         if (!circle) {
             throw new Error("Robber token not found in SVG");
         }
+
+        this.isRobberAnimating = true;
 
         const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
 
@@ -687,55 +631,15 @@ export class GameRenderer {
             }
         );
 
-        animation.onfinish = () => {
+        animation.onfinish = bind(this)(() => {
             // ensure final position is set
             circle.setAttribute('cx', newX);
             circle.setAttribute('cy', newY);
-        }
+            this.isRobberAnimating = false;
+        });
 
         // start the animation
         animation.play();
+        console.log("Robber movement animation started.");
     }
-
-
-    activateRobSelectionMode(robableSettlementsCoords, robTileCoord) {
-        const interactionLayer = document.getElementById('interaction-layer');
-        if (!interactionLayer) return;
-
-        const robSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        robSelectionGroup.id = 'rob-selection-group';
-        interactionLayer.appendChild(robSelectionGroup);
-        interactionLayer.classList.add('placement-mode');
-
-        // draw a mask to highlight the tile with robber
-        const [robTileX, robTileY] = HexUtils.hexToPixel(robTileCoord, this.hexSize);
-        const robTileHex = HtmlUtils.createSvgPolygon(robTileCoord, 'robber-tile-mask', this.hexSize);
-        robTileHex.classList.add('robber-tile-mask');
-        robSelectionGroup.appendChild(robTileHex);
-
-
-        // darw a "mask" over the valid settlements
-        robableSettlementsCoords.forEach(vCoord => {
-            const vertexId = HexUtils.coordToId(vCoord);
-            const [x, y] = HexUtils.vertexToPixel(vCoord, this.hexSize);
-
-            const robableCircle = this.createHtmlCircleElement(x, y, 20, ["robbable-settlement"]);
-            robableCircle.dataset.vertexId = vertexId;
-            robSelectionGroup.appendChild(robableCircle);
-
-            // add click event listener to the hitbox
-            robableCircle.addEventListener('click', async (event) => {
-                const res = await this.controller.inputEvent({ type: 'ROB_PLAYER', vertexId: vertexId });
-                if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                    throw new Error("Failed to rob player.");
-                }
-                HtmlUtils.deactivateRobSelectionMode();
-                this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-                this.updateDebugDashboard(res.gameContext, `Robbed player at settlement ${vertexId}`);
-            });
-        });
-    }
-
-
-
 }

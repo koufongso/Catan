@@ -40,6 +40,13 @@ export class GameClient {
             return;
         }
 
+        if (this.pendingRobberResultCallback) {
+            // If there is a pending callback for robber placement result, call it with the update packet
+            this.pendingRobberResultCallback(updatePacket);
+        }
+
+
+
         const activePlayerId = updatePacket.event.payload.activePlayerId;
         console.log(`Active Player ID: ${activePlayerId}, This Client ID: ${this.id}`);
 
@@ -48,7 +55,7 @@ export class GameClient {
             return;
         }
 
-        
+
         if (!this.mapInitialized) {// draw static board only once
             this.uiRenderer.initializeUI();
             this.inputManager.initalize();
@@ -106,8 +113,8 @@ export class GameClient {
                 this.inputManager.deactivateAllBtns(); // clear all buttons first
                 this.inputManager.activateBtn('btnRoll');
                 this.inputManager.activateDevCards();
-                break;  
-            case 'MAIN':    
+                break;
+            case 'MAIN':
                 this.inputManager.deactivateAllBtns();
                 this.inputManager.activateBtn('btnBuild');
                 this.inputManager.activateBtn('btnEndTurn');
@@ -145,10 +152,10 @@ export class GameClient {
             console.error("GameController not connected.");
             return;
         }
-        
-        if(GameUtils.isDiscardValid(this.gameContext.players.find(p => p.id === this.id).resources, selectedResources)){
+
+        if (GameUtils.isDiscardValid(this.gameContext.players.find(p => p.id === this.id).resources, selectedResources)) {
             this.gameController.inputEvent({ type: 'DISCARD', payload: { playerId: this.id, discardedResources: selectedResources } });
-        }else{
+        } else {
             throw new Error("Invalid discard resources submitted.");
         }
     }
@@ -158,7 +165,30 @@ export class GameClient {
             console.error("GameController not connected.");
             return;
         }
+        if (this.isHuman) {
+            this.pendingRobberResultCallback = (updatePacket) => {
+                console.log("Robber placement result update packet:", updatePacket);
 
+                if (!(updatePacket.event.type === 'MOVE_ROBBER_ERROR' && updatePacket.event.payload.playerId === this.id)) {
+                    // If it's not an error related to this player's robber placement
+                    // execute move robber animation
+                    //  TODO: execute steal resource animation if applicable
+                    this.uiRenderer.animateMoveRobberToTile(this.gameContext.gameMap.robberCoord);
+
+                    while (this.uiRenderer.isRobberAnimating) {
+                        console.log("Waiting for robber animation to complete...");
+                        // wait for animation to complete
+                        setTimeout(() => { }, 100);
+                    }
+                } else {
+                    console.error("Robber placement failed:", updatePacket.event.payload.message);
+                }
+
+                // clear no matter success or failure
+                this.pendingRobberResultCallback = null;
+            };
+        }
+        console.log(`Submitting robber placement with robStack:`, robStack);
         this.gameController.inputEvent({ type: 'MOVE_ROBBER', payload: { playerId: this.id, robStack: robStack } });
     }
 

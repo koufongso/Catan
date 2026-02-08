@@ -427,11 +427,83 @@ export class GameControllerV2 {
     handleStateMoveRobber(event) {
         const validationResult = this._validateRequest(event, 'MOVE_ROBBER');
         if (validationResult.status === StatusCodes.ERROR) {
+            console.error("Invalid MOVE_ROBBER request:", validationResult.errorMessage);
             return validationResult;
         }
 
-        console.warn(`Player ${event.payload.playerId} MOVE_ROBBER action not implemented yet.`);
-        // after implementing move robber logic, remember to call this._handleStateMainEndTurn() to advance the turn after robber sequence is done
+        // validate input tile for robber placement
+        // expected format: [{type: 'TILE', id: tileId}, {type: 'SETTLEMENT', id: vertexId}]
+        // or [{type: 'TILE', id: tileId}] if no robbable settlement to rob on that tile
+        const robStack = event.payload.robStack; 
+        if (!robStack || robStack.length < 1 || robStack[0].type !== 'TILE') {
+            console.error("Invalid robStack format for MOVE_ROBBER:", robStack);
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid robStack format for MOVE_ROBBER: ${JSON.stringify(robStack)}`
+            };
+        }
+        console.log(`Submitting robber payload:`, event.payload);
+
+        const tileId = event.payload.robStack[0].id;
+        const vertexId = event.payload.robStack[1] ? event.payload.robStack[1].id : null;
+
+        const robbableTileIds = GameUtils.getRobbableTiles(this.gameContext.gameMap).map(tile => tile.id);
+        if (!robbableTileIds.includes(tileId)) {
+            console.error(`MOVE_ROBBER validation error: tile id not valid ${tileId}`);
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid tileId for MOVE_ROBBER: ${tileId} is not a valid tile to move the robber to.`
+            };
+        }
+
+        // tile is valid, move robber, check for robbable settlements on that tile if applicable,
+        const robbableSettlementIds = GameUtils.getRobbableSettlementIds(this.gameContext.currentPlayerId, tileId, this.gameContext.gameMap);
+        if (robbableSettlementIds.length > 0 && vertexId === null) {
+            // can rob, but no settlement selected to rob
+            console.error("MOVE_ROBBER validation error: settlement id not valid");
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `No settlement selected to rob on tile ${tileId}. Player must select a settlement to rob.`
+            };
+        }
+
+        if (robbableSettlementIds.length === 0 && vertexId !== null) {
+            // cnnot rob, but settlement id provided
+            console.error("MOVE_ROBBER validation error: settlement id not valid");
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid vertexId for MOVE_ROBBER: ${vertexId} is not a valid settlement to rob on tile ${tileId}.`
+            };
+        }
+
+        if (robbableSettlementIds.length > 0 && vertexId && !robbableSettlementIds.includes(vertexId)) {
+            // can rob, provided settlement id is not in the list of robbable settlements
+            console.error("MOVE_ROBBER validation error: settlement id not valid");
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Invalid vertexId for MOVE_ROBBER: ${vertexId} is not a valid settlement to rob on tile ${tileId}.`
+            };
+        }
+
+        // valid input, update robber position
+        this.gameContext.gameMap.robberCoord = HexUtils.idToCoord(tileId);
+
+        // check if target player has resources to steal
+        const ownerId = this.gameContext.gameMap.settlements[vertexId].ownerId;
+        const targetPlayer = this.gameContext.players.find(p => p.id === ownerId);
+        const stolenResources = this._randomStealFromPlayer(targetPlayer, this._getCurrentPlayer());
+
+        // complete, broadcast
+        this.gameContext.currentState = this.returnStateAfterRob;
+        this.returnStateAfterRob = null; // clear
+        console.log("Rob complete. Stolen resources:", stolenResources);
+        this._broadcast({
+            type: 'WAITING_FOR_ACTION',
+            payload: {
+                phase: this.gameContext.currentState,
+                activePlayerId: this.gameContext.currentPlayerId,
+            }
+        });
     }
 
 
@@ -662,7 +734,7 @@ export class GameControllerV2 {
         return { status: StatusCodes.SUCCESS };
     }
 
-    __isAuthorizedPlayer(playerId) {
+    _isAuthorizedPlayer(playerId) {
         if (this.gameContext.currentState === GameState.DISCARD && this.discardInfo.length > 0) {
             // during DISCARD phase, only the first player in the queue is authorized
             return this.discardInfo[0].playerId === playerId;
@@ -671,6 +743,28 @@ export class GameControllerV2 {
         // otherwise, only the current active player is authorized
 
         return this.gameContext.currentPlayerId === playerId;
+    }
+
+
+    /**
+     * Steal a random resource from the target player and give it to the active player.
+     * Should only be called after validating that the steal action is valid (e.g. there is a settlement to rob, target player has resources to steal, etc.)
+     * @param {Player} targetPlayer 
+     * @param {Player} activePlayer 
+     * @returns the resources stolen from the target player, or null if no resources were stolen
+     */
+    _randomStealFromPlayer(targetPlayer, activePlayer) {
+        const totalResources = targetPlayer.getTotalResourceCount();
+        if (totalResources === 0) {
+            return null; // nothing to steal
+        }
+
+        // create a weighted array of resources based on the player's current resources
+        const randomIndex = this.rng.nextInt(0, totalResources - 1);
+
+        const stolenResources = targetPlayer.removeResourceByIndicies([randomIndex]);
+        activePlayer.addResources(stolenResources);
+        return stolenResources;
     }
 
 
