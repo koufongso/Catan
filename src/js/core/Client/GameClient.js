@@ -30,7 +30,7 @@ export class GameClient {
         this.gameController.subscribe(this, this.onGameStateUpdate.bind(this));
     }
 
-    onGameStateUpdate(updatePacket) {
+    async onGameStateUpdate(updatePacket) {
         // Update the local game state
         this.gameContext = updatePacket.gameContext;
         console.log(`Client ${this.id} received game state update:`, updatePacket);
@@ -42,7 +42,7 @@ export class GameClient {
 
         if (this.pendingRobberResultCallback) {
             // If there is a pending callback for robber placement result, call it with the update packet
-            this.pendingRobberResultCallback(updatePacket);
+            await this.pendingRobberResultCallback(updatePacket);
         }
 
 
@@ -166,20 +166,14 @@ export class GameClient {
             return;
         }
         if (this.isHuman) {
-            this.pendingRobberResultCallback = (updatePacket) => {
+            this.pendingRobberResultCallback = async(updatePacket) => {
                 console.log("Robber placement result update packet:", updatePacket);
 
                 if (!(updatePacket.event.type === 'MOVE_ROBBER_ERROR' && updatePacket.event.payload.playerId === this.id)) {
                     // If it's not an error related to this player's robber placement
                     // execute move robber animation
                     //  TODO: execute steal resource animation if applicable
-                    this.uiRenderer.animateMoveRobberToTile(this.gameContext.gameMap.robberCoord);
-
-                    while (this.uiRenderer.isRobberAnimating) {
-                        console.log("Waiting for robber animation to complete...");
-                        // wait for animation to complete
-                        setTimeout(() => { }, 100);
-                    }
+                    await this.uiRenderer.animateMoveRobberToTile(this.gameContext.gameMap.robberCoord);
                 } else {
                     console.error("Robber placement failed:", updatePacket.event.payload.message);
                 }

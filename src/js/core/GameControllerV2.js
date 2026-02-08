@@ -489,14 +489,17 @@ export class GameControllerV2 {
         this.gameContext.gameMap.robberCoord = HexUtils.idToCoord(tileId);
 
         // check if target player has resources to steal
-        const ownerId = this.gameContext.gameMap.settlements[vertexId].ownerId;
-        const targetPlayer = this.gameContext.players.find(p => p.id === ownerId);
-        const stolenResources = this._randomStealFromPlayer(targetPlayer, this._getCurrentPlayer());
+        if (vertexId) {
+            const ownerId = this.gameContext.gameMap.settlements[vertexId].ownerId;
+            const targetPlayer = this.gameContext.players.find(p => p.id === ownerId);
+            const stolenResources = this._randomStealFromPlayer(targetPlayer, this._getCurrentPlayer());
 
-        // complete, broadcast
-        this.gameContext.currentState = this.returnStateAfterRob;
-        this.returnStateAfterRob = null; // clear
-        console.log("Rob complete. Stolen resources:", stolenResources);
+            // complete, broadcast
+            this.gameContext.currentState = this.returnStateAfterRob;
+            this.returnStateAfterRob = null; // clear
+            console.log("Rob complete. Stolen resources:", stolenResources);
+        }
+        
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
             payload: {

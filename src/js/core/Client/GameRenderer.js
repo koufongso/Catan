@@ -600,46 +600,45 @@ export class GameRenderer {
 
 
     animateMoveRobberToTile(tileCoord) {
-        // animate the robber moving to the new tile
-        const robberLayer = document.getElementById('robber-layer');
-        if (!robberLayer) {
-            throw new Error("Robber layer not found in SVG");
-        }
-
-        const circle = robberLayer.querySelector('#robber-token');
-
-        if (!circle) {
-            throw new Error("Robber token not found in SVG");
-        }
-
-        this.isRobberAnimating = true;
-
-        const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
-
-        const animation = circle.animate(
-            [
-                // Keyframes
-                { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
-                { cx: newX, cy: newY } // End point
-            ],
-            {
-                // Timing options
-                duration: 1000, // seconds
-                iterations: 1, // Run once
-                fill: 'both', // Keep the final state after animation
-                easing: 'ease-in-out'
+        return new Promise((resolve, reject) => {
+            // animate the robber moving to the new tile
+            const robberLayer = document.getElementById('robber-layer');
+            if (!robberLayer) {
+                throw new Error("Robber layer not found in SVG");
             }
-        );
 
-        animation.onfinish = bind(this)(() => {
-            // ensure final position is set
-            circle.setAttribute('cx', newX);
-            circle.setAttribute('cy', newY);
-            this.isRobberAnimating = false;
+            const circle = robberLayer.querySelector('#robber-token');
+
+            if (!circle) {
+                throw new Error("Robber token not found in SVG");
+            }
+            
+            const [newX, newY] = HexUtils.hexToPixel(tileCoord, this.hexSize);
+
+            const animation = circle.animate(
+                [
+                    // Keyframes
+                    { cx: circle.getAttribute('cx'), cy: circle.getAttribute('cy') }, // Start point 
+                    { cx: newX, cy: newY } // End point
+                ],
+                {
+                    // Timing options
+                    duration: 1000, // seconds
+                    iterations: 1, // Run once
+                    fill: 'both', // Keep the final state after animation
+                    easing: 'ease-in-out'
+                }
+            );
+
+            animation.onfinish = (() => {
+                // ensure final position is set
+                circle.setAttribute('cx', newX);
+                circle.setAttribute('cy', newY);
+            });
+
+            // start the animation
+            animation.play();
+            console.log("Robber movement animation started.");
         });
-
-        // start the animation
-        animation.play();
-        console.log("Robber movement animation started.");
     }
 }
