@@ -53,8 +53,6 @@ export class GameRenderer {
             road: document.getElementById('road-layer'),
             robber: document.getElementById('robber-layer')
         };
-
-        console.log("Game UI initialized with layers:", this.layers);
     }
 
 

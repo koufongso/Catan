@@ -13,10 +13,10 @@ export const NUMBER_TOKENS_ORDER = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4
 
 // cost to build each structure
 export const COSTS = {
-    road: { [RESOURCE_TYPES.BRICK]: -1, [RESOURCE_TYPES.LUMBER]: -1 },
-    settlement: { [RESOURCE_TYPES.BRICK]: -1, [RESOURCE_TYPES.LUMBER]: -1, [RESOURCE_TYPES.WOOL]: -1, [RESOURCE_TYPES.WHEAT]: -1 },
-    city: { [RESOURCE_TYPES.ORE]: -3, [RESOURCE_TYPES.WHEAT]: -2 },
-    devCard: { [RESOURCE_TYPES.ORE]: -1, [RESOURCE_TYPES.WOOL]: -1, [RESOURCE_TYPES.WHEAT]: -1 }
+    road: { [RESOURCE_TYPES.BRICK]: 1, [RESOURCE_TYPES.LUMBER]: 1 },
+    settlement: { [RESOURCE_TYPES.BRICK]: 1, [RESOURCE_TYPES.LUMBER]: 1, [RESOURCE_TYPES.WOOL]: 1, [RESOURCE_TYPES.WHEAT]: 1 },
+    city: { [RESOURCE_TYPES.ORE]: 3, [RESOURCE_TYPES.WHEAT]: 2 },
+    devCard: { [RESOURCE_TYPES.ORE]: 1, [RESOURCE_TYPES.WOOL]: 1, [RESOURCE_TYPES.WHEAT]: 1 }
 };
 
 // initial resources in the bank

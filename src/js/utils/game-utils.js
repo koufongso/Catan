@@ -6,6 +6,8 @@ import { GameMap } from "../models/GameMap.js";
 import { Player } from "../models/Player.js";
 import { HexUtils } from "./hex-utils.js";
 import { MapUtils } from "./map-utils.js";
+import {COSTS} from "../constants/GameRuleConstants.js";
+
 
 export const GameUtils = Object.freeze({
     /**
@@ -54,7 +56,7 @@ export const GameUtils = Object.freeze({
         if (playerSettlementIdSet === null) {
             playerSettlementIdSet = MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
         }
-
+        console.log("Player settlement ids for road building:", playerSettlementIdSet);
         const visitedVertexIds = new Set();
         const validRoadIds = new Set();
 
@@ -195,5 +197,28 @@ export const GameUtils = Object.freeze({
         });
 
         return robbableSettlementIds;
-    }
+    },
+
+
+
+    /* -----------------------------------------------------Cost of Building ----------------------------------------------------- */
+    // note: all cost are positive numbers
+
+    getRoadCost() {
+        return COSTS.road;
+    },
+
+    getSettlementCost() {
+        return COSTS.settlement;
+    },
+
+    getCityCost() {
+        return COSTS.city;
+    },
+
+    getDevCardCost() {
+        return COSTS.devCard;
+     },
+
+
 });

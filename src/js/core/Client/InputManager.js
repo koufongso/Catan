@@ -54,7 +54,18 @@ export class InputManager {
             btnEndTurn: (event) => {
                 this.gameClient.btnEndTurnOnClick(event);
             },
-
+            btnBuildRoad: (event) => {
+                this.gameClient.btnBuildRoadOnClick(event);
+            },
+            btnBuildSettlement: (event) => {
+                this.gameClient.btnBuildSettlementOnClick(event);
+            },
+            btnBuildCity: (event) => {
+                this.gameClient.btnBuildCityOnClick(event);
+            },
+            btnBuyDevCard: (event) => {
+                this.gameClient.btnBuyDevCardOnClick(event);
+            }
         }
 
 
@@ -260,6 +271,11 @@ export class InputManager {
         const validBuildingSpots = buildingPredictor.lastResult.result;    // Set of valid road spot ids
         const placedBuildings = buildingPredictor.buildStack;   // Array of placed buildings {type, coord}
 
+        console.log("Drawing from BuildingPredictor with context:", {
+            buildingType,
+            validBuildingSpots,
+            placedBuildings
+        });
         // clear interaction layer
         this._clearInteractionLayer();
         console.log("Start drawing interaction layer from BuildingPredictor.");
@@ -519,45 +535,48 @@ export class InputManager {
      * @param {GameMap} gameMap - the current game map object
      * @param {string} playerColor - optional color for the player's roads default to 'rgba(0,255,0,0.5)'
      */
-    _setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
+    _setRoadBuildingContext(playerId, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
         this.clickedEdge = []; // reset clicked edges
         this.buildingPredictor.init(gameMap, playerId, "ROAD_ONLY");
-        this.numberOfRoads = numberOfRoads;
         this.gameMap = gameMap;
         this.playerColor = playerColor;
         this.playerId = playerId;
     }
 
-    activateRoadBuildingInteractionLayer(playerId, numberOfRoads, gameMap, playerColor) {
+    activateRoadBuildingMode(playerId, gameMap, playerColor) {
         if (!this.interactionLayer) {
             console.error("Interaction layer not found!");
             return;
         }
-
+        this.setMode('BUILD_ROAD');
         // clear existing layer
         this._clearInteractionLayer();
         this._clearRoadBuildingContext();
-        this._setRoadBuildingContext(playerId, numberOfRoads, gameMap, playerColor); // example setup
+        this._setRoadBuildingContext(playerId, gameMap, playerColor); // example setup
+
         // show all valid road spots for the player
         const res = this.buildingPredictor.getNextValidSpots();
         if (res.status !== StatusCodes.SUCCESS) {
             console.error("Failed to get valid road spots:", res);
             return;
         }
-        const validRoadSpots = res.result;
-        //console.log("Valid road spots for player", playerId, ":", validRoadSpots);
+
+        // draw all elements from building predictor
         this._drawFromBuildingPredictor(this.buildingPredictor);
+
         const btnGroup = this.createBtnGroup(0b111);
 
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
-        this.setMode('BUILD_ROAD');
+        
     }
 
 
     _handleEdgeClick(event) {
-        if (this.currentMode !== 'BUILD_ROAD' && this.currentMode !== 'INITIAL_PLACEMENT') {
+        // ealry return if not in road building mode
+        const validMode = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'INITIAL_PLACEMENT'];
+        if (!validMode.includes(this.currentMode)) {
             return; // ignore if not in build road mode
         }
 
@@ -607,6 +626,7 @@ export class InputManager {
                     document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
                 }
                 break;
+            case 'BUILD_ROAD':
             case 'BUILD_SETTLEMENT':
             case 'BUILD_CITY': // normal settlement/city building mode, confirm, cancel, undo buttons
                 const btnGroup2 = this.createBtnGroup(0b111); // confirm, cancel, undo
@@ -622,6 +642,8 @@ export class InputManager {
 
     /*---------------------------------------------------------------Button Handlers----------------------------------------------------------------*/
     _handleUndoBtnClick() {
+        let res = null;
+        let btnGroup = null;
         switch (this.currentMode) {
             case "INITIAL_PLACEMENT":
                 // remove last selected building
@@ -629,8 +651,8 @@ export class InputManager {
                     console.warn("No more buildings to undo in initial placement.");
                     return;
                 }
-                // reompuate valid spots
-                const res = this.buildingPredictor.getNextValidSpots();
+                // recompute valid spots
+                res = this.buildingPredictor.getNextValidSpots();
                 if (res.status !== StatusCodes.SUCCESS) {
                     console.error("Failed to get next valid spots after undo:", res);
                     return;
@@ -640,7 +662,7 @@ export class InputManager {
                 this._drawFromBuildingPredictor(this.buildingPredictor);
 
                 // recreate button group
-                const btnGroup = this.createBtnGroup(0b101);
+                btnGroup = this.createBtnGroup(0b101);
                 for (let btn of btnGroup) {
                     this.interactionLayer.appendChild(btn);
                 }
@@ -652,27 +674,28 @@ export class InputManager {
                 }
                 break;
             case 'BUILD_ROAD':
-                // remove last selected road
-                if (this.clickedEdge.length > 0) {
-                    this.clickedEdge.pop();
-                    const res = this.buildingPredictor.rollbackLastRoad();
-                    if (res.status !== StatusCodes.SUCCESS) {
-                        console.error("Failed to rollback last road:", res);
-                        return;
-                    }
-                    const validRoadSpots = res.result;
-
-                    // redraw interaction layer
-                    this._clearInteractionLayer();
-                    this._drawFromBuildingPredictor(this.buildingPredictor);
-                    const btnGroup = this.createBtnGroup(0b111);
-                    for (let btn of btnGroup) {
-                        this.interactionLayer.appendChild(btn);
-                    }
-                }
-                break;
             case 'BUILD_SETTLEMENT':
-                console.warn("Undo not implemented for settlement building mode yet.");
+                // remove last selected building
+                if (!this.buildingPredictor.rollback()) {
+                    console.warn("No more buildings to undo in initial placement.");
+                    return;
+                }
+                // recompute valid spots
+                res = this.buildingPredictor.getNextValidSpots();
+                if (res.status !== StatusCodes.SUCCESS) {
+                    console.error("Failed to get next valid spots after undo:", res);
+                    return;
+                }
+                // redraw interaction layer
+                this._clearInteractionLayer();
+                this._drawFromBuildingPredictor(this.buildingPredictor);
+
+                // recreate button group
+                btnGroup = this.createBtnGroup(0b111);
+                for (let btn of btnGroup) {
+                    this.interactionLayer.appendChild(btn);
+                }
+
                 break;
             case 'ROBBER_PLACEMENT':
                 if (this.robStack.length === 2) {
@@ -717,7 +740,7 @@ export class InputManager {
         switch (this.currentMode) {
             case 'BUILD_ROAD':
                 // clear interaction layer
-                this.clearRoadBuildingContext();
+                this._clearRoadBuildingContext();
                 this._clearInteractionLayer();
                 break;
             default:
@@ -765,14 +788,14 @@ export class InputManager {
 
             case 'BUILD_ROAD':
                 // submit the selected roads to server/controller
-                this.controller.inputEvent({ type: 'BUILD_ROAD', playerId: this.playerId, roadCoords: this.clickedEdge });
+                this.gameClient.submitBuildRoad(this.buildingPredictor.buildStack);
                 // clear interaction layer
-                this.clearRoadBuildingContext();
+                this._clearRoadBuildingContext();
                 this._clearInteractionLayer();
                 break;
             case 'BUILD_SETTLEMENT':
                 // submit the selected settlement to server/controller
-                this.controller.inputEvent({ type: 'BUILD_SETTLEMENT', vertexCoord: this.clickedVertex[0] });
+                console.warn("Settlement building is not implemented yet.");
                 break;
 
             case 'ROBBER_PLACEMENT':

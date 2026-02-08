@@ -4,8 +4,8 @@ export const MapUtils = Object.freeze({
     getPlayerSettlementVerticesIdSet(gameMap, playerId) {
         const settlementIds = new Set();
         for (const settlement of Object.values(gameMap.settlements)) {
-            if (settlement.owner === playerId) {
-                settlementIds.add(HexUtils.coordToId(settlement.vertex.coord));
+            if (settlement.ownerId === playerId) {
+                settlementIds.add(HexUtils.coordToId(settlement.coord));
             }
         }
         return settlementIds;
@@ -52,7 +52,7 @@ export const MapUtils = Object.freeze({
     getPlayerRoadVerticesIdSet(gameMap, playerId) {
         const roadVertexIds = new Set();
         for (const road of Object.values(gameMap.roads)) {
-            if (road.owner === playerId) {
+            if (road.ownerId === playerId) {
                 const vCoord1 = road.edge.vertex1.coord;
                 const vCoord2 = road.edge.vertex2.coord;
                 roadVertexIds.add(HexUtils.coordToId(vCoord1));

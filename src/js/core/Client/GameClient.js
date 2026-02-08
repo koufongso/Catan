@@ -110,7 +110,11 @@ export class GameClient {
                 break;
             case 'MAIN':
                 this.inputManager.deactivateAllBtns();
-                this.inputManager.activateBtn('btnBuild');
+                this.inputManager.activateBtn('btnBuildRoad');
+                this.inputManager.activateBtn('btnBuildSettlement');
+                this.inputManager.activateBtn('btnBuildCity');
+                this.inputManager.activateBtn('btnTrade');
+                this.inputManager.activateBtn('btnBuyDevCard');
                 this.inputManager.activateBtn('btnEndTurn');
                 break;
             default:
@@ -140,6 +144,45 @@ export class GameClient {
 
         this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT', payload: { playerId: this.id, buildStack: buildStack } });
     }
+
+    submitBuildRoad(buildStack) {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+        // quick check buildStack validity and compute total cost
+        if (buildStack.length === 0){
+            return; // allow empty submission to exit road building mode
+        }
+
+        let totalCost = {};
+        const roadCost = GameUtils.getRoadCost();
+        for (let build of buildStack) {
+            if (build.type !== 'ROAD') {
+                console.error(`Invalid build type in buildStack for submitBuildRoad: ${build.type}`);
+                return;
+            }
+            
+            for (let [resource, amount] of Object.entries(roadCost)) {
+                totalCost[resource] = (totalCost[resource] || 0) + amount;
+            }
+        }
+
+
+        // check if has enough resources to build the roads
+        let player = this.gameContext.players.find(p => p.id === this.id);
+        if (!(player instanceof Player)) {
+            player = new Player(player); // create a Player instance for resource checking
+        }
+
+        if (!player.canAfford(totalCost)) {
+            console.warn(`Player ${this.id} cannot afford to build roads with total cost:`, totalCost);
+            return;
+        }
+
+        this.gameController.inputEvent({ type: 'BUILD_ROAD', payload: { playerId: this.id, buildStack: buildStack}});
+    }
+        
 
     submitDiscardResources(selectedResources) {
         if (this.gameController === null) {
@@ -193,16 +236,6 @@ export class GameClient {
     }
 
 
-    btnBuildOnClick() {
-        if (this.gameController === null) {
-            console.error("GameController not connected.");
-            return;
-        }
-
-        this.inputManager.activateBuildInteractionLayer(this.id, this.gameContext.gameMap, this.color);
-    }
-
-
     btnEndTurnOnClick() {
         if (this.gameController === null) {
             console.error("GameController not connected.");
@@ -210,6 +243,17 @@ export class GameClient {
         }
         this.gameController.inputEvent({ type: 'END_TURN', payload: { playerId: this.id } });
     }
+
+    btnBuildRoadOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.inputManager.activateRoadBuildingMode(this.id, this.gameContext.gameMap, this.color);
+    }
+
+
 
 
 
