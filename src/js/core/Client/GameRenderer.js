@@ -107,7 +107,11 @@ export class GameRenderer {
     drawExistingBuildings(gameMap, playerColors = {}) {
 
         for (const settlement of Object.values(gameMap.settlements)) {
-            const settlementElement = HtmlUtils.createSettlementElement(settlement.coord, { color: playerColors[settlement.ownerId] }, ["settlement"], this.hexSize);
+            const settlementElement = HtmlUtils.createSettlementElement(settlement.coord, 
+                { color: playerColors[settlement.ownerId] }, 
+                settlement.level == 1 ? ["settlement"] : ["city"], 
+                this.hexSize,
+                settlement.level == 1 ? 10 : 12); // settlement size is 1, city size is 2);
             this.layers.settlement.appendChild(settlementElement);
         }
 

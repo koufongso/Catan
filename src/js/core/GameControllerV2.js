@@ -352,15 +352,10 @@ export class GameControllerV2 {
         const playerId = event.payload.playerId;
         switch (event.type) {
             case 'BUILD_ROAD':
-                // handle build road logic
-                console.warn(`Player ${playerId} BUILD_ROAD action not implemented yet.`);
-                this._handleStateMainBuildRoad(event);
-                break;
             case 'BUILD_SETTLEMENT':
-                console.warn(`Player ${playerId} BUILD_SETTLEMENT action not implemented yet.`);
-                break;
             case 'BUILD_CITY':
-                console.warn(`Player ${playerId} BUILD_CITY action not implemented yet.`);
+                // handle build road logic
+                this._handleStateMainBuild(event, event.type);
                 break;
             case 'TRADE':
                 // handle trade logic
@@ -379,8 +374,8 @@ export class GameControllerV2 {
         }
     }
 
-    _handleStateMainBuildRoad(event) {
-        const validateResult = this._validateRequest(event, 'BUILD_ROAD');
+    _handleStateMainBuild(event, eventType) {
+        const validateResult = this._validateRequest(event, ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY']);
         if (validateResult.status === StatusCodes.ERROR) {
             return validateResult;
         }
@@ -391,23 +386,26 @@ export class GameControllerV2 {
         if (buildStack.length === 0) {
             return {
                 status: StatusCodes.ERROR,
-                errorMessage: `No roads provided in BUILD_ROAD action.`
+                errorMessage: `No ${eventType.toLowerCase()}s provided in ${eventType} action.`
             }
         }
 
         // check resource 
         let totalCost = {};
-        const roadCost = GameUtils.getRoadCost();
         for (let build of buildStack) {
-            if (build.type !== 'ROAD') {
-                console.error(`Invalid build type in buildStack for submitBuildRoad: ${build.type}`);
-                return {
-                    status: StatusCodes.ERROR,
-                    errorMessage: `Invalid build type in buildStack for submitBuildRoad: ${build.type}`
-                };
+            switch (build.type ) {
+                case 'ROAD':
+                    var cost = GameUtils.getRoadCost('ROAD');
+                    break;
+                case 'SETTLEMENT':
+                    var cost = GameUtils.getSettlementCost('SETTLEMENT');
+                    break;
+                case 'CITY':
+                    var cost = GameUtils.getCityCost('CITY');
+                    break;
             }
-            
-            for (let [resource, amount] of Object.entries(roadCost)) {
+
+            for (let [resource, amount] of Object.entries(cost)) {
                 totalCost[resource] = (totalCost[resource] || 0) + amount;
             }
         }
@@ -415,12 +413,24 @@ export class GameControllerV2 {
         if (!player.canAfford(totalCost)) {
             return {
                 status: StatusCodes.ERROR,
-                errorMessage: `Player ${playerId} cannot afford to build ${buildStack.length} roads. Required: ${JSON.stringify(totalCost)}.`
+                errorMessage: `Player ${playerId} cannot afford to build ${buildStack.length} ${eventType.toLowerCase()}s. Required: ${JSON.stringify(totalCost)}.`
             }
         }
 
         // check placement rules
-        const validateRes = this._validateAndApplyBuildStack(playerId, buildStack, "ROAD_ONLY");
+        switch (eventType) {
+            case 'BUILD_ROAD':
+                var mode = 'ROAD_ONLY'
+                break;
+            case 'BUILD_SETTLEMENT':
+                var mode = 'SETTLEMENT_ONLY'
+                break;
+            case 'BUILD_CITY':
+                var mode = 'CITY_ONLY'
+                break;
+        }
+
+        const validateRes = this._validateAndApplyBuildStack(playerId, buildStack, mode);
         if (validateRes.status !== StatusCodes.SUCCESS) {
             return validateRes;
         }
@@ -431,7 +441,7 @@ export class GameControllerV2 {
         // put resource back to bank
         this._addBankResource(totalCost);
 
-        // boradcast update to all clients
+        // broadcast update to all clients
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
             payload: {
@@ -618,27 +628,55 @@ export class GameControllerV2 {
     _validateAndApplyBuildStack(playerId, buildStack, mode) {
         // verify buildStack
         // prelimeary checks for initial placement
+        console.log(`Validating build stack for player ${playerId} in mode ${mode}:`, buildStack);
         switch (mode) {
             case "INITIAL_PLACEMENT":
-            // 1. must have length 2 for initial placement (one settlement and one road)
-            if (buildStack.length !== 2) {
-                return {
-                    status: StatusCodes.ERROR,
-                    errorMessage: `Invalid buildStack length for initial placement: ${buildStack.length}`
-                };
-            }
-            // 2. first must be settlement, second must be road
-            if (buildStack[0].type !== 'SETTLEMENT' || buildStack[1].type !== 'ROAD') {
-                return {
-                    status: StatusCodes.ERROR,
-                    errorMessage: `Invalid buildStack types for initial placement: ${buildStack[0].type}, ${buildStack[1].type}`
-                };
-            }
-            break;
+                // 1. must have length 2 for initial placement (one settlement and one road)
+                if (buildStack.length !== 2) {
+                    return {
+                        status: StatusCodes.ERROR,
+                        errorMessage: `Invalid buildStack length for initial placement: ${buildStack.length}`
+                    };
+                }
+                // 2. first must be settlement, second must be road
+                if (buildStack[0].type !== 'SETTLEMENT' || buildStack[1].type !== 'ROAD') {
+                    return {
+                        status: StatusCodes.ERROR,
+                        errorMessage: `Invalid buildStack types for initial placement: ${buildStack[0].type}, ${buildStack[1].type}`
+                    };
+                }
+                break;
+            case "ROAD_ONLY":
+                if (!buildStack.every(build => build.type === 'ROAD')) {
+                    return {
+                        status: StatusCodes.ERROR,
+                        errorMessage: `Invalid buildStack types for ROAD_ONLY mode: ${buildStack.map(b => b.type).join(', ')}`
+                    };
+                }
+                break;
+            case "SETTLEMENT_ONLY":
+                if (!buildStack.every(build => build.type === 'SETTLEMENT')) {
+                    return {
+                        status: StatusCodes.ERROR,
+                        errorMessage: `Invalid buildStack types for SETTLEMENT_ONLY mode: ${buildStack.map(b => b.type).join(', ')}`
+                    };
+                }
+                break;
+            case "CITY_ONLY":
+                if (!buildStack.every(build => build.type === 'CITY')) {
+                    return {
+                        status: StatusCodes.ERROR,
+                        errorMessage: `Invalid buildStack types for CITY_ONLY mode: ${buildStack.map(b => b.type).join(', ')}`
+                    };
+                }
+                break;
+            default:
+                throw new Error(`Invalid mode for _validateAndApplyBuildStack: ${mode}`);
         }
 
 
         // 3. verify using BuildingPredictor
+        console.log(`Checking build stack validity for player ${playerId} with BuildingPredictor in mode ${mode}...`);
         const buildingPredictor = new BuildingPredictor();
         buildingPredictor.init(this.gameContext.gameMap, playerId, mode);
         buildingPredictor.getNextValidSpots(); // prepare valid spots for the player
@@ -662,6 +700,10 @@ export class GameControllerV2 {
                 case 'ROAD':
                     this.gameContext.gameMap.updateRoad(building.coord, playerId);
                     this.gameContext.players.find(p => p.id === playerId).addRoad(HexUtils.coordToId(building.coord));
+                    break;
+                case 'CITY':
+                    this.gameContext.gameMap.updateSettlement(building.coord, playerId, 2);
+                    this.gameContext.players.find(p => p.id === playerId).addCity(HexUtils.coordToId(building.coord));
                     break;
                 default:
                     throw new Error(`Invalid building type in initial placement: ${building.type}`);

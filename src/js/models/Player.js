@@ -108,9 +108,10 @@ export class Player {
 
     addCity(cityId) {
         this.citiesLeft--;
+        this.settlementsLeft++; // assuming city replaces a settlement, so we return one settlement back to the player
         // we assume the city replaces a settlement
         this.settlements.delete(cityId);
-        this.settlements.add(cityId);
+        this.cities.add(cityId);
     }
 
     // add a road object to player's list
