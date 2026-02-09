@@ -24,8 +24,7 @@ export class BuildingPredictor {
     }
 
     init(gameMap, playerId, mode) {
-        const gameMapCopy = structuredClone(gameMap); // create a deep copy to avoid mutating original
-        this.gameMap = new GameMap(gameMapCopy); // construct a new instance from the deep copy data
+        this.gameMap = new GameMap(gameMap); // construct a new instance from the deep copy data
         this.playerId = playerId;
         this.buildStack = []; // reset build stack
         this.validRoadSpots = new Set();

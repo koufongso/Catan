@@ -4,15 +4,16 @@ import { HexUtils } from '../utils/hex-utils.js';
 
 export class Player {
     constructor(data = {}) {
-        this.id = data.id;
-        this.name = data.name;
-        this.color = data.color;
-        this.roadsLeft = data.roadsLeft || PLAYER_ASSET_LIMITS.roads;
-        this.settlementsLeft = data.settlementsLeft || PLAYER_ASSET_LIMITS.settlements;
-        this.citiesLeft = data.citiesLeft || PLAYER_ASSET_LIMITS.cities;
+        const dataCopy = structuredClone(data); // create a deep copy to avoid mutating original
+        this.id = dataCopy.id;
+        this.name = dataCopy.name;
+        this.color = dataCopy.color;
+        this.roadsLeft = dataCopy.roadsLeft || PLAYER_ASSET_LIMITS.roads;
+        this.settlementsLeft = dataCopy.settlementsLeft || PLAYER_ASSET_LIMITS.settlements;
+        this.citiesLeft = dataCopy.citiesLeft || PLAYER_ASSET_LIMITS.cities;
 
         // resource inventory
-        this.resources = data.resources || {
+        this.resources = dataCopy.resources || {
             [RESOURCE_TYPES.ORE]: 0,
             [RESOURCE_TYPES.WOOL]: 0,
             [RESOURCE_TYPES.LUMBER]: 0,
@@ -22,13 +23,13 @@ export class Player {
 
 
         // asset ownership (ids)
-        this.settlements = data.settlements || new Set();   // set of settlement id
-        this.roads = data.roads || new Set();               // set of road id
-        this.cities = data.cities || new Set();                 // set of city id
-        this.devCards = data.devCards || [];                // array of DevCard objects
+        this.settlements = dataCopy.settlements || new Set();   // set of settlement id
+        this.roads = dataCopy.roads || new Set();               // set of road id
+        this.cities = dataCopy.cities || new Set();                 // set of city id
+        this.devCards = dataCopy.devCards || [];                // array of DevCard objects
 
         // Achievement/Special Status (Data only, logic handled by ScoreService)
-        this.achievements = data.achievements || {
+        this.achievements = dataCopy.achievements || {
             hasLongestRoad: false,
             hasLargestArmy: false,
             knightsPlayed: 0,

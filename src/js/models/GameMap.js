@@ -10,15 +10,16 @@ export class GameMap {
     // we compute the connected components coordinates on run-time when needed
     // and query the interactable elements from these three maps
     constructor(data = {}) {
-        this.tiles = data.tiles || {};             // regiester all (interactable) tiles/hex, others will be conceptual "empty" tiles
-        this.tradingPosts = data.tradingPosts || {};      // register all trading posts on the map
-        this.settlements = data.settlements || {};       // register all (interactable) settlements/vertices, others will be conceptual "empty" settlements
-        this.roads = data.roads || {};             // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
-        this.robberCoord = data.robberCoord || [0, 0, 0];       // the tile coord where the robber is currently located
+        const dataCopy = structuredClone(data); // create a deep copy to avoid mutating original
+        this.tiles = dataCopy.tiles || {};             // regiester all (interactable) tiles/hex, others will be conceptual "empty" tiles
+        this.tradingPosts = dataCopy.tradingPosts || {};      // register all trading posts on the map
+        this.settlements = dataCopy.settlements || {};       // register all (interactable) settlements/vertices, others will be conceptual "empty" settlements
+        this.roads = dataCopy.roads || {};             // register all (interacterable) roads/edges elements, others will be conceptual "empty" roads
+        this.robberCoord = dataCopy.robberCoord || [0, 0, 0];       // the tile coord where the robber is currently located
 
         // map "boundary" info, save for quick access, only computed once after map initialization
-        this.allVertexIdSet = data.allVertexIdSet || null;     // a set of all vertex coordinates on the map
-        this.allEdgeIdSet = data.allEdgeIdSet || null;       // a set of all edge coordinates on the map
+        this.allVertexIdSet = dataCopy.allVertexIdSet || null;     // a set of all vertex coordinates on the map
+        this.allEdgeIdSet = dataCopy.allEdgeIdSet || null;       // a set of all edge coordinates on the map
     }
 
     /**
