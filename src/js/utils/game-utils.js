@@ -110,11 +110,16 @@ export const GameUtils = Object.freeze({
      * Get valid city coordinates for a player. Valid city spots are simply existing settlements owned by the player.
      * @param {*} gameMap 
      * @param {*} playerId 
-     * @returns 
+     * @returns {Set} a set of valid vertex id for placing a city
      */
-    getValidCityCoords(gameMap, playerId) {
+    getValidCitySpots(gameMap, playerId) {
         // valid city spots are simply existing settlements owned by the player
-        return MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
+        if (!(gameMap instanceof GameMap)) {
+            gameMap = new GameMap(gameMap); // in case a plain object is passed, convert to GameMap instance
+        }
+
+        const citySpots = gameMap.filter('settlements', (settlement) => (settlement.ownerId === playerId && settlement.level === 1));
+        return new Set(citySpots.map(settlement =>settlement.id));
     },
 
 

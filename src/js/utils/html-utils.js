@@ -268,10 +268,10 @@ export const HtmlUtils = Object.freeze({
         return edgeLine;
     },
 
-    createSettlementElement(vCoord, attributes = {}, classList = [], hexSize = HEX_SIZE) {
+    createSettlementElement(vCoord, attributes = {}, classList = [], hexSize = HEX_SIZE, size = 10) {
         const vertexId = HexUtils.coordToId(vCoord);
         const [x, y] = HexUtils.vertexToPixel(vCoord, hexSize);
-        const settlementCircle = HtmlUtils.createSvgCircle(x, y, 10, classList);
+        const settlementCircle = HtmlUtils.createSvgCircle(x, y, size, classList);
         settlementCircle.dataset.id = vertexId;
         if (attributes.color) {
             settlementCircle.style.fill = attributes.color;

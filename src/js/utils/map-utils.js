@@ -53,10 +53,9 @@ export const MapUtils = Object.freeze({
         const roadVertexIds = new Set();
         for (const road of Object.values(gameMap.roads)) {
             if (road.ownerId === playerId) {
-                const vCoord1 = road.edge.vertex1.coord;
-                const vCoord2 = road.edge.vertex2.coord;
-                roadVertexIds.add(HexUtils.coordToId(vCoord1));
-                roadVertexIds.add(HexUtils.coordToId(vCoord2));
+                HexUtils.getVerticesFromEdge(road.coord).forEach(vCoord => {
+                    roadVertexIds.add(HexUtils.coordToId(vCoord));
+                });
             }
         }
         return roadVertexIds;

@@ -76,11 +76,10 @@ body {
     filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
     transition: all 0.2s ease;
-    /* animation: smooth-blink 2s infinite; */
 }
  
 
-.available-settlement, .available-city {
+.available-settlement {
     fill: rgba(0, 255, 0, 0.5);
     opacity: 0.5;
     stroke: rgba(255, 255, 255, 0.5);
@@ -91,27 +90,26 @@ body {
     transition: all 0.2s ease;
 }
 
-.placed-settlement {
+.placed-settlement, .placed-city {
     /* Slightly thicker and more transparent to indicate ghost settlement */
     opacity: 1.0;  
     stroke-linecap: round;
     filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
     cursor: pointer;
     transition: all 0.2s ease;
-    /* animation: smooth-blink 2s infinite; */
-}
-
-@keyframes smooth-blink {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
 }
 
 
-
+.available-city {
+    /* Slightly thicker and more transparent to indicate ghost city */
+    opacity: 1.0;  
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 10px;
+    stroke-linecap: round;
+    filter:drop-shadow(0px 0px 3px white) drop-shadow(0px 0px 2px white);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
 
 .vertex-slot:hover {

@@ -19,6 +19,7 @@ export class BuildingPredictor {
         // must be initialized in getNextValidSpots()
         this.validRoadSpots = new Set(); // list of valid road coordinates for next selection
         this.validSettlementSpots = new Set(); // valid settlement coords for initial placement
+        this.validCitySpots = new Set(); // valid city coords for next selection
 
         this.initialized = false;
     }
@@ -29,6 +30,7 @@ export class BuildingPredictor {
         this.buildStack = []; // reset build stack
         this.validRoadSpots = new Set();
         this.validSettlementSpots = new Set();
+        this.validCitySpots = new Set();
         this.mode = mode;
 
         // save last build type and coord for tracking (useful for initial placement)
@@ -48,9 +50,10 @@ export class BuildingPredictor {
         this.playerId = null;
         this.validRoadSpots = new Set();
         this.validSettlementSpots = new Set();
+        this.validCitySpots = new Set();
         this.lastBuildType = null;
         this.lastBuildId = null;
-        this.lastValidSpots = null
+        this.lastValidSpots = null;
         this.counter = 0;
         this.initialized = false;
     }
@@ -116,6 +119,16 @@ export class BuildingPredictor {
                     };
                     return structuredClone(this.lastResult);
                 }
+            case "CITY_ONLY":
+                {
+                    this.validCitySpots = GameUtils.getValidCitySpots(this.gameMap, this.playerId);
+                    this.lastResult = {
+                        status: StatusCodes.SUCCESS,
+                        type: 'CITY',
+                        result: this.validCitySpots // return a clone to avoid mutation
+                    };
+                    return structuredClone(this.lastResult);
+                }
             default:
                 throw new Error(`Invalid mode for BuildingPredictor: ${this.mode}`);
         }  
@@ -123,7 +136,7 @@ export class BuildingPredictor {
 
     /**
      * Build a building at the specified location, updating the game map and build stack
-     * @param {String} type 'ROAD' or 'SETTLEMENT'
+     * @param {String} type 'ROAD', 'SETTLEMENT', or 'CITY'
      * @param {Array|String} location coordinate or coordinate id
      * @returns 
      */
@@ -132,33 +145,34 @@ export class BuildingPredictor {
             throw new Error("BuildingPredictor not initialized. Call init() before build().");
         }
 
-        if (this.validRoadSpots.size === 0 && this.validSettlementSpots.size === 0) {
+        if (this.validRoadSpots.size === 0 && this.validSettlementSpots.size === 0 && this.validCitySpots.size === 0) {
             throw new Error("No valid spots computed. Call getNextValidSpots() before build().");
         }
         const coord = typeof location === 'string' ? HexUtils.idToCoord(location) : location;
         const coordId = HexUtils.coordToId(coord);
 
         // check if valid
-        if (type === 'SETTLEMENT') {
-            if (!this.validSettlementSpots.has(coordId)) {
-                return false
-            }
-        } else if (type === 'ROAD') {
-            if (!this.validRoadSpots.has(coordId)) {
-                return false
-            }
-        } else {
-            throw new Error(`Invalid building type for BuildingPredictor: ${type}, must be 'SETTLEMENT' or 'ROAD'`);
-        }
-
-
-        // add building to game map
-        if (type === 'SETTLEMENT') {
-            this.gameMap.updateSettlement(coord, this.playerId, 1);
-        } else if (type === 'ROAD') {
-            this.gameMap.updateRoad(coord, this.playerId);
-        } else {
-            throw new Error(`Invalid building type for BuildingPredictor: ${type}, must be 'SETTLEMENT' or 'ROAD'`);
+        switch (type) {
+            case 'SETTLEMENT':
+                if (!this.validSettlementSpots.has(coordId)) {
+                    return false
+                }
+                this.gameMap.updateSettlement(coord, this.playerId, 1);
+                break;
+            case 'ROAD':
+                if (!this.validRoadSpots.has(coordId)) {
+                    return false
+                }
+                this.gameMap.updateRoad(coord, this.playerId);
+                break;
+            case 'CITY':
+                if (!this.validCitySpots.has(coordId)) {
+                    return false
+                }
+                this.gameMap.updateSettlement(coord, this.playerId, 2);
+                break;
+            default:
+                throw new Error(`Invalid building type for BuildingPredictor: ${type}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);
         }
 
         // add to stack
@@ -200,10 +214,18 @@ export class BuildingPredictor {
         const buildId = HexUtils.coordToId(buildCoord);
 
         // remove from game map
-        if (buildType === 'SETTLEMENT') {
-            this.gameMap.removeSettlement(buildId);
-        } else if (buildType === 'ROAD') {
-            this.gameMap.removeRoad(buildId);
+        switch (buildType) {
+            case 'SETTLEMENT':
+                this.gameMap.removeSettlement(buildId);
+                break;
+            case 'ROAD':
+                this.gameMap.removeRoad(buildId);
+                break;
+            case 'CITY':
+                this.gameMap.updateSettlement(buildId, this.playerId, 1); // downgrade city back to settlement
+                break;
+            default:
+                throw new Error(`Invalid building type in BuildingPredictor rollback: ${buildType}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);
         }
 
         // update last build type/id

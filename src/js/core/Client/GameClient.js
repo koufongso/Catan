@@ -145,7 +145,7 @@ export class GameClient {
         this.gameController.inputEvent({ type: 'INITIAL_PLACEMENT', payload: { playerId: this.id, buildStack: buildStack } });
     }
 
-    submitBuildRoad(buildStack) {
+    submitBuild(buildStack, mode) {
         if (this.gameController === null) {
             console.error("GameController not connected.");
             return;
@@ -156,14 +156,29 @@ export class GameClient {
         }
 
         let totalCost = {};
-        const roadCost = GameUtils.getRoadCost();
+        let cost = {}
+        switch (mode) {
+            case "BUILD_ROAD":
+                cost = GameUtils.getRoadCost();
+                break;
+            case "BUILD_SETTLEMENT":
+                cost = GameUtils.getSettlementCost();
+                break;
+            case "BUILD_CITY":
+                cost = GameUtils.getCityCost();
+                break;
+            default:
+                throw new Error(`Invalid mode for submitBuild: ${mode}`);
+        }
+
+        const validType = ['ROAD', 'SETTLEMENT', 'CITY'];
         for (let build of buildStack) {
-            if (build.type !== 'ROAD') {
+            if (!validType.includes(build.type)) {
                 console.error(`Invalid build type in buildStack for submitBuildRoad: ${build.type}`);
                 return;
             }
             
-            for (let [resource, amount] of Object.entries(roadCost)) {
+            for (let [resource, amount] of Object.entries(cost)) {
                 totalCost[resource] = (totalCost[resource] || 0) + amount;
             }
         }
@@ -180,8 +195,9 @@ export class GameClient {
             return;
         }
 
-        this.gameController.inputEvent({ type: 'BUILD_ROAD', payload: { playerId: this.id, buildStack: buildStack}});
+        this.gameController.inputEvent({ type: mode, payload: { playerId: this.id, buildStack: buildStack}});
     }
+
         
 
     submitDiscardResources(selectedResources) {
@@ -251,7 +267,25 @@ export class GameClient {
             return;
         }
 
-        this.inputManager.activateRoadBuildingMode(this.id, this.gameContext.gameMap, this.color);
+        this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'BUILD_ROAD');
+    }
+
+    btnBuildSettlementOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'BUILD_SETTLEMENT');
+    }
+
+    btnBuildCityOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'BUILD_CITY');
     }
 
 

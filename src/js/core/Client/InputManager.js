@@ -27,6 +27,7 @@ export class InputManager {
         this.buildingPredictor = new BuildingPredictor(); // a helper class to predict building placements (before submit to server)
 
         this.currentMode = 'IDLE'; // IDLE, INITIAL_PLACEMENT, BUILD_ROAD, BUILD_SETTLEMENT, BUILD_CITY, TRADE, DISCARD, ROBBER, etc.
+        this.validMode = ['IDLE', 'INITIAL_PLACEMENT', 'BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'TRADE', 'DISCARD', 'ROBBER'];
 
         // 
         this.elementIds = {
@@ -281,6 +282,7 @@ export class InputManager {
         console.log("Start drawing interaction layer from BuildingPredictor.");
 
         // redraw valid spots
+        // settlement
         if (!skipValidSpots && buildingType === 'SETTLEMENT' && validBuildingSpots.size > 0) {
             const validSettlementCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
             const settlementPlacementGroup = HtmlUtils.createSettlementPlacementGroup(validSettlementCoords, this._handleVertexClick.bind(this), { color: this.playerColor }, ["available-settlement"], HEX_SIZE);
@@ -288,6 +290,15 @@ export class InputManager {
             this.interactionLayer.appendChild(settlementPlacementGroup);
         }
 
+        // city
+        if (!skipValidSpots && buildingType === 'CITY' && validBuildingSpots.size > 0) {
+            const validSettlementCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
+            const settlementPlacementGroup = HtmlUtils.createSettlementPlacementGroup(validSettlementCoords, this._handleVertexClick.bind(this), { color: this.playerColor }, ["available-city"], HEX_SIZE);
+            settlementPlacementGroup.classList.add('valid-settlement-group');
+            this.interactionLayer.appendChild(settlementPlacementGroup);
+        }
+
+        // road
         if (!skipValidSpots && buildingType === 'ROAD' && validBuildingSpots.size > 0) {
             const validRoadCoords = Array.from(validBuildingSpots).map(id => HexUtils.idToCoord(id));
             const roadPlacementGroup = HtmlUtils.createRoadPlacementGroup(validRoadCoords, this._handleEdgeClick.bind(this), { color: this.playerColor }, ["available-road"], HEX_SIZE);
@@ -297,12 +308,21 @@ export class InputManager {
         // redraw placed buildings
         if (!skipPlacedBuildings) {
             for (let building of placedBuildings) {
-                if (building.type === 'SETTLEMENT') {
-                    const settlementElement = HtmlUtils.createSettlementElement(building.coord, { color: this.playerColor }, ["placed-settlement"], HEX_SIZE);
-                    this.interactionLayer.appendChild(settlementElement);
-                } else if (building.type === 'ROAD') {
-                    const roadElement = HtmlUtils.createRoadElement(building.coord, { color: this.playerColor }, ["placed-road"], HEX_SIZE);
-                    this.interactionLayer.appendChild(roadElement);
+                switch (building.type) {
+                    case 'SETTLEMENT':
+                        const settlementElement = HtmlUtils.createSettlementElement(building.coord, { color: this.playerColor }, ["placed-settlement"], HEX_SIZE);
+                        this.interactionLayer.appendChild(settlementElement);
+                        break;
+                    case 'CITY':
+                        const cityElement = HtmlUtils.createSettlementElement(building.coord, { color: this.playerColor }, ["placed-city"], HEX_SIZE, 12);
+                        this.interactionLayer.appendChild(cityElement);
+                        break;
+                    case 'ROAD':
+                        const roadElement = HtmlUtils.createRoadElement(building.coord, { color: this.playerColor }, ["placed-road"], HEX_SIZE);
+                        this.interactionLayer.appendChild(roadElement);
+                        break;
+                    default:
+                        console.warn("Unknown building type in building stack:", building.type);
                 }
             }
         }
@@ -365,195 +385,59 @@ export class InputManager {
     }
 
 
-    /*----------------------------------------------------------------Settlement/City Building Mode----------------------------------------------------------------*/
 
-    _clearSettlementBuildingContext() {
-        this.clickedVertex = [];
-        this.numberOfSettlements = 0;
-        this.gameMap = null;
-        this.playerColor = null;
-        this.playerId = null;
-        this.placementPhase = null;
-    }
-
-    _setSettlementBuildingContext(playerId, numberOfSettlements, placementPhase, gameMap, playerColor) {
-        this.clickedVertex = [];
-        this.gameMap = gameMap;
-        this.playerColor = playerColor;
-        this.playerId = playerId;
-        this.placementPhase = placementPhase;
-        this.numberOfSettlements = numberOfSettlements;
-    }
-
-
-
-    activateSettlementInteractionLayer(playerId, placementPhase, gameMap, playerColor) {
-        console.log("Activating settlement interaction layer for player:", playerId, "phase:", placementPhase);
-        if (!this.interactionLayer) {
-            console.error("Interaction layer not found!");
-            return;
-        }
-
-        // clear existing layer
-        this._clearInteractionLayer();
-        this._clearSettlementBuildingContext();
-        this._setSettlementBuildingContext(playerId, 1, placementPhase, gameMap, playerColor);
-
-        // show all valid settlement spots for the player
-        const validSettlementSpots = GameUtils.getValidSettlementSpots(gameMap, null); // use playerId = null to show all valid spots
-
-        // draw all elements from building predictor
-        this._drawFromBuildingPredictor(this.buildingPredictor);
-
-        // create button group
-        let btnGroup = [];
-        if (this.placementPhase === 'INITIAL_1') {
-            // initial placement phase 1: only confirm button and undo (no cancel)
-            btnGroup = this.createBtnGroup(0b101);
-        } else {
-            // normal settlement building: confirm, cancel, undo
-            btnGroup = this.createBtnGroup(0b111);
-        }
-        for (let btn of btnGroup) {
-            this.interactionLayer.appendChild(btn);
-        }
-        this.setMode('BUILD_SETTLEMENT');
-    }
-
-
-
-    _handleVertexClick(event) {
-        console.log("Vertex clicked:", event.target.dataset.id);
-
-        switch (this.currentMode) {
-            case 'INITIAL_PLACEMENT':
-            case 'BUILD_SETTLEMENT':
-                this._handleVertexClickBuildSettlement(event);
-                break;
-            case 'ROBBER_PLACEMENT':
-                this._handleVertexClickRob(event);
-                break;
-            default:
-                return; // ignore if not in settlement building mode
-        }
-    }
-
-    _handleVertexClickRob(event) {
-        if (this.robStack.length === 2) {
-            return; // already selected a vertex for robbing, ignore further clicks
-        }
-        const vertexId = event.target.dataset.id;
-        this.robStack.push({ type: 'SETTLEMENT', id: vertexId });
-
-        // highlight the selected vertex
-        event.target.classList.add('robber-settlement-mask');
-
-        // enable confirm button if we have selected a settlement to rob
-        if (this.robStack.length === 2) {
-            this._enableConfirmBtn();
-        } else {
-            // otherwise, wait for player to select a settlement to rob before enabling confirm button
-            console.error("Unexpected state: wrong number of selected elements for robbing:", this.robStack);
-            this._disableConfirmBtn();
-        }
-
-    }
-
-    _handleVertexClickBuildSettlement(event) {
-        const settlementId = event.target.dataset.id;
-        // add class to indicate selection
-        if (event.target.classList.contains("placed-settlement")) {
-            console.warn("Settlement already placed at:", settlementId);
-            return;
-        }
-
-        // placed settlements
-        // add to building predictor
-        if (!this.buildingPredictor.build("SETTLEMENT", settlementId)) {
-            console.error("Failed to add settlement to building predictor at:", settlementId);
-        }
-
-        // get the next valid spots
-        const res = this.buildingPredictor.getNextValidSpots();
-        if (res.status !== StatusCodes.SUCCESS) {
-            console.error("Failed to get next valid spots after settlement placement:", res);
-            return;
-        }
-
-        this._clearInteractionLayer();
-        if (res.result === null) {
-            // all buildings placed, wait for confirm
-            console.log("All settlements placed, waiting for confirm.");
-            // stop here, skip redraw valid spots
-            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
-        } else {
-            // redraw interaction layer with new valid spots and placed buildings
-            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
-        }
-
-        switch (this.currentMode) {
-            case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
-                const btnGroup = this.createBtnGroup(0b101); // confirm and undo only, no cancel during initial placement
-                for (let btn of btnGroup) {
-                    this.interactionLayer.appendChild(btn);
-                }
-                // check btn state
-                // if all buildings placed, enable confirm button
-                if (res.result === null) {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-                } else {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
-                }
-                break;
-            case 'BUILD_SETTLEMENT':
-            case 'BUILD_CITY': // normal settlement/city building mode, confirm, cancel, undo buttons
-                const btnGroup2 = this.createBtnGroup(0b111); // confirm, cancel, undo
-                for (let btn of btnGroup2) {
-                    this.interactionLayer.appendChild(btn);
-                }
-                break;
-            default:
-                console.error("Unknown mode after settlement placement:", this.currentMode);
-        }
-    }
-
-
-    /*----------------------------------------------------------------Road Building Mode----------------------------------------------------------------*/
-    _clearRoadBuildingContext() {
-        this.clickedEdge = [];
+    /*---------------------------------------------------------------- Building Mode----------------------------------------------------------------*/
+    _clearBuildingContext() {
         this.buildingPredictor.clear();
-        this.numberOfRoads = 0;
         this.gameMap = null;
         this.playerColor = null;
         this.playerId = null;
     }
 
     /**
-     * Set up parameters/context for road building mode
+     * Set up parameters/context for building mode
      * e.g. Player x (with color c (optional)) wants to build n roads in this gameMap
      * @param {integer} numberOfRoads 
      * @param {GameMap} gameMap - the current game map object
      * @param {string} playerColor - optional color for the player's roads default to 'rgba(0,255,0,0.5)'
      */
-    _setRoadBuildingContext(playerId, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
-        console.log("Setting road building context for player:", playerId);
-        this.clickedEdge = []; // reset clicked edges
-        this.buildingPredictor.init(gameMap, playerId, "ROAD_ONLY");
+    _setBuildingContext(playerId, gameMap, playerColor = 'rgba(0,255,0,0.5)', mode) {
+        let predictorMode = null;
+        switch (mode) {
+            case 'BUILD_ROAD':
+                predictorMode = "ROAD_ONLY";
+                break;
+            case 'BUILD_SETTLEMENT':
+                predictorMode = "SETTLEMENT_ONLY";
+                break;
+            case 'BUILD_CITY':
+                predictorMode = "CITY_ONLY";
+                break;
+            default:
+                throw new Error("Invalid building mode for setting building context:", mode);
+        }
+        this.buildingPredictor.init(gameMap, playerId, predictorMode);
         this.gameMap = gameMap;
         this.playerColor = playerColor;
         this.playerId = playerId;
     }
 
-    activateRoadBuildingMode(playerId, gameMap, playerColor) {
+    activateBuildingMode(playerId, gameMap, playerColor, mode) {
         if (!this.interactionLayer) {
             console.error("Interaction layer not found!");
             return;
         }
-        this.setMode('BUILD_ROAD');
+        const validModes = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY'];
+        if (!validModes.includes(mode)) {
+            console.error("Invalid building mode:", mode);
+            return;
+        }
+
+        this.setMode(mode);
         // clear existing layer
         this._clearInteractionLayer();
-        this._clearRoadBuildingContext();
-        this._setRoadBuildingContext(playerId, gameMap, playerColor); // example setup
+        this._clearBuildingContext();
+        this._setBuildingContext(playerId, gameMap, playerColor, mode); // example setup
 
         // show all valid road spots for the player
         const res = this.buildingPredictor.getNextValidSpots();
@@ -570,76 +454,11 @@ export class InputManager {
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
-        
-    }
-
-
-    _handleEdgeClick(event) {
-        // ealry return if not in road building mode
-        const validMode = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'INITIAL_PLACEMENT'];
-        if (!validMode.includes(this.currentMode)) {
-            return; // ignore if not in build road mode
-        }
-
-        const roadId = event.target.dataset.id;
-
-        // add class to indicate selection
-        if (event.target.classList.contains("placed-road")) {
-            console.warn("Road already placed at:", roadId);
-            return;
-        }
-
-        // placed roads
-        // add to building predictor
-        if (!this.buildingPredictor.build("ROAD", roadId)) {
-            console.error("Failed to add road to building predictor at:", roadId);
-        }
-
-        // get the next valid spots
-        const res = this.buildingPredictor.getNextValidSpots();
-        if (res.status !== StatusCodes.SUCCESS) {
-            console.error("Failed to get next valid spots after road placement:", res);
-            return;
-        }
-
-        this._clearInteractionLayer();
-        if (res.result === null) {
-            // all buildings placed, wait for confirm
-            console.log("All settlements placed, waiting for confirm.");
-            // stop here, skip redraw valid spots
-            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
-        } else {
-            // redraw interaction layer with new valid spots and placed buildings
-            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
-        }
-
-        switch (this.currentMode) {
-            case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
-                const btnGroup = this.createBtnGroup(0b101); // confirm and undo only, no cancel during initial placement
-                for (let btn of btnGroup) {
-                    this.interactionLayer.appendChild(btn);
-                }
-                // check btn state
-                // if all buildings placed, enable confirm button
-                if (res.result === null) {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-                } else {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
-                }
-                break;
-            case 'BUILD_ROAD':
-            case 'BUILD_SETTLEMENT':
-            case 'BUILD_CITY': // normal settlement/city building mode, confirm, cancel, undo buttons
-                const btnGroup2 = this.createBtnGroup(0b111); // confirm, cancel, undo
-                for (let btn of btnGroup2) {
-                    this.interactionLayer.appendChild(btn);
-                }
-                break;
-            default:
-                console.error("Unknown mode after settlement placement:", this.currentMode);
-        }
 
     }
+
+
+
 
     /*---------------------------------------------------------------Button Handlers----------------------------------------------------------------*/
     _handleUndoBtnClick() {
@@ -730,7 +549,7 @@ export class InputManager {
 
                 // disable confirm button until player selects a settlement to rob again
                 this._disableConfirmBtn();
-                
+
                 break;
             default:
                 console.warn("Undo button clicked in unknown mode:", this.currentMode);
@@ -740,8 +559,10 @@ export class InputManager {
     _handleCancelBtnClick() {
         switch (this.currentMode) {
             case 'BUILD_ROAD':
+            case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY':
                 // clear interaction layer
-                this._clearRoadBuildingContext();
+                this._clearBuildingContext();
                 this._clearInteractionLayer();
                 break;
             default:
@@ -788,16 +609,15 @@ export class InputManager {
                 break;
 
             case 'BUILD_ROAD':
+            case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY':
                 // submit the selected roads to server/controller
-                this.gameClient.submitBuildRoad(this.buildingPredictor.buildStack);
+                this.gameClient.submitBuild(this.buildingPredictor.buildStack, this.currentMode);
                 // clear interaction layer
-                this._clearRoadBuildingContext();
+                this._clearBuildingContext();
                 this._clearInteractionLayer();
                 break;
-            case 'BUILD_SETTLEMENT':
-                // submit the selected settlement to server/controller
-                console.warn("Settlement building is not implemented yet.");
-                break;
+
 
             case 'ROBBER_PLACEMENT':
                 const robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
@@ -962,6 +782,137 @@ export class InputManager {
     }
 
 
+    _highlightRobbablePlayers(tileId) {
+        // get the players that can be robbed on this tile
+        this.robSettlementSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.robSettlementSelectionGroup.id = 'rob-settlement-selection-group';
+        this.interactionLayer.appendChild(this.robSettlementSelectionGroup);
+
+        this.robbableSettlementIds.forEach(settlementId => {
+            const settlementCoord = HexUtils.idToCoord(settlementId);
+            const [x, y] = HexUtils.vertexToPixel(settlementCoord, HEX_SIZE);
+
+            const robableCircle = HtmlUtils.createSvgCircle(x, y, 20, ["robbable-settlement"], null);
+            robableCircle.dataset.id = settlementId; // use dataset to store the settlement id to avoid id conflict in setttlement layer
+            this.robSettlementSelectionGroup.appendChild(robableCircle);
+        });
+
+        this.robSettlementSelectionGroup.onclick = this._handleVertexClick.bind(this);
+    };
+
+
+
+
+    /*---------------------------------------- basic element click handlers for building mode (road/settlement/city) -------------------------------------------------------*/
+    _handleVertexClick(event) {
+        console.log("Vertex clicked:", event.target.dataset.id);
+
+        switch (this.currentMode) {
+            case 'INITIAL_PLACEMENT':
+            case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY':
+                this._handleVertexClickBuildSettlement(event);
+                break;
+            case 'ROBBER_PLACEMENT':
+                this._handleVertexClickRob(event);
+                break;
+            default:
+                return; // ignore if not in settlement building mode
+        }
+    }
+
+    _handleVertexClickRob(event) {
+        if (this.robStack.length === 2) {
+            return; // already selected a vertex for robbing, ignore further clicks
+        }
+        const vertexId = event.target.dataset.id;
+        this.robStack.push({ type: 'SETTLEMENT', id: vertexId });
+
+        // highlight the selected vertex
+        event.target.classList.add('robber-settlement-mask');
+
+        // enable confirm button if we have selected a settlement to rob
+        if (this.robStack.length === 2) {
+            this._enableConfirmBtn();
+        } else {
+            // otherwise, wait for player to select a settlement to rob before enabling confirm button
+            console.error("Unexpected state: wrong number of selected elements for robbing:", this.robStack);
+            this._disableConfirmBtn();
+        }
+
+    }
+
+    _handleVertexClickBuildSettlement(event) {
+        const settlementId = event.target.dataset.id;
+        // add class to indicate selection
+        if (event.target.classList.contains("placed-settlement")) {
+            console.warn("Settlement already placed at:", settlementId);
+            return;
+        }
+
+        // placed settlements
+        // add to building predictor
+        switch (this.currentMode) {
+            case 'INITIAL_PLACEMENT':
+            case 'BUILD_SETTLEMENT':
+                if (!this.buildingPredictor.build("SETTLEMENT", settlementId)) {
+                    console.error("Failed to add settlement to building predictor at:", settlementId);
+                }
+                break;  
+            case 'BUILD_CITY':
+                if (!this.buildingPredictor.build("CITY", settlementId)) {
+                    console.error("Failed to add city to building predictor at:", settlementId);
+                }
+                break;
+            default:
+                console.error("Unknown mode during vertex click settlement building:", this.currentMode);
+        }
+
+        // get the next valid spots
+        const res = this.buildingPredictor.getNextValidSpots();
+        if (res.status !== StatusCodes.SUCCESS) {
+            console.error("Failed to get next valid spots after settlement placement:", res);
+            return;
+        }
+
+        this._clearInteractionLayer();
+        if (res.result === null) {
+            // all buildings placed, wait for confirm
+            console.log("All settlements placed, waiting for confirm.");
+            // stop here, skip redraw valid spots
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
+        } else {
+            // redraw interaction layer with new valid spots and placed buildings
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
+        }
+
+        switch (this.currentMode) {
+            case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
+                const btnGroup = this.createBtnGroup(0b101); // confirm and undo only, no cancel during initial placement
+                for (let btn of btnGroup) {
+                    this.interactionLayer.appendChild(btn);
+                }
+                // check btn state
+                // if all buildings placed, enable confirm button
+                if (res.result === null) {
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
+                } else {
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+                }
+                break;
+            case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY': // normal settlement/city building mode, confirm, cancel, undo buttons
+                const btnGroup2 = this.createBtnGroup(0b111); // confirm, cancel, undo
+                for (let btn of btnGroup2) {
+                    this.interactionLayer.appendChild(btn);
+                }
+                break;
+            default:
+                console.error("Unknown mode after settlement placement:", this.currentMode);
+        }
+    }
+
+
     _handleTileClick(event) {
         if (this.currentMode !== 'ROBBER_PLACEMENT') {
             return; // ignore if not in robber placement mode
@@ -994,21 +945,70 @@ export class InputManager {
     }
 
 
-    _highlightRobbablePlayers(tileId) {
-        // get the players that can be robbed on this tile
-        this.robSettlementSelectionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        this.robSettlementSelectionGroup.id = 'rob-settlement-selection-group';
-        this.interactionLayer.appendChild(this.robSettlementSelectionGroup);
+    _handleEdgeClick(event) {
+        // ealry return if not in road building mode
+        const validMode = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'INITIAL_PLACEMENT'];
+        if (!validMode.includes(this.currentMode)) {
+            return; // ignore if not in build road mode
+        }
 
-        this.robbableSettlementIds.forEach(settlementId => {
-            const settlementCoord = HexUtils.idToCoord(settlementId);
-            const [x, y] = HexUtils.vertexToPixel(settlementCoord, HEX_SIZE);
+        const roadId = event.target.dataset.id;
 
-            const robableCircle = HtmlUtils.createSvgCircle(x, y, 20, ["robbable-settlement"], null);
-            robableCircle.dataset.id = settlementId; // use dataset to store the settlement id to avoid id conflict in setttlement layer
-            this.robSettlementSelectionGroup.appendChild(robableCircle);
-        });
+        // add class to indicate selection
+        if (event.target.classList.contains("placed-road")) {
+            console.warn("Road already placed at:", roadId);
+            return;
+        }
 
-        this.robSettlementSelectionGroup.onclick = this._handleVertexClick.bind(this);
-    };
+        // placed roads
+        // add to building predictor
+        if (!this.buildingPredictor.build("ROAD", roadId)) {
+            console.error("Failed to add road to building predictor at:", roadId);
+        }
+
+        // get the next valid spots
+        const res = this.buildingPredictor.getNextValidSpots();
+        if (res.status !== StatusCodes.SUCCESS) {
+            console.error("Failed to get next valid spots after road placement:", res);
+            return;
+        }
+
+        this._clearInteractionLayer();
+        if (res.result === null) {
+            // all buildings placed, wait for confirm
+            console.log("All settlements placed, waiting for confirm.");
+            // stop here, skip redraw valid spots
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
+        } else {
+            // redraw interaction layer with new valid spots and placed buildings
+            this._drawFromBuildingPredictor(this.buildingPredictor, false, false);
+        }
+
+        switch (this.currentMode) {
+            case 'INITIAL_PLACEMENT': // initial placement mode, only confirm and undo buttons
+                const btnGroup = this.createBtnGroup(0b101); // confirm and undo only, no cancel during initial placement
+                for (let btn of btnGroup) {
+                    this.interactionLayer.appendChild(btn);
+                }
+                // check btn state
+                // if all buildings placed, enable confirm button
+                if (res.result === null) {
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
+                } else {
+                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+                }
+                break;
+            case 'BUILD_ROAD':
+            case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY': // normal settlement/city building mode, confirm, cancel, undo buttons
+                const btnGroup2 = this.createBtnGroup(0b111); // confirm, cancel, undo
+                for (let btn of btnGroup2) {
+                    this.interactionLayer.appendChild(btn);
+                }
+                break;
+            default:
+                console.error("Unknown mode after settlement placement:", this.currentMode);
+        }
+
+    }
 }
