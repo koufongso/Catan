@@ -536,6 +536,7 @@ export class InputManager {
      * @param {string} playerColor - optional color for the player's roads default to 'rgba(0,255,0,0.5)'
      */
     _setRoadBuildingContext(playerId, gameMap, playerColor = 'rgba(0,255,0,0.5)') {
+        console.log("Setting road building context for player:", playerId);
         this.clickedEdge = []; // reset clicked edges
         this.buildingPredictor.init(gameMap, playerId, "ROAD_ONLY");
         this.gameMap = gameMap;

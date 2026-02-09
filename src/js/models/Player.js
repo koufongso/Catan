@@ -65,6 +65,21 @@ export class Player {
         }
     }
 
+
+    /**
+     * Deduct resources from player's resource hand according to the cost
+     * @param {*} cost an object {resourceType: amount (positive), ...}
+     * @param {boolean} allowNegative whether to allow negative resources (default: false)
+     */
+    deductResources(cost, allowNegative = false) {
+        for (let [type, amount] of Object.entries(cost)) {
+            if (this.resources[type] !== undefined) {
+                // Prevents resources from dropping below zero
+                this.resources[type] = allowNegative ? this.resources[type] - amount : Math.max(0, this.resources[type] - amount);  
+            }
+        }
+    }
+
     /**
      * Check if player can build a building of given type
      * Note: this only checks the remaining building count, not resource cost or placement rules

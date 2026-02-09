@@ -191,7 +191,6 @@ export class GameControllerV2 {
                 break;
             case GameState.MAIN:
                 // handle main game loop events
-                // res = this.handleStateMain(event);
                 res = this.handleStateMain(event);
                 break;
             case GameState.DISCARD:
@@ -345,16 +344,23 @@ export class GameControllerV2 {
     }
 
     handleStateMain(event) {
-        const validationResult = this._validateRequest(event, ['BUILD', 'TRADE', 'ACTIVATE_DEV_CARD', 'END_TURN']);
+        const validationResult = this._validateRequest(event, ['BUILD_ROAD','BUILD_SETTLEMENT', 'BUILD_CITY', 'TRADE', 'ACTIVATE_DEV_CARD', 'END_TURN']);
         if (validationResult.status === StatusCodes.ERROR) {
             return validationResult;
         }
 
         const playerId = event.payload.playerId;
         switch (event.type) {
-            case 'BUILD':
-                // handle build logic
-                console.warn(`Player ${playerId} BUILD action not implemented yet.`);
+            case 'BUILD_ROAD':
+                // handle build road logic
+                console.warn(`Player ${playerId} BUILD_ROAD action not implemented yet.`);
+                this._handleStateMainBuildRoad(event);
+                break;
+            case 'BUILD_SETTLEMENT':
+                console.warn(`Player ${playerId} BUILD_SETTLEMENT action not implemented yet.`);
+                break;
+            case 'BUILD_CITY':
+                console.warn(`Player ${playerId} BUILD_CITY action not implemented yet.`);
                 break;
             case 'TRADE':
                 // handle trade logic
@@ -367,9 +373,72 @@ export class GameControllerV2 {
             case 'END_TURN':
                 // handle end turn logic
                 this._handleStateMainEndTurn(event);
+                break;
             default:
                 break;
         }
+    }
+
+    _handleStateMainBuildRoad(event) {
+        const validateResult = this._validateRequest(event, 'BUILD_ROAD');
+        if (validateResult.status === StatusCodes.ERROR) {
+            return validateResult;
+        }
+
+        const buildStack = event.payload.buildStack; // array of build actions
+        const playerId = event.payload.playerId;
+        const player = this.gameContext.players.find(p => p.id === playerId);
+        if (buildStack.length === 0) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `No roads provided in BUILD_ROAD action.`
+            }
+        }
+
+        // check resource 
+        let totalCost = {};
+        const roadCost = GameUtils.getRoadCost();
+        for (let build of buildStack) {
+            if (build.type !== 'ROAD') {
+                console.error(`Invalid build type in buildStack for submitBuildRoad: ${build.type}`);
+                return {
+                    status: StatusCodes.ERROR,
+                    errorMessage: `Invalid build type in buildStack for submitBuildRoad: ${build.type}`
+                };
+            }
+            
+            for (let [resource, amount] of Object.entries(roadCost)) {
+                totalCost[resource] = (totalCost[resource] || 0) + amount;
+            }
+        }
+
+        if (!player.canAfford(totalCost)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} cannot afford to build ${buildStack.length} roads. Required: ${JSON.stringify(totalCost)}.`
+            }
+        }
+
+        // check placement rules
+        const validateRes = this._validateAndApplyBuildStack(playerId, buildStack, "ROAD_ONLY");
+        if (validateRes.status !== StatusCodes.SUCCESS) {
+            return validateRes;
+        }
+
+        // apply cost
+        player.deductResources(totalCost);
+
+        // put resource back to bank
+        this._addBankResource(totalCost);
+
+        // boradcast update to all clients
+        this._broadcast({
+            type: 'WAITING_FOR_ACTION',
+            payload: {
+                phase: 'MAIN',
+                activePlayerId: this.gameContext.currentPlayerId,
+            }
+        });
     }
 
 
@@ -548,23 +617,30 @@ export class GameControllerV2 {
      */
     _validateAndApplyBuildStack(playerId, buildStack, mode) {
         // verify buildStack
-        // 1. must have length 2
-        if (buildStack.length !== 2) {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid buildStack length for initial placement: ${buildStack.length}`
-            };
+        // prelimeary checks for initial placement
+        switch (mode) {
+            case "INITIAL_PLACEMENT":
+            // 1. must have length 2 for initial placement (one settlement and one road)
+            if (buildStack.length !== 2) {
+                return {
+                    status: StatusCodes.ERROR,
+                    errorMessage: `Invalid buildStack length for initial placement: ${buildStack.length}`
+                };
+            }
+            // 2. first must be settlement, second must be road
+            if (buildStack[0].type !== 'SETTLEMENT' || buildStack[1].type !== 'ROAD') {
+                return {
+                    status: StatusCodes.ERROR,
+                    errorMessage: `Invalid buildStack types for initial placement: ${buildStack[0].type}, ${buildStack[1].type}`
+                };
+            }
+            break;
         }
-        // 2. first must be settlement, second must be road
-        if (buildStack[0].type !== 'SETTLEMENT' || buildStack[1].type !== 'ROAD') {
-            return {
-                status: StatusCodes.ERROR,
-                errorMessage: `Invalid buildStack types for initial placement: ${buildStack[0].type}, ${buildStack[1].type}`
-            };
-        }
+
+
         // 3. verify using BuildingPredictor
         const buildingPredictor = new BuildingPredictor();
-        buildingPredictor.init(this.gameContext.gameMap, this.gameContext.players, mode);
+        buildingPredictor.init(this.gameContext.gameMap, playerId, mode);
         buildingPredictor.getNextValidSpots(); // prepare valid spots for the player
         buildStack.forEach((building) => {
             console.log(`Verifying building: ${building.type} at ${building.coord}`);
@@ -728,7 +804,7 @@ export class GameControllerV2 {
 
         // 3. Check Player Authorization
         const playerId = event.payload.playerId;
-        if (!this._isActivePlayer(playerId)) {
+        if (!this._isAuthorizedPlayer(playerId)) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Player ${playerId} is not authorized for this action.`

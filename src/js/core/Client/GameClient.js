@@ -241,6 +241,7 @@ export class GameClient {
             console.error("GameController not connected.");
             return;
         }
+        this.inputManager._clearInteractionLayer(); // clear any interaction layer (e.g. road building highlights)
         this.gameController.inputEvent({ type: 'END_TURN', payload: { playerId: this.id } });
     }
 
