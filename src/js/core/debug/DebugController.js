@@ -174,7 +174,7 @@ export class DebugController {
                 // cheat add dev card
                 const player = this.gameContext.players[playerIndex];
                 for (let i = 0; i < amountInt; i++) {
-                    player.addDevCard(new DevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
+                    player.addDevCard(new DevCard({type: resolvedCardType, turnBought: -1})); // set turnBought to -1 to avoid locked
                 }
 
                 this.controller._broadcast({

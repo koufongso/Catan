@@ -35,7 +35,7 @@ export class DevCardDeck {
         if (this.cards.length === 0) {
             return null;
         }
-        return new DevCard(this.cards.pop(), currentTurnNumber);
+        return new DevCard({ type: this.cards.pop(), turnBought: currentTurnNumber });
     }
 
     getRemainingCardCount(type = null) {

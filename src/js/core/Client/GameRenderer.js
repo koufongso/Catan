@@ -10,6 +10,7 @@ import { GameUtils } from "../../utils/game-utils.js";
 import { HtmlUtils } from "../../utils/html-utils.js";
 import { StatusCodesUtils } from "../../utils/status-code-utils.js";
 import { HEX_SIZE } from "../../constants/RenderingConstants.js";
+import { DevCard } from "../../models/devCards/DevCard.js";
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -107,9 +108,9 @@ export class GameRenderer {
     drawExistingBuildings(gameMap, playerColors = {}) {
 
         for (const settlement of Object.values(gameMap.settlements)) {
-            const settlementElement = HtmlUtils.createSettlementElement(settlement.coord, 
-                { color: playerColors[settlement.ownerId] }, 
-                settlement.level == 1 ? ["settlement"] : ["city"], 
+            const settlementElement = HtmlUtils.createSettlementElement(settlement.coord,
+                { color: playerColors[settlement.ownerId] },
+                settlement.level == 1 ? ["settlement"] : ["city"],
                 this.hexSize,
                 settlement.level == 1 ? 10 : 12); // settlement size is 1, city size is 2);
             this.layers.settlement.appendChild(settlementElement);
@@ -384,19 +385,16 @@ export class GameRenderer {
 
         // used dev cards
         devCards.forEach(card => {
-            if (card.isPlayed()) {
+            if (!(card instanceof DevCard)) {
+                card = new DevCard(card); // convert raw card data to DevCard instance if needed
+            }
+            if (card.isPlayed()) { // used dev cards (already played)
                 const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
                 usedDevCardsContainer.appendChild(cardHtml);
+            } else { // unused dev cards (not played yet)
+                const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
+                devCardsContainer.appendChild(cardHtml);
             }
-        });
-
-        // dev cards
-        devCards.forEach(card => {
-            if (card.isPlayed()) {
-                return; // skip played cards
-            }
-            const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
-            devCardsContainer.appendChild(cardHtml);
         });
     }
 

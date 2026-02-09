@@ -4,16 +4,18 @@ import { StatusCodes } from "../../constants/StatusCodes.js";
 
 
 export class DevCard {
-    constructor(type, turnBought) {
+    constructor(data) {
+        const dataCopy = structuredClone(data); // create a deep copy to avoid mutating original data
+
         // type check
-        if (!Object.values(DEV_CARD_TYPES).includes(type)) {
-            throw new Error(`Invalid development card type: ${type}`);
+        if (!Object.values(DEV_CARD_TYPES).includes(dataCopy.type)) {
+            throw new Error(`Invalid development card type: ${data.type}`);
         }
 
-        this.type = type;
-        this.turnBought = turnBought; // turn number when the card was bought (sleeping card rule)
-        this.played = false;
-        this.vp = (type === DEV_CARD_TYPES.VICTORY_POINT) ? 1 : 0;
+        this.type = dataCopy.type;
+        this.turnBought = dataCopy.turnBought; 
+        this.played = dataCopy.played || false; 
+        this.vp = (dataCopy.type === DEV_CARD_TYPES.VICTORY_POINT) ? 1 : 0;
     }
 
     getVP() {

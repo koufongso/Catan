@@ -288,6 +288,34 @@ export class GameClient {
         this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'BUILD_CITY');
     }
 
+    btnBuyDevCardOnClick() {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+
+        // check if can afford dev card
+        let player = this.gameContext.players.find(p => p.id === this.id);
+        if (!(player instanceof Player)) {
+            player = new Player(player); // create a Player instance for resource checking
+        }
+
+        const devCardCost = GameUtils.getDevCardCost();
+        if (!player.canAfford(devCardCost)) {
+            console.warn(`Player ${this.id} cannot afford to buy a development card with cost:`, devCardCost);
+            return;
+        }
+
+        // check if dev cards are available in the bank
+        // TODO: better interface managment of dev card deck
+        if (this.gameContext.devCardDeck.cards.length <= 0) {
+            console.warn(`No development cards left in the bank.`);
+            return;
+        }
+
+        this.gameController.inputEvent({ type: 'BUY_DEV_CARD', payload: { playerId: this.id } });
+    }
+
 
 
 

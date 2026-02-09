@@ -1,6 +1,7 @@
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
 import { Player } from "../../models/Player.js";
+import { DevCard } from "../../models/devCards/DevCard.js";
 
 export class DebugDashboard {
 
@@ -136,9 +137,13 @@ export class DebugDashboard {
 
             // prepare dev card summary
             const devCardSummary = playerInstance.devCards.reduce((acc, card) => {
+                if (!(card instanceof DevCard)) {
+                    card = new DevCard(card); // convert raw card data to DevCard instance if needed
+                }
                 // Group by type
                 if (!acc[card.type]) acc[card.type] = { count: 0, playable: 0, played: 0, locked: 0 };
                 acc[card.type].count++;
+                console.log(`Processing card for player ${playerInstance.id}:`, card);
                 if (card.isPlayable(gameContext.turnNumber)) { // track playable cards (not played and not bought this turn)
                     acc[card.type].playable++;
                 }

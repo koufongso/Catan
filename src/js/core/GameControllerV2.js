@@ -344,7 +344,14 @@ export class GameControllerV2 {
     }
 
     handleStateMain(event) {
-        const validationResult = this._validateRequest(event, ['BUILD_ROAD','BUILD_SETTLEMENT', 'BUILD_CITY', 'TRADE', 'ACTIVATE_DEV_CARD', 'END_TURN']);
+        const validationResult = this._validateRequest(event,
+            ['BUILD_ROAD',
+                'BUILD_SETTLEMENT',
+                'BUILD_CITY',
+                'TRADE',
+                'BUY_DEV_CARD',
+                'ACTIVATE_DEV_CARD',
+                'END_TURN']);
         if (validationResult.status === StatusCodes.ERROR) {
             return validationResult;
         }
@@ -356,6 +363,9 @@ export class GameControllerV2 {
             case 'BUILD_CITY':
                 // handle build road logic
                 this._handleStateMainBuild(event, event.type);
+                break;
+            case 'BUY_DEV_CARD':
+                this._handleStateMainBuyDevCard(event);
                 break;
             case 'TRADE':
                 // handle trade logic
@@ -393,7 +403,7 @@ export class GameControllerV2 {
         // check resource 
         let totalCost = {};
         for (let build of buildStack) {
-            switch (build.type ) {
+            switch (build.type) {
                 case 'ROAD':
                     var cost = GameUtils.getRoadCost('ROAD');
                     break;
@@ -450,6 +460,54 @@ export class GameControllerV2 {
             }
         });
     }
+
+    _handleStateMainBuyDevCard(event) {
+        const validationResult = this._validateRequest(event, 'BUY_DEV_CARD');
+        if (validationResult.status === StatusCodes.ERROR) {
+            return validationResult;
+        }
+
+        // check if player can afford
+        const playerId = event.payload.playerId;
+        const player = this.gameContext.players.find(p => p.id === playerId);
+        const cost = GameUtils.getDevCardCost();
+        console.log(`Player ${playerId} attempting to buy dev card. Cost: ${JSON.stringify(cost)}. Player resources: ${JSON.stringify(player.resources)}`);
+        if (!player.canAfford(cost)) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} cannot afford to buy a development card. Required: ${JSON.stringify(cost)}.`
+            }
+        }
+
+        // check if dev cards are available
+        console.log(`Checking if dev cards are available. Remaining: ${this.gameContext.devCardDeck.getRemainingCardCount()}`);
+        if (this.gameContext.devCardDeck.getRemainingCardCount() <= 0) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `No development cards left in the deck.`
+            }
+        }
+
+        // apply cost
+        player.deductResources(cost);
+        // put resource back to bank
+        this._addBankResource(cost);
+
+        // give player a dev card
+        const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
+        player.addDevCard(devCard);
+
+        // broadcast update to all clients
+        this._broadcast({
+            type: 'WAITING_FOR_ACTION',
+            payload: {
+                phase: 'MAIN',
+                activePlayerId: this.gameContext.currentPlayerId,
+            }
+        });
+
+    }
+
 
 
     _handleStateMainEndTurn(event) {
@@ -579,7 +637,7 @@ export class GameControllerV2 {
         console.log(`change state to ${this.returnStateAfterRob}`);
         this.gameContext.currentState = this.returnStateAfterRob;
         this.returnStateAfterRob = null; // clear
-        
+
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
             payload: {
