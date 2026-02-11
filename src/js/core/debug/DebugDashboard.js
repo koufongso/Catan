@@ -1,7 +1,5 @@
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
-import { StatusCodes } from "../../constants/StatusCodes.js";
-import { Player } from "../../models/Player.js";
-import { DevCard } from "../../models/devCards/DevCard.js";
+import { GameRules } from "../../logic/GameRules.js";
 
 export class DebugDashboard {
 
@@ -129,21 +127,17 @@ export class DebugDashboard {
 
 
         // player info table
-        const playersHtml = gameContext.players.map((p, idx) => {
-            const playerInstance = new Player(p); // create a Player instance from raw data
+        const playersHtml = gameContext.players.map((player, idx) => {
             const isCurrent = idx === gameContext.currentPlayerIndex;
-            const totalVP = playerInstance.getVictoryPoints();
-            const devCardCount = playerInstance.devCards.length;
+            const totalVP = GameRules.getVictoryPoints(player);
+            const devCardCount = player.devCards.length;
 
             // prepare dev card summary
-            const devCardSummary = playerInstance.devCards.reduce((acc, card) => {
-                if (!(card instanceof DevCard)) {
-                    card = new DevCard(card); // convert raw card data to DevCard instance if needed
-                }
+            const devCardSummary = player.devCards.reduce((acc, card) => {
                 // Group by type
                 if (!acc[card.type]) acc[card.type] = { count: 0, playable: 0, played: 0, locked: 0 };
                 acc[card.type].count++;
-                console.log(`Processing card for player ${playerInstance.id}:`, card);
+                console.log(`Processing card for player ${player.id}:`, card);
                 if (card.isPlayable(gameContext.turnNumber)) { // track playable cards (not played and not bought this turn)
                     acc[card.type].playable++;
                 }
@@ -177,12 +171,12 @@ export class DebugDashboard {
                 <div class="res-grid-row ${isCurrent ? 'current-player' : ''}" 
                     onclick="this.parentElement.classList.toggle('expanded')"
                     style="cursor: pointer;">
-                    <span class="cell-id" style="color: ${playerInstance.color}">
-                        ${isCurrent ? '▶' : '&nbsp;'} P${playerInstance.id}
+                    <span class="cell-id" style="color: ${player.color}">
+                        ${isCurrent ? '▶' : '&nbsp;'} P${player.id}
                     </span>
                     <span class="cell-val has-res">${totalVP}</span> 
                     ${resourceList.map(type => {
-                const amount = playerInstance.resources[type] || 0;
+                const amount = player.resources[type] || 0;
                 return `<span class="cell-val ${amount > 0 ? 'has-res' : 'is-zero'}">${amount}</span>`;
             }).join('')}
                     <span class="cell-val ${devCardCount > 0 ? 'has-cards' : 'is-zero'}">${devCardCount}</span>
@@ -190,7 +184,7 @@ export class DebugDashboard {
                 
                 <div class="debug-details">
                     <div class="dev-card-inventory">
-                        ${playerInstance.devCards.length > 0 ? devCardsHtml : '<small>No cards</small>'}
+                        ${player.devCards.length > 0 ? devCardsHtml : '<small>No cards</small>'}
                     </div>
                 </div>
             </div>

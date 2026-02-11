@@ -1,16 +1,19 @@
 import { StatusCodes } from "../constants/StatusCodes.js";
 import { INITIAL_BANK_RESOURCES } from "../constants/GameRuleConstants.js";
 
-import { Player } from "../models/Player.js";
-import { BuildingPredictor } from "../utils/building-predictor.js";
-import { MapRules } from "../utils/MapRules.js";
+import { BuildingPredictor } from "../utils/BuildingPredictor.js";
+import { GameRules } from "../logic/GameRules.js";
 import { GameClient } from "./client/GameClient.js";
 import { DebugClient } from "./debug/DebugClient.js";
-import { Dice } from "../models/Dice.js";
-import { DevCardDeck } from "../models/devCards/DevCardDeck.js";
-
-import { HexUtils } from "../utils/hex-utils.js";
-import { GameUtils } from "../utils/game-utils.js";
+import { Dice } from "../core/Dice.js";
+// factories
+import { createDevCardDeck } from "../factories/deckFactory.js";
+import { createPlayer } from "../factories/playerFactory.js";
+// uitls
+import { HexUtils } from "../utils/HexUtils.js";
+import { PlayerUtils } from "../utils/PlayerUtils.js";
+import { MapUtils } from "../utils/MapUtils.js";
+import { DevCardDeckUtils } from "../utils/DeckUtils.js";
 
 
 export const GameState = Object.freeze({
@@ -49,8 +52,8 @@ export class GameControllerV2 {
             turnNumber: 0,
             currentState: GameState.IDLE,
 
-            // game components
-            gameMap: gameMap, // game map instance (contain methods)
+            // game components (all plain data, no methods)
+            gameMap: gameMap,
             bankResources: null,
 
             // robber properties
@@ -62,7 +65,7 @@ export class GameControllerV2 {
             playerWithLargestArmy: null,
 
             /* -------------private game context properties ------------- */
-            devCardDeck: new DevCardDeck(this.rng),
+            devCardDeck: createDevCardDeck(this.rng),
             players: [], // array of Player objects
         }
     }
@@ -75,12 +78,7 @@ export class GameControllerV2 {
     subscribe(client, callback) {
         if (client instanceof GameClient) {
             console.log(`Subscribing GameClient ${client.id} to GameController`);
-            const playerData = {
-                id: client.id,
-                name: client.name,
-                color: client.color
-            }
-            this.gameContext.players.push(new Player(playerData));
+            this.gameContext.players.push(createPlayer(client.id, client.name, client.color));
             this.listeners.set(client.id, callback);
         } else if (client instanceof DebugClient) {
             console.log(`Subscribing DebugClient to GameController`);
@@ -129,11 +127,11 @@ export class GameControllerV2 {
         // hide dev cards in deck
         gameContextCopy.devCardDeck.devCards = null;
         // replace with count only
-        gameContextCopy.devCardDeckCount = this.gameContext.devCardDeck.getRemainingCardCount();
+        gameContextCopy.devCardDeckCount = DevCardDeckUtils.getCount(this.gameContext.devCardDeck);
 
         // replaced with Sanitize player info
         gameContextCopy.players = this.gameContext.players.map(player => {
-            return player.serialize(!showAll && player.id !== viewingPlayerId);
+            return PlayerUtils.serialize(player, !showAll && player.id !== viewingPlayerId);
         });
 
         return gameContextCopy;
@@ -267,10 +265,10 @@ export class GameControllerV2 {
         // distribute resources for second settlement
         const player = this.gameContext.players.find(p => p.id === playerId);
         const settlementCoord = buildStack[0].coord;
-        const resourceTiles = this.gameContext.gameMap.getTilesOfVertex(settlementCoord);
+        const resourceTiles = MapUtils.getTilesAtVertexs(this.gameContext.gameMap, settlementCoord);
         for (const tile of resourceTiles) {
-            const resourceType = MapRules.getTileProduction(tile, this.gameContext.gameMap, false);
-            player.addResources({ [resourceType]: 1 });
+            const resourceType = GameRules.getTileProduction(tile, this.gameContext.gameMap, false);
+            PlayerUtils.addResources(player, { [resourceType]: 1 });
             console.log(`Player ${playerId} received 1 ${resourceType} from initial settlement at ${settlementCoord}`);
             this.gameContext.bankResources[resourceType] -= 1;
         }
@@ -323,7 +321,7 @@ export class GameControllerV2 {
             // start robber sequence
             this.returnStateAfterRob = GameState.MAIN;
             this.discardInfo = []; // reset discard list
-            this.discardInfo = GameUtils.getDiscardInfo(this.gameContext);
+            this.discardInfo = GameRules.getDiscardInfo(this.gameContext);
             this._handleDiscardOrMoveRobber();
         } else {
             // distribute resources
@@ -405,13 +403,13 @@ export class GameControllerV2 {
         for (let build of buildStack) {
             switch (build.type) {
                 case 'ROAD':
-                    var cost = GameUtils.getRoadCost('ROAD');
+                    var cost = GameRules.getRoadCost('ROAD');
                     break;
                 case 'SETTLEMENT':
-                    var cost = GameUtils.getSettlementCost('SETTLEMENT');
+                    var cost = GameRules.getSettlementCost('SETTLEMENT');
                     break;
                 case 'CITY':
-                    var cost = GameUtils.getCityCost('CITY');
+                    var cost = GameRules.getCityCost('CITY');
                     break;
             }
 
@@ -420,7 +418,7 @@ export class GameControllerV2 {
             }
         }
 
-        if (!player.canAfford(totalCost)) {
+        if (!PlayerUtils.canAfford(player, totalCost)) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Player ${playerId} cannot afford to build ${buildStack.length} ${eventType.toLowerCase()}s. Required: ${JSON.stringify(totalCost)}.`
@@ -446,7 +444,7 @@ export class GameControllerV2 {
         }
 
         // apply cost
-        player.deductResources(totalCost);
+        PlayerUtils.deductResources(player, totalCost);
 
         // put resource back to bank
         this._addBankResource(totalCost);
@@ -470,9 +468,9 @@ export class GameControllerV2 {
         // check if player can afford
         const playerId = event.payload.playerId;
         const player = this.gameContext.players.find(p => p.id === playerId);
-        const cost = GameUtils.getDevCardCost();
+        const cost = GameRules.getDevCardCost();
         console.log(`Player ${playerId} attempting to buy dev card. Cost: ${JSON.stringify(cost)}. Player resources: ${JSON.stringify(player.resources)}`);
-        if (!player.canAfford(cost)) {
+        if (!PlayerUtils.canAfford(player, cost)) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Player ${playerId} cannot afford to buy a development card. Required: ${JSON.stringify(cost)}.`
@@ -480,8 +478,8 @@ export class GameControllerV2 {
         }
 
         // check if dev cards are available
-        console.log(`Checking if dev cards are available. Remaining: ${this.gameContext.devCardDeck.getRemainingCardCount()}`);
-        if (this.gameContext.devCardDeck.getRemainingCardCount() <= 0) {
+        console.log(`Checking if dev cards are available. Remaining: ${DevCardDeckUtils.getCount(this.gameContext.devCardDeck)}`);
+        if (this.gameContext.devCardDeck.getCount() <= 0) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `No development cards left in the deck.`
@@ -489,13 +487,13 @@ export class GameControllerV2 {
         }
 
         // apply cost
-        player.deductResources(cost);
+        PlayerUtils.deductResources(player, cost);
         // put resource back to bank
         this._addBankResource(cost);
 
         // give player a dev card
         const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
-        player.addDevCard(devCard);
+        PlayerUtils.addDevCard(player, devCard);
 
         // broadcast update to all clients
         this._broadcast({
@@ -541,7 +539,7 @@ export class GameControllerV2 {
         const discardedResources = event.payload.discardedResources; // { 'WOOD': 2, 'BRICK': 1, ...}
 
         // validate discard
-        if (!GameUtils.isDiscardValid(player.resources, discardedResources)) {
+        if (!GameRules.isDiscardValid(player.resources, discardedResources)) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Invalid discard resources submitted by Player ${requestDiscardPlayerId}.`
@@ -549,7 +547,7 @@ export class GameControllerV2 {
         }
 
         // apply discard
-        player.discardResources(discardedResources);
+        PlayerUtils.deductResources(player, discardedResources);
 
         // return resources to bank
         this._addBankResource(discardedResources);
@@ -584,7 +582,7 @@ export class GameControllerV2 {
         const tileId = event.payload.robStack[0].id;
         const vertexId = event.payload.robStack[1] ? event.payload.robStack[1].id : null;
 
-        const robbableTileIds = GameUtils.getRobbableTiles(this.gameContext.gameMap).map(tile => tile.id);
+        const robbableTileIds = GameRules.getRobbableTiles(this.gameContext.gameMap).map(tile => tile.id);
         if (!robbableTileIds.includes(tileId)) {
             console.error(`MOVE_ROBBER validation error: tile id not valid ${tileId}`);
             return {
@@ -594,7 +592,7 @@ export class GameControllerV2 {
         }
 
         // tile is valid, move robber, check for robbable settlements on that tile if applicable,
-        const robbableSettlementIds = GameUtils.getRobbableSettlementIds(this.gameContext.currentPlayerId, tileId, this.gameContext.gameMap);
+        const robbableSettlementIds = GameRules.getRobbableSettlementIds(this.gameContext.currentPlayerId, tileId, this.gameContext.gameMap);
         if (robbableSettlementIds.length > 0 && vertexId === null) {
             // can rob, but no settlement selected to rob
             console.error("MOVE_ROBBER validation error: settlement id not valid");
@@ -752,15 +750,15 @@ export class GameControllerV2 {
         buildStack.forEach((building) => {
             switch (building.type) {
                 case 'SETTLEMENT':
-                    this.gameContext.gameMap.updateSettlement(building.coord, playerId, 1);
+                    MapUtils.updateSettlement(this.gameContext.gameMap, building.coord, playerId, 1);
                     this.gameContext.players.find(p => p.id === playerId).addSettlement(HexUtils.coordToId(building.coord));
                     break;
                 case 'ROAD':
-                    this.gameContext.gameMap.updateRoad(building.coord, playerId);
+                    MapUtils.updateRoad(this.gameContext.gameMap, building.coord, playerId);
                     this.gameContext.players.find(p => p.id === playerId).addRoad(HexUtils.coordToId(building.coord));
                     break;
                 case 'CITY':
-                    this.gameContext.gameMap.updateSettlement(building.coord, playerId, 2);
+                    MapUtils.updateSettlement(this.gameContext.gameMap, building.coord, playerId, 2);
                     this.gameContext.players.find(p => p.id === playerId).addCity(HexUtils.coordToId(building.coord));
                     break;
                 default:
@@ -780,9 +778,9 @@ export class GameControllerV2 {
      */
     _distributeResourcesByRoll(rolledNumber) {
         // get all the tile ids with the rolled number token
-        const filteredTiles = this.gameContext.gameMap.filter('tiles', (tile) => tile.numberToken === rolledNumber)
+        const filteredTiles = MapUtils.filter(this.gameContext.gameMap, 'tiles', (tile) => tile.numberToken === rolledNumber);
         filteredTiles.forEach(tile => {
-            const resourceType = MapRules.getTileProduction(tile);
+            const resourceType = GameRules.getTileProduction(tile);
             if (resourceType === null) return; // skip desert or invalid resource tile
 
             // get all adjacent vertex coords
@@ -811,7 +809,7 @@ export class GameControllerV2 {
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
             console.log(`Before distribution, Player ${playerId} resources:`, player.resources);
-            player.addResources(returnedResources);
+            PlayerUtils.addResources(player, returnedResources);
             console.log(`After distribution, Player ${playerId} resources:`, player.resources);
         }
     }
@@ -934,7 +932,7 @@ export class GameControllerV2 {
      * @returns the resources stolen from the target player, or null if no resources were stolen
      */
     _randomStealFromPlayer(targetPlayer, activePlayer) {
-        const totalResources = targetPlayer.getTotalResourceCount();
+        const totalResources = PlayerUtils.getTotalResourceCount(targetPlayer);
         if (totalResources === 0) {
             return null; // nothing to steal
         }
@@ -942,8 +940,8 @@ export class GameControllerV2 {
         // create a weighted array of resources based on the player's current resources
         const randomIndex = this.rng.nextInt(0, totalResources - 1);
 
-        const stolenResources = targetPlayer.removeResourceByIndicies([randomIndex]);
-        activePlayer.addResources(stolenResources);
+        const stolenResources = PlayerUtils.removeResourceByIndicies(targetPlayer, [randomIndex]);
+        PlayerUtils.addResources(activePlayer, stolenResources);
         return stolenResources;
     }
 

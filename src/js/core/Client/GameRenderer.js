@@ -1,16 +1,12 @@
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
-import { HexUtils } from "../../utils/hex-utils.js";
 import { TEXTURE_PATHS } from "../../constants/RenderingConstants.js";
-import { TERRAIN_TYPES } from "../../constants/TerrainTypes.js";
-import { Player } from "../../models/Player.js";
 import { DEV_CARD_TYPES, PLAYERABLDE_DEVCARDS } from "../../constants/DevCardTypes.js";
-import { StatusCodes } from "../../constants/StatusCodes.js";
-import { DebugDashboard } from "../debug/DebugDashboard.js";
-import { GameUtils } from "../../utils/game-utils.js";
-import { HtmlUtils } from "../../utils/html-utils.js";
-import { StatusCodesUtils } from "../../utils/status-code-utils.js";
 import { HEX_SIZE } from "../../constants/RenderingConstants.js";
-import { DevCard } from "../../models/devCards/DevCard.js";
+
+import { HtmlUtils } from "../../utils/HtmlUtils.js";
+import { HexUtils } from "../../utils/HexUtils.js";
+import { PlayerUtils } from "../../utils/PlayerUtils.js";
+
 
 // constants for hex geometry
 const RAD30 = Math.PI / 6; // 30 degrees in radians
@@ -98,7 +94,6 @@ export class GameRenderer {
         // find the current player
         for (const p of gameContext.players) {
             if (p.id === playerId) {
-                const playerInstance = new Player(p); // create a Player instance from raw data   
                 this.renderPlayerAssets(playerInstance, gameContext.turnNumber);
             }
         }
@@ -351,7 +346,7 @@ export class GameRenderer {
      */
     renderPlayerResourceCards(player) {
         const resourcesContainer = document.getElementById('player-hands-resources-container');
-        this.__renderResources(player.getResources(), resourcesContainer);
+        this._renderResources(PlayerUtils.getResources(player), resourcesContainer);
     }
 
     /**
@@ -360,7 +355,7 @@ export class GameRenderer {
      * @param {*} container the target container to render into
      * @param {*} onCardClick callback when a card is clicked (optional)
      */
-    __renderResources(resources, container, onCardClick = null) {
+    _renderResources(resources, container, onCardClick = null) {
         container.innerHTML = ''; // clear existing content
 
         // resource resources
@@ -377,7 +372,7 @@ export class GameRenderer {
     }
 
     renderPlayerDevCards(player, currentTurnNumber) {
-        const devCards = player.getDevCards();
+        const devCards = PlayerUtils.getDevCards(player);
         const devCardsContainer = document.getElementById('player-hands-devcards-container');
         const usedDevCardsContainer = document.getElementById('player-used-devcards-container');
         devCardsContainer.innerHTML = '';
@@ -551,7 +546,7 @@ export class GameRenderer {
 
         // render player's resource cards into the modal body
         const modalBody = modalCard.querySelector('#modal-body');
-        this.__renderResources(resources, modalBody, (clickedType, cardDiv) => {
+        this._renderResources(resources, modalBody, (clickedType, cardDiv) => {
             // card clicked, first check how many are selected
             const selectedCards = modalBody.querySelectorAll('.card-selected');
             if (selectedCards.length >= numCardsToSelect && !cardDiv.classList.contains('card-selected')) {

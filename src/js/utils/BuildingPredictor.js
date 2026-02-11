@@ -1,7 +1,7 @@
 // class to help predict and manage building placements
-import { GameUtils } from "./game-utils.js";
-import { HexUtils } from "./hex-utils.js";
-import { GameMap } from "../models/GameMap.js";
+import { GameRules } from "../logic/GameRules.js";
+import { HexUtils } from "./HexUtils.js";
+import { MapUtils } from "../utils/MapUtils.js";
 import { StatusCodes } from "../constants/StatusCodes.js";
 
 
@@ -25,7 +25,7 @@ export class BuildingPredictor {
     }
 
     init(gameMap, playerId, mode) {
-        this.gameMap = new GameMap(gameMap); // construct a new instance from the deep copy data
+        this.gameMap = MapUtils.clone(gameMap); // construct a new instance from the deep copy data
         this.playerId = playerId;
         this.buildStack = []; // reset build stack
         this.validRoadSpots = new Set();
@@ -79,7 +79,7 @@ export class BuildingPredictor {
 
                 if (this.lastBuildType === null || this.lastBuildType === 'ROAD') {
                     // need to place settlement next
-                    this.validSettlementSpots = GameUtils.getValidSettlementSpots(this.gameMap, null);
+                    this.validSettlementSpots = GameRules.getValidSettlementSpots(this.gameMap, null);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'SETTLEMENT',
@@ -88,7 +88,7 @@ export class BuildingPredictor {
                     return structuredClone(this.lastResult);
                 }else if (this.lastBuildType === 'SETTLEMENT') {
                     // need to place road next
-                    this.validRoadSpots = GameUtils.getValidRoadFromSettlementIds(this.gameMap, this.playerId, new Set([this.lastBuildId]));
+                    this.validRoadSpots = GameRules.getValidRoadFromSettlementIds(this.gameMap, this.playerId, new Set([this.lastBuildId]));
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'ROAD',
@@ -101,7 +101,7 @@ export class BuildingPredictor {
 
             case "ROAD_ONLY":
                 {
-                    this.validRoadSpots = GameUtils.getValidRoadFromSettlementIds(this.gameMap, this.playerId);
+                    this.validRoadSpots = GameRules.getValidRoadFromSettlementIds(this.gameMap, this.playerId);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'ROAD',
@@ -111,7 +111,7 @@ export class BuildingPredictor {
                 }
             case "SETTLEMENT_ONLY":
                 {
-                    this.validSettlementSpots = GameUtils.getValidSettlementSpots(this.gameMap, this.playerId);
+                    this.validSettlementSpots = GameRules.getValidSettlementSpots(this.gameMap, this.playerId);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'SETTLEMENT',
@@ -121,7 +121,7 @@ export class BuildingPredictor {
                 }
             case "CITY_ONLY":
                 {
-                    this.validCitySpots = GameUtils.getValidCitySpots(this.gameMap, this.playerId);
+                    this.validCitySpots = GameRules.getValidCitySpots(this.gameMap, this.playerId);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'CITY',
@@ -157,19 +157,19 @@ export class BuildingPredictor {
                 if (!this.validSettlementSpots.has(coordId)) {
                     return false
                 }
-                this.gameMap.updateSettlement(coord, this.playerId, 1);
+                MapUtils.updateSettlement(this.gameMap, coord, this.playerId, 1);
                 break;
             case 'ROAD':
                 if (!this.validRoadSpots.has(coordId)) {
                     return false
                 }
-                this.gameMap.updateRoad(coord, this.playerId);
+                MapUtils.updateRoad(this.gameMap, coord, this.playerId);
                 break;
             case 'CITY':
                 if (!this.validCitySpots.has(coordId)) {
                     return false
                 }
-                this.gameMap.updateSettlement(coord, this.playerId, 2);
+                MapUtils.updateSettlement(this.gameMap, coord, this.playerId, 2);
                 break;
             default:
                 throw new Error(`Invalid building type for BuildingPredictor: ${type}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);
@@ -216,13 +216,13 @@ export class BuildingPredictor {
         // remove from game map
         switch (buildType) {
             case 'SETTLEMENT':
-                this.gameMap.removeSettlement(buildId);
+                MapUtils.removeSettlement(this.gameMap, buildId);
                 break;
             case 'ROAD':
-                this.gameMap.removeRoad(buildId);
+                MapUtils.removeRoad(this.gameMap, buildId);
                 break;
             case 'CITY':
-                this.gameMap.updateSettlement(buildId, this.playerId, 1); // downgrade city back to settlement
+                MapUtils.updateSettlement(this.gameMap, buildId, this.playerId, 1); // downgrade city back to settlement
                 break;
             default:
                 throw new Error(`Invalid building type in BuildingPredictor rollback: ${buildType}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);

@@ -10,12 +10,10 @@
 // BUILD_SETTLEMENT mode:
 //  - allow user to click one vertex to build a settlement
 import { HEX_SIZE } from "../../constants/RenderingConstants.js";
-import { HtmlUtils } from "../../utils/html-utils.js";
-import { StatusCodes } from "../../constants/StatusCodes.js";
-import { GameUtils } from "../../utils/game-utils.js";
-import { HexUtils } from "../../utils/hex-utils.js";
-import { BuildingPredictor } from "../../utils/building-predictor.js";
-
+import { GameRules } from "../../logic/GameRules.js";
+import { HtmlUtils } from "../../utils/HtmlUtils.js";;
+import { HexUtils } from "../../utils/HexUtils.js";
+import { BuildingPredictor } from "../../utils/BuildingPredictor.js";
 
 export class InputManager {
     constructor(gameClient) {
@@ -29,7 +27,6 @@ export class InputManager {
         this.currentMode = 'IDLE'; // IDLE, INITIAL_PLACEMENT, BUILD_ROAD, BUILD_SETTLEMENT, BUILD_CITY, TRADE, DISCARD, ROBBER, etc.
         this.validMode = ['IDLE', 'INITIAL_PLACEMENT', 'BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'TRADE', 'DISCARD', 'ROBBER'];
 
-        // 
         this.elementIds = {
             btnRoll: 'btn-roll',
             btnBuildRoad: 'btn-build-road',
@@ -745,7 +742,7 @@ export class InputManager {
         this.playerId = playerId;
         this.gameMap = gameMap;
         this.playerId = playerId;
-        this.robbableTiles = GameUtils.getRobbableTiles(gameMap);
+        this.robbableTiles = GameRules.getRobbableTiles(gameMap);
         this.robStack = []; // use a simple stack to keep track of the current highlighted tile and player (if any)
         this.robbableSettlementIds = []; // keep track of the currently highlighted robbable settlements for easy cleanup when user change tile selection
     }
@@ -935,7 +932,7 @@ export class InputManager {
         event.target.classList.add('robber-tile-mask');
 
         // highlight the robable player
-        this.robbableSettlementIds = GameUtils.getRobbableSettlementIds(this.playerId, tileId, this.gameMap);
+        this.robbableSettlementIds = GameRules.getRobbableSettlementIds(this.playerId, tileId, this.gameMap);
         if (this.robbableSettlementIds.length === 0) {
             this._enableConfirmBtn(); // if no players to rob, enable confirm button immediately
         } else {

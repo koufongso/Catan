@@ -1,8 +1,8 @@
 import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
-import { DevCard } from "../../models/devCards/DevCard.js";
+import { createDevCard } from "../../factories/devCardFactory.js";
 import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
-import { GameUtils } from "../../utils/game-utils.js";
+import { GameRules } from "../../logic/GameRules.js";
 
 export class DebugController {
     // We pass the actual game state or engine to the commands
@@ -118,7 +118,7 @@ export class DebugController {
                 if (diceValue === 7) {
                     this.controller.returnStateAfterRob = this.controller.gameContext.currentState;
                     this.controller.discardInfo = []; // reset discard info
-                    this.controller.discardInfo = GameUtils.getDiscardInfo(this.controller.gameContext);
+                    this.controller.discardInfo = GameRules.getDiscardInfo(this.controller.gameContext);
                     this.controller._handleDiscardOrMoveRobber();
                 } else {
                     this.controller._distributeResourcesByRoll(diceValue);
@@ -174,7 +174,7 @@ export class DebugController {
                 // cheat add dev card
                 const player = this.gameContext.players[playerIndex];
                 for (let i = 0; i < amountInt; i++) {
-                    player.addDevCard(new DevCard({type: resolvedCardType, turnBought: -1})); // set turnBought to -1 to avoid locked
+                    player.addDevCard(createDevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
                 }
 
                 this.controller._broadcast({

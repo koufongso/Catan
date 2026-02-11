@@ -1,10 +1,6 @@
 import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
-import { DEBUG_FLAGS } from "../../constants/Config.js";
-import { Player } from "../../models/Player.js";
-import { DebugController } from "../debug/DebugController.js";
-import { DebugDashboard } from "../debug/DebugDashboard.js";
-import { GameUtils } from "../../utils/game-utils.js";
+import { GameRules } from "../../logic/GameRules.js";
 
 export class GameClient {
     constructor(id, name, color, isHuman) {
@@ -159,13 +155,13 @@ export class GameClient {
         let cost = {}
         switch (mode) {
             case "BUILD_ROAD":
-                cost = GameUtils.getRoadCost();
+                cost = GameRules.getRoadCost();
                 break;
             case "BUILD_SETTLEMENT":
-                cost = GameUtils.getSettlementCost();
+                cost = GameRules.getSettlementCost();
                 break;
             case "BUILD_CITY":
-                cost = GameUtils.getCityCost();
+                cost = GameRules.getCityCost();
                 break;
             default:
                 throw new Error(`Invalid mode for submitBuild: ${mode}`);
@@ -186,9 +182,7 @@ export class GameClient {
 
         // check if has enough resources to build the roads
         let player = this.gameContext.players.find(p => p.id === this.id);
-        if (!(player instanceof Player)) {
-            player = new Player(player); // create a Player instance for resource checking
-        }
+
 
         if (!player.canAfford(totalCost)) {
             console.warn(`Player ${this.id} cannot afford to build roads with total cost:`, totalCost);
@@ -206,7 +200,7 @@ export class GameClient {
             return;
         }
 
-        if (GameUtils.isDiscardValid(this.gameContext.players.find(p => p.id === this.id).resources, selectedResources)) {
+        if (GameRules.isDiscardValid(this.gameContext.players.find(p => p.id === this.id).resources, selectedResources)) {
             this.gameController.inputEvent({ type: 'DISCARD', payload: { playerId: this.id, discardedResources: selectedResources } });
         } else {
             throw new Error("Invalid discard resources submitted.");
@@ -296,11 +290,8 @@ export class GameClient {
 
         // check if can afford dev card
         let player = this.gameContext.players.find(p => p.id === this.id);
-        if (!(player instanceof Player)) {
-            player = new Player(player); // create a Player instance for resource checking
-        }
 
-        const devCardCost = GameUtils.getDevCardCost();
+        const devCardCost = GameRules.getDevCardCost();
         if (!player.canAfford(devCardCost)) {
             console.warn(`Player ${this.id} cannot afford to buy a development card with cost:`, devCardCost);
             return;

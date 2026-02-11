@@ -1,7 +1,5 @@
-import { MenuUI } from "./MenuUI.js";
 import { RNG } from "../utils/rng.js";
-import { MapGenerator } from "../utils/map-generator.js";
-import { GameMap } from "../models/GameMap.js";
+import { MapGenerator } from "../factories/mapGenerator.js";
 import { GameClient } from "./client/GameClient.js";
 import { GameControllerV2 } from "./GameControllerV2.js";
 import { PLAYER_COLORS } from "../constants/RenderingConstants.js";

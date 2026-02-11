@@ -1,15 +1,12 @@
 /**
  * Utility functions for game-related operations.
  */
-import { MapRules } from "./MapRules.js";
-import { GameMap } from "../models/GameMap.js";
-import { Player } from "../models/Player.js";
-import { HexUtils } from "./hex-utils.js";
-import { MapUtils } from "./map-utils.js";
-import {COSTS} from "../constants/GameRuleConstants.js";
+import { HexUtils } from "../utils/HexUtils.js";
+import { MapUtils } from "../utils/MapUtils.js";
+import { COSTS } from "../constants/GameRuleConstants.js";
 
 
-export const GameUtils = Object.freeze({
+export const GameRules = Object.freeze({
     /**
      * Get a valid coordinate for placing a settlement. Following rules must be observed:
      * - The coordinate must not be adjacent to any existing settlements.
@@ -119,7 +116,7 @@ export const GameUtils = Object.freeze({
         }
 
         const citySpots = gameMap.filter('settlements', (settlement) => (settlement.ownerId === playerId && settlement.level === 1));
-        return new Set(citySpots.map(settlement =>settlement.id));
+        return new Set(citySpots.map(settlement => settlement.id));
     },
 
 
@@ -182,7 +179,7 @@ export const GameUtils = Object.freeze({
      * @param {*} tileLocation - the location where the robber is moved to
      * @param {*} gameMap 
      */
-    getRobbableSettlementIds(playerId, tileLocation, gameMap){
+    getRobbableSettlementIds(playerId, tileLocation, gameMap) {
         // convert tile location to tile id
         const tileId = typeof tileLocation === 'string' ? tileLocation : HexUtils.coordToId(tileLocation);
         const tileCoord = HexUtils.idToCoord(tileId);
@@ -223,7 +220,62 @@ export const GameUtils = Object.freeze({
 
     getDevCardCost() {
         return COSTS.devCard;
-     },
+    },
+
+
+    /*------------------------------------------------------Tile Production Helpers-----------------------------------------------------*/
+    /**
+    * Rule: Determines what resource a specific tile produces.
+    * @param {Tile} tile - The tile to check.
+    * @param {GameMap} gameMap - The current game map (for robber position). (optional)
+    * @param {boolean} checkRobber - Whether to consider the robber's position. (optional, default: false)
+    * @returns {RESOURCE_TYPES | null} - The resource type produced by the tile, or null if none.
+    */
+    getTileProduction(tile, gameMap = null, checkRobber = false) {
+        if (checkRobber && HexUtils.areCoordsEqual(tile.coord, gameMap.robberCoord)) {
+            return null; // tile is blocked by the robber
+        }
+
+        if (!tile || !tile.terrainType) return null;
+        return PRODUCTION_TABLE[tile.terrainType] || null;
+    },
+
+    /**
+     * Helper function to check if a tile is productive (i.e., has a number token, produces a resource and is not blocked by the robber).
+     * @param {Tile} tile - The tile to check.
+     * @param {GameMap} gameMap - The current game map (for robber position). (optional)
+     * @returns {boolean} - True if the tile is productive, false otherwise.
+     */
+    isProductiveTile(tile, gameMap = null) {
+        const resource = this.getTileProduction(tile, gameMap, true);
+        return resource !== null && tile.numberToken !== null;
+    },
+
+
+    /* ----------------------------------------------------- Player VP Helpers ----------------------------------------------------- */
+
+    /**
+     * Get IDs as an array (useful for iteration)
+     */
+    getSettlementIds: (player) => Object.keys(player.settlements),
+    getRoadIds: (player) => Object.keys(player.roads),
+    getCityIds: (player) => Object.keys(player.cities),
+
+    getVictoryPoints: (player) => {
+        let vp = 0;
+        // Count keys
+        vp += Object.keys(player.settlements).length;
+        vp += Object.keys(player.cities).length * 2;
+        vp += player.devCards.filter(card => card.type === 'VICTORY_POINT').length;
+
+        if (player.achievements.hasLongestRoad) vp += 2;
+        if (player.achievements.hasLargestArmy) vp += 2;
+        vp += player.achievements.cheatVP;
+
+        return vp;
+    },
+
+
 
 
 });

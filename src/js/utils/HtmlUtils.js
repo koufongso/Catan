@@ -1,4 +1,4 @@
-import { HexUtils } from "../utils/hex-utils.js";
+import { HexUtils } from "./HexUtils.js";
 import { SVG_NAMESPACE, HEX_SIZE, TEXTURE_PATHS } from "../constants/RenderingConstants.js";
 
 const RAD60 = Math.PI / 3;
