@@ -15,6 +15,8 @@ import { HtmlUtils } from "../../utils/HtmlUtils.js";;
 import { HexUtils } from "../../utils/HexUtils.js";
 import { BuildingPredictor } from "../../utils/BuildingPredictor.js";
 
+import { StatusCodes } from "../../constants/StatusCodes.js";
+
 export class InputManager {
     constructor(gameClient) {
         this.gameClient = gameClient; // reference to the parent GameClient

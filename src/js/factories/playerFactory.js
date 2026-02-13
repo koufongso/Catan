@@ -2,10 +2,10 @@
 import { RESOURCE_TYPES } from '../constants/ResourceTypes.js';
 import { PLAYER_ASSET_LIMITS } from '../constants/GameRuleConstants.js';
 
-export const createPlayer = ({ id, name, color }) => ({
-    id,
-    name,
-    color,
+export const createPlayer = (id, name, color) => ({
+    id: id,
+    name: name,
+    color: color,
     
     // Limits
     roadsLeft: PLAYER_ASSET_LIMITS.roads,

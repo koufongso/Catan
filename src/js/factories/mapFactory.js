@@ -10,7 +10,9 @@ export const initGameMap = () => ({
     roads: {},        // Map<string (id), Road>
     settlements: {},  // Map<string (id), Settlement>
     tradingPosts: {}, // Map<string (id), TradingPost>
-    robberCoord: [0, 0, 0]
+    robberCoord: [0, 0, 0],
+    allVertexId: {},
+    allEdgeId: {},
 });
 
 /**

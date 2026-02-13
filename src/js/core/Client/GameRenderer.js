@@ -6,6 +6,7 @@ import { HEX_SIZE } from "../../constants/RenderingConstants.js";
 import { HtmlUtils } from "../../utils/HtmlUtils.js";
 import { HexUtils } from "../../utils/HexUtils.js";
 import { PlayerUtils } from "../../utils/PlayerUtils.js";
+import { DevCardUtils } from "../../utils/DevCardUtils.js";
 
 
 // constants for hex geometry
@@ -58,6 +59,7 @@ export class GameRenderer {
      * @param {*} gameMap 
      */
     drawStaticBoard(gameMap) {
+        console.log("Drawing static board elements:", gameMap);
         this.setupPatterns(this.layers.defs);
 
         // Draw Hexes and Tokens once
@@ -94,7 +96,7 @@ export class GameRenderer {
         // find the current player
         for (const p of gameContext.players) {
             if (p.id === playerId) {
-                this.renderPlayerAssets(playerInstance, gameContext.turnNumber);
+                this.renderPlayerAssets(p, gameContext.turnNumber);
             }
         }
     }
@@ -380,10 +382,7 @@ export class GameRenderer {
 
         // used dev cards
         devCards.forEach(card => {
-            if (!(card instanceof DevCard)) {
-                card = new DevCard(card); // convert raw card data to DevCard instance if needed
-            }
-            if (card.isPlayed()) { // used dev cards (already played)
+            if (DevCardUtils.isPlayed(card)) { // used dev cards (already played)
                 const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
                 usedDevCardsContainer.appendChild(cardHtml);
             } else { // unused dev cards (not played yet)
@@ -428,9 +427,9 @@ export class GameRenderer {
         cardDiv.dataset.type = devCard.type;
 
         // check if the card is locked (bought this turn)
-        if (devCard.isLocked(currentTurnNumber)) {
+        if (DevCardUtils.isLocked(devCard, currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
-        } else if (!devCard.isPlayed() && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
+        } else if (!DevCardUtils.isPlayed(devCard) && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
             // card can be played, pop up action menu on click
 
             cardDiv.classList.add('dev-card-playable');

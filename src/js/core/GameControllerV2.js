@@ -131,6 +131,7 @@ export class GameControllerV2 {
 
         // replaced with Sanitize player info
         gameContextCopy.players = this.gameContext.players.map(player => {
+            console.log(`Serializing player ${player.id} for viewingPlayerId ${viewingPlayerId} with showAll=${showAll}`);
             return PlayerUtils.serialize(player, !showAll && player.id !== viewingPlayerId);
         });
 
@@ -265,9 +266,10 @@ export class GameControllerV2 {
         // distribute resources for second settlement
         const player = this.gameContext.players.find(p => p.id === playerId);
         const settlementCoord = buildStack[0].coord;
-        const resourceTiles = MapUtils.getTilesAtVertexs(this.gameContext.gameMap, settlementCoord);
+        const resourceTiles = MapUtils.getTilesAtVertex(this.gameContext.gameMap, settlementCoord);
         for (const tile of resourceTiles) {
             const resourceType = GameRules.getTileProduction(tile, this.gameContext.gameMap, false);
+            if (resourceType === null) continue; // skip if tile does not produce resources (e.g. desert)
             PlayerUtils.addResources(player, { [resourceType]: 1 });
             console.log(`Player ${playerId} received 1 ${resourceType} from initial settlement at ${settlementCoord}`);
             this.gameContext.bankResources[resourceType] -= 1;
@@ -479,7 +481,7 @@ export class GameControllerV2 {
 
         // check if dev cards are available
         console.log(`Checking if dev cards are available. Remaining: ${DevCardDeckUtils.getCount(this.gameContext.devCardDeck)}`);
-        if (this.gameContext.devCardDeck.getCount() <= 0) {
+        if (DevCardDeckUtils.getCount(this.gameContext.devCardDeck) <= 0) {
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `No development cards left in the deck.`
@@ -492,7 +494,7 @@ export class GameControllerV2 {
         this._addBankResource(cost);
 
         // give player a dev card
-        const devCard = this.gameContext.devCardDeck.drawCard(this.gameContext.turnNumber);
+        const devCard = DevCardDeckUtils.drawCard(this.gameContext.devCardDeck, this.gameContext.turnNumber);
         PlayerUtils.addDevCard(player, devCard);
 
         // broadcast update to all clients
@@ -751,15 +753,15 @@ export class GameControllerV2 {
             switch (building.type) {
                 case 'SETTLEMENT':
                     MapUtils.updateSettlement(this.gameContext.gameMap, building.coord, playerId, 1);
-                    this.gameContext.players.find(p => p.id === playerId).addSettlement(HexUtils.coordToId(building.coord));
+                    PlayerUtils.addSettlement(this.gameContext.players.find(p => p.id === playerId), HexUtils.coordToId(building.coord));
                     break;
                 case 'ROAD':
                     MapUtils.updateRoad(this.gameContext.gameMap, building.coord, playerId);
-                    this.gameContext.players.find(p => p.id === playerId).addRoad(HexUtils.coordToId(building.coord));
+                    PlayerUtils.addRoad(this.gameContext.players.find(p => p.id === playerId), HexUtils.coordToId(building.coord));
                     break;
                 case 'CITY':
                     MapUtils.updateSettlement(this.gameContext.gameMap, building.coord, playerId, 2);
-                    this.gameContext.players.find(p => p.id === playerId).addCity(HexUtils.coordToId(building.coord));
+                    PlayerUtils.addCity(this.gameContext.players.find(p => p.id === playerId), HexUtils.coordToId(building.coord));
                     break;
                 default:
                     throw new Error(`Invalid building type in initial placement: ${building.type}`);
@@ -805,12 +807,9 @@ export class GameControllerV2 {
         const returnedResources = this._getResourceFromBank({ [resourceType]: amount });
 
         // find the player in the game context and give them the resource
-        console.log(`Distributing to Player ${playerId}:`, returnedResources);
         const player = this.gameContext.players.find(p => p.id === playerId);
         if (player) {
-            console.log(`Before distribution, Player ${playerId} resources:`, player.resources);
             PlayerUtils.addResources(player, returnedResources);
-            console.log(`After distribution, Player ${playerId} resources:`, player.resources);
         }
     }
 

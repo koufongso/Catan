@@ -102,6 +102,7 @@ export class BuildingPredictor {
             case "ROAD_ONLY":
                 {
                     this.validRoadSpots = GameRules.getValidRoadFromSettlementIds(this.gameMap, this.playerId);
+                    console.log(this.validRoadSpots);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
                         type: 'ROAD',

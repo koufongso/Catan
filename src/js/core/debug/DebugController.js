@@ -4,6 +4,8 @@ import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 import { StatusCodes } from "../../constants/StatusCodes.js";
 import { GameRules } from "../../logic/GameRules.js";
 
+import { PlayerUtils } from "../../utils/PlayerUtils.js";
+
 export class DebugController {
     // We pass the actual game state or engine to the commands
     constructor(debugClient) {
@@ -38,7 +40,7 @@ export class DebugController {
                 const [type, qty, pIdx] = args;
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 const player = this.gameContext.players[playerIndex];
-                player.addResources({ [type]: parseInt(qty) });
+                PlayerUtils.addResources(player, { [type]: parseInt(qty) });
                 this.controller._broadcast({
                     type: 'CHEAT_RESOURCES_ADDED',
                     payload: {
@@ -64,7 +66,7 @@ export class DebugController {
                 }
                 const player = this.gameContext.players[playerIndex];
                 for (const type of Object.values(RESOURCE_TYPES)) {
-                    player.addResources({ [type]: amount });
+                    PlayerUtils.addResources(player, { [type]: amount });
                 }
                 this.controller._broadcast({
                     type: 'CHEAT_RESOURCES_ADDED',
@@ -174,7 +176,7 @@ export class DebugController {
                 // cheat add dev card
                 const player = this.gameContext.players[playerIndex];
                 for (let i = 0; i < amountInt; i++) {
-                    player.addDevCard(createDevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
+                    PlayerUtils.addDevCard(player, createDevCard(resolvedCardType, -1)); // set turnBought to -1 to avoid locked
                 }
 
                 this.controller._broadcast({

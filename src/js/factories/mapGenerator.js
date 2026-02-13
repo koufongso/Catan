@@ -108,8 +108,6 @@ export const MapGenerator = {
             for (let r = -2; r <= 2; r++) {
                 for (let s = -2; s <= 2; s++) {
                     if (HexUtils.isValidHex([q, r, s])) {
-                        // OLD: gameMap.updateTile(...)
-                        // NEW: MapUtils updates the POJO
                         const type = terrainPool.pop();
                         MapUtils.updateTile(gameMap, [q, r, s], type, null);
                     }
@@ -149,6 +147,9 @@ export const MapGenerator = {
         }
 
         console.warn("MapGenerator: Ports generation not implemented yet.");
+
+        MapUtils.updateAllEdgeId(gameMap);
+        MapUtils.updateAllVertexId(gameMap);
 
         // 5. Return the Plain Object
         return gameMap;

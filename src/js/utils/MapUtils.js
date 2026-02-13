@@ -137,12 +137,18 @@ export const MapUtils = {
 
     getSettlementOwner: (map, location) => {
         const id = MapUtils._normalize(location);
-        return map.settlements[id]?.ownerId || null;
+        if (map.settlements[id]) {
+            return map.settlements[id].ownerId;
+        }
+        return null;
     },
 
     getRoadOwner: (map, location) => {
         const id = MapUtils._normalize(location);
-        return map.roads[id]?.ownerId || null;
+        if (map.roads[id]) {
+            return map.roads[id].ownerId;
+        }
+        return null;
     },
 
 
@@ -164,23 +170,67 @@ export const MapUtils = {
         return settlementIds;
     },
 
-    getAllVertexIdSet(map) {
-        if (map.allVertexIdSet !== null) {
-            // result cached, return it
-            return map.allVertexIdSet;
-        }
-
+    updateAllVertexId(map) {
         // compute the set, this should only be done once unless the map changes
-        let results = new Set();
+        map.allVertexId = {};
         for (let [tileId, tile] of Object.entries(map.tiles)) {
             let vCoordList = HexUtils.getVerticesFromHex(tile.coord);
             for (let vCoord of vCoordList) {
-                results.add(HexUtils.coordToId(vCoord));
+                map.allVertexId[HexUtils.coordToId(vCoord)] = true; // to support O(1) lookup, we store as an object with value=true (like a Set)
             }
         }
-        map.allVertexIdSet = results;
-        return results;
     },
+
+    getAllVertexIdSet(map) {
+        if (map.allVertexId !== null) {
+            return new Set(Object.keys(map.allVertexId));
+        }
+    },
+
+
+    /**
+     * Check if the vertex exist on the map/board
+     * @param {*} vCoord 
+     * @returns {boolean} true if the vertex exists on the map
+     */
+    hasVertex(gameMap, vCoord) {
+        const id = HexUtils.coordToId(vCoord);
+        return gameMap.allVertexId[id] === true; // O(1) lookup
+    },
+
+    updateAllEdgeId(gameMap) {
+        gameMap.allEdgeId = {};
+        // compute the set, this should only be done once unless the map changes
+        for (let [tileId, tile] of Object.entries(gameMap.tiles)) {
+            let eCoordList = HexUtils.getEdgesFromHex(tile.coord);
+            for (let eCoord of eCoordList) {
+                gameMap.allEdgeId[HexUtils.coordToId(eCoord)] = true; // to support O(1) lookup, we store as an object with value=true (like a Set)
+            }
+        }
+    },
+
+    /**
+     * Get all the edge IDs on the map (based on existing tiles)
+     * Note: this should be static after map initialization
+     * @returns {Set} - A set of edge IDs
+     */
+    getAllEdgeIdSet(gameMap) {
+        if (gameMap.allEdgeId !== null) {
+            return new Set(Object.keys(gameMap.allEdgeId));
+        }
+    },
+
+
+    /**
+     * Check if the edge exist on the map/board
+     * @param {*} eCoord coordinate of the edge
+     * @returns {boolean} true if the edge exists on the map
+     */
+    hasEdge(gameMap, eCoord) {
+        const id = HexUtils.coordToId(eCoord);
+        return gameMap.allEdgeId[id] === true; // O(1) lookup
+    },
+
 
     getAllSettlementIdSet(map) {
         const settlementIds = new Set();

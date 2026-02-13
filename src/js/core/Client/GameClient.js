@@ -2,6 +2,8 @@ import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
 import { GameRules } from "../../logic/GameRules.js";
 
+import { PlayerUtils } from "../../utils/PlayerUtils.js";
+
 export class GameClient {
     constructor(id, name, color, isHuman) {
         this.id = id;
@@ -184,7 +186,7 @@ export class GameClient {
         let player = this.gameContext.players.find(p => p.id === this.id);
 
 
-        if (!player.canAfford(totalCost)) {
+        if (!PlayerUtils.canAfford(player, totalCost)) {
             console.warn(`Player ${this.id} cannot afford to build roads with total cost:`, totalCost);
             return;
         }
@@ -292,7 +294,7 @@ export class GameClient {
         let player = this.gameContext.players.find(p => p.id === this.id);
 
         const devCardCost = GameRules.getDevCardCost();
-        if (!player.canAfford(devCardCost)) {
+        if (!PlayerUtils.canAfford(player, devCardCost)) {
             console.warn(`Player ${this.id} cannot afford to buy a development card with cost:`, devCardCost);
             return;
         }

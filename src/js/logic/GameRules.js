@@ -4,6 +4,7 @@
 import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { COSTS } from "../constants/GameRuleConstants.js";
+import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
 
 
 export const GameRules = Object.freeze({
@@ -68,7 +69,7 @@ export const GameRules = Object.freeze({
                 const vCoord0 = HexUtils.idToCoord(vId0);
 
                 // check if this vertex is blocked by another player's settlement
-                const settlementOwner = gameMap.getSettlementOwner(vId0);
+                const settlementOwner = MapUtils.getSettlementOwner(gameMap, vId0);
                 if (settlementOwner !== null && settlementOwner !== playerId) {
                     // blocked by another player's settlement, cannot extend roads from here
                     continue;
@@ -81,10 +82,11 @@ export const GameRules = Object.freeze({
                     const edgeCoord = HexUtils.getEdgeFromVertices(vCoord0, vCoord1);
                     const vId1 = HexUtils.coordToId(vCoord1);
 
-                    if (!gameMap.hasEdge(edgeCoord)) continue; // skip if edge not in map (out of bounds)
+                    if (!MapUtils.hasEdge(gameMap, edgeCoord)) continue; // skip if edge not in map (out of bounds)
 
                     // check the ownership of this road
-                    const edgeOwner = gameMap.getRoadOwner(edgeCoord);
+                    const edgeOwner = MapUtils.getRoadOwner(gameMap, edgeCoord);
+                    console.log(`Checking edge ${HexUtils.coordToId(edgeCoord)} between ${vId0} and ${vId1}, owned by ${edgeOwner}`);
                     if (edgeOwner === null) {
                         // unoccupied road, valid placement, stop BFS in this direction
                         validRoadIds.add(HexUtils.coordToId(edgeCoord));
@@ -110,12 +112,7 @@ export const GameRules = Object.freeze({
      * @returns {Set} a set of valid vertex id for placing a city
      */
     getValidCitySpots(gameMap, playerId) {
-        // valid city spots are simply existing settlements owned by the player
-        if (!(gameMap instanceof GameMap)) {
-            gameMap = new GameMap(gameMap); // in case a plain object is passed, convert to GameMap instance
-        }
-
-        const citySpots = gameMap.filter('settlements', (settlement) => (settlement.ownerId === playerId && settlement.level === 1));
+        const citySpots = MapUtils.filter(gameMap, 'settlements', (settlement) => (settlement.ownerId === playerId && settlement.level === 1));
         return new Set(citySpots.map(settlement => settlement.id));
     },
 
@@ -165,10 +162,7 @@ export const GameRules = Object.freeze({
     },
 
     getRobbableTiles(gameMap) {
-        if (!(gameMap instanceof GameMap)) {
-            gameMap = new GameMap(gameMap); // in case a plain object is passed, convert to GameMap instance
-        }
-        return gameMap.filter('tiles', (tile) => !HexUtils.areCoordsEqual(tile.coord, gameMap.robberCoord));
+        return MapUtils.filter(gameMap, 'tiles', (tile) => !HexUtils.areCoordsEqual(tile.coord, gameMap.robberCoord));
     },
 
     /**
@@ -184,17 +178,12 @@ export const GameRules = Object.freeze({
         const tileId = typeof tileLocation === 'string' ? tileLocation : HexUtils.coordToId(tileLocation);
         const tileCoord = HexUtils.idToCoord(tileId);
 
-        // convert gameMap to GameMap instance if it's a plain object
-        if (!(gameMap instanceof GameMap)) {
-            gameMap = new GameMap(gameMap);
-        }
-
         // get adjacent vertices to this tile
         const adjacentVertexIds = HexUtils.getVerticesFromHex(tileCoord).map(vCoord => HexUtils.coordToId(vCoord));
 
         // filter for settlements owned by other players
         const robbableSettlementIds = adjacentVertexIds.filter(vId => {
-            const settlementOwner = gameMap.getSettlementOwner(vId);
+            const settlementOwner = MapUtils.getSettlementOwner(gameMap, vId);
             return settlementOwner !== null && settlementOwner !== playerId;
         });
 

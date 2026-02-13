@@ -186,5 +186,9 @@ export const PlayerUtils = {
 
         player.totalResourceCount = null; // Invalidate cache
         return finalRemoved;
+    },
+
+    addDevCard: (player, devCard) => {
+        player.devCards.push(devCard);
     }
 };
