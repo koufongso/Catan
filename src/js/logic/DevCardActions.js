@@ -8,31 +8,14 @@ import { GameState } from "../core/GameControllerV2.js";
 
 export const DevCardEffects = {
 
-  [DEV_CARD_TYPES.KNIGHT]: (gameController, payload = null) => { // note: no payload needed for Knight, but we keep the signature consistent for all cards
-    console.log("Knight played: Switching to Robber State");
-    
-    // 1. Get player data
-    const currentPlayer = gameController._getCurrentPlayer();
-    
-    // 2. update largest army
-    currentPlayer.achievements.knightsPlayed++;
-    gameController.updateLargestArmy(); 
-
-    // 3. enter the move robber routine
-    gameController.returnStateAfterRob = gameController.gameContext.currentState; // save current state to return to after moving robber
-    gameController.gameContext.currentState = GameState.MOVE_ROBBER;
-
-    // mark the card as played
-    const devCard = payload.devCard; // avoid searching again for the card, we already have it in the payload
-    devCard.played = true;
-
-    gameController._broadcast({
-        type: 'WAITING_FOR_ACTION',
-        payload: {
-            phase: 'MOVE_ROBBER',
-            activePlayerId: gameController.gameContext.currentPlayerId
-        }
-    });
+  [DEV_CARD_TYPES.KNIGHT]: (gameController, payload) => {
+    // create a "virtual" evnet to reuse the existing robber placement logic in the game controller
+    const event = {
+      type: 'ACTIVATE_DEV_CARD_KNIGHT',
+      payload: structuredClone(payload) // deep clone to avoid mutation issues
+    }
+    gameController.returnStateAfterRob = gameController.gameContext.currentState; // return the current state after completion of robber placement
+    gameController.handleStateMoveRobber(event); // let the game controller handle the rest of the logic for moving the robber and stealing resources
   },
 
   [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, payload) => {

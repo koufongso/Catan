@@ -16,6 +16,7 @@ import { HexUtils } from "../../utils/HexUtils.js";
 import { BuildingPredictor } from "../../utils/BuildingPredictor.js";
 
 import { StatusCodes } from "../../constants/StatusCodes.js";
+import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
 
 export class InputManager {
     constructor(gameClient) {
@@ -155,7 +156,7 @@ export class InputManager {
             if (cardContainer) {
                 const cardType = cardContainer.dataset.type;
                 if (cardType) {
-                    this.gameClient.submitActivateDevCard(cardType);
+                    this.gameClient.handleActivateDevCard(cardType);
                 }
             }
         };
@@ -520,6 +521,7 @@ export class InputManager {
 
                 break;
             case 'ROBBER_PLACEMENT':
+            case 'ACTIVATE_DEV_CARD_KNIGHT':
                 if (this.robStack.length === 2) {
                     // back to select settlement for robbing
                     this.robStack.pop();
@@ -563,6 +565,8 @@ export class InputManager {
             case 'BUILD_ROAD':
             case 'BUILD_SETTLEMENT':
             case 'BUILD_CITY':
+            case 'ROBBER_PLACEMENT':
+            case 'ACTIVATE_DEV_CARD_KNIGHT':
                 // clear interaction layer
                 this._clearBuildingContext();
                 this._clearInteractionLayer();
@@ -619,13 +623,17 @@ export class InputManager {
                 this._clearBuildingContext();
                 this._clearInteractionLayer();
                 break;
-
-
             case 'ROBBER_PLACEMENT':
-                const robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
+                var robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
                 this._clearRobberPlacementContext();
                 this._clearInteractionLayer();
-                this.gameClient.submitRobberPlacement(robStackCopy);
+                this.gameClient.submitRobberPlacement(robStackCopy, 'ROBBER_PLACEMENT');
+                break;
+            case 'ACTIVATE_DEV_CARD_KNIGHT':
+                var robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
+                this._clearRobberPlacementContext();
+                this._clearInteractionLayer();
+                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.KNIGHT, {robStack: robStackCopy});
                 break;
 
             default:
@@ -752,11 +760,19 @@ export class InputManager {
         this.robbableSettlementIds = []; // keep track of the currently highlighted robbable settlements for easy cleanup when user change tile selection
     }
 
-
-    activateRobberPlacementMode(playerId, gameMap) {
+    /**
+     * Activate the interaction layer for robber placement mode, which includes two phases:
+     * 1. Select a tile to move the robber to (highlight the valid tiles and add click handlers)
+     * 2. If there are players to rob on that tile, select a player to rob (highlight the robbable players and add click handlers)
+     * @param {*} playerId 
+     * @param {*} gameMap 
+     * @param {*} mode 'ROBBER_PLACEMENT' or 'ACTIVATE_DEV_CARD_KNIGHT'
+     * @param {*} allowCancel 
+     */
+    activateRobberPlacementMode(playerId, gameMap, mode, allowCancel = false) {
         console.log("Activating robber placement mode for player:", playerId);
         this._setRobberPlacementContext(playerId, gameMap); // set up context first (robbable tiles, etc.)
-        this.setMode('ROBBER_PLACEMENT');
+        this.setMode(mode);
 
         // phase 1: click on a tile to move the robber there, highlight the robbable players on that tile (if any)
         // group for easier cleanup later
@@ -777,7 +793,13 @@ export class InputManager {
         this.robTileSelectionGroup.onclick = this._handleTileClick.bind(this);
 
         // create button group for confirm and undo (no cancel during robber placement)
-        const btnGroup = this.createBtnGroup(0b101);
+        let btnGroup = [];
+        if (allowCancel) {
+            btnGroup = this.createBtnGroup(0b111);
+        } else {
+            btnGroup = this.createBtnGroup(0b101);
+        }
+
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
@@ -816,6 +838,7 @@ export class InputManager {
                 this._handleVertexClickBuildSettlement(event);
                 break;
             case 'ROBBER_PLACEMENT':
+            case 'ACTIVATE_DEV_CARD_KNIGHT':
                 this._handleVertexClickRob(event);
                 break;
             default:
@@ -916,7 +939,7 @@ export class InputManager {
 
 
     _handleTileClick(event) {
-        if (this.currentMode !== 'ROBBER_PLACEMENT') {
+        if (this.currentMode !== 'ROBBER_PLACEMENT' && this.currentMode !== 'ACTIVATE_DEV_CARD_KNIGHT') {
             return; // ignore if not in robber placement mode
         }
 

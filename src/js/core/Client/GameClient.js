@@ -2,8 +2,13 @@ import { GameRenderer } from "./GameRenderer.js";
 import { InputManager } from "./InputManager.js";
 import { GameRules } from "../../logic/GameRules.js";
 
+// constants
+import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
+
+// utils
 import { PlayerUtils } from "../../utils/PlayerUtils.js";
 import { DevCardUtils } from "../../utils/DevCardUtils.js";
+
 
 export class GameClient {
     constructor(id, name, color, isHuman) {
@@ -100,7 +105,7 @@ export class GameClient {
                 break;
             case 'MOVE_ROBBER':
                 // compute robbable tiles
-                this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap);
+                this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap, 'ROBBER_PLACEMENT', false);
                 break;
             case 'ROLL':
                 this.inputManager.deactivateAllBtns(); // clear all buttons first
@@ -151,7 +156,7 @@ export class GameClient {
             return;
         }
         // quick check buildStack validity and compute total cost
-        if (buildStack.length === 0){
+        if (buildStack.length === 0) {
             return; // allow empty submission to exit road building mode
         }
 
@@ -177,7 +182,7 @@ export class GameClient {
                 console.error(`Invalid build type in buildStack for submitBuildRoad: ${build.type}`);
                 return;
             }
-            
+
             for (let [resource, amount] of Object.entries(cost)) {
                 totalCost[resource] = (totalCost[resource] || 0) + amount;
             }
@@ -193,10 +198,10 @@ export class GameClient {
             return;
         }
 
-        this.gameController.inputEvent({ type: mode, payload: { playerId: this.id, buildStack: buildStack}});
+        this.gameController.inputEvent({ type: mode, payload: { playerId: this.id, buildStack: buildStack } });
     }
 
-        
+
 
     submitDiscardResources(selectedResources) {
         if (this.gameController === null) {
@@ -211,13 +216,27 @@ export class GameClient {
         }
     }
 
-    submitRobberPlacement(robStack) {
+    /**
+     * Send the robber placement result to the GameController, and set up a pending callback to handle the result update (success or error)
+     * @param {*} robStack 
+     * @param {*} actionType 'MOVE_ROBBER' or 'ACTIVATE_KNIGHT_CARD', they have the same payload but different handling in the GameController
+     * @returns 
+     */
+    submitRobberPlacement(robStack, actionType) {
         if (this.gameController === null) {
             console.error("GameController not connected.");
             return;
         }
+        this._pendingAfterRobberPlacement(); // set up pending callback to handle the result update after submitting the robber placement
+
+        console.log(`Submitting robber placement with robStack:`, robStack);
+        this.gameController.inputEvent({ type: actionType, payload: { playerId: this.id, robStack: robStack } });
+    }
+
+    // only for visual effect
+    _pendingAfterRobberPlacement() {
         if (this.isHuman) {
-            this.pendingRobberResultCallback = async(updatePacket) => {
+            this.pendingRobberResultCallback = async (updatePacket) => {
                 console.log("Robber placement result update packet:", updatePacket);
 
                 if (!(updatePacket.event.type === 'MOVE_ROBBER_ERROR' && updatePacket.event.payload.playerId === this.id)) {
@@ -233,8 +252,6 @@ export class GameClient {
                 this.pendingRobberResultCallback = null;
             };
         }
-        console.log(`Submitting robber placement with robStack:`, robStack);
-        this.gameController.inputEvent({ type: 'MOVE_ROBBER', payload: { playerId: this.id, robStack: robStack } });
     }
 
 
@@ -311,19 +328,47 @@ export class GameClient {
         this.gameController.inputEvent({ type: 'BUY_DEV_CARD', payload: { playerId: this.id } });
     }
 
-    submitActivateDevCard(cardType) {
+    /**
+     * Client side handle activate dev card
+     * @param {*} cardType 
+     * @returns 
+     */
+    handleActivateDevCard(cardType) {
+        //1. collect required info for each card type
+        switch (cardType) {
+            case DEV_CARD_TYPES.KNIGHT:
+                // move robber routine
+                this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap, 'ACTIVATE_DEV_CARD_KNIGHT', true);
+                break;
+            default:
+                console.warn(`Dev card type ${cardType} activation not implemented yet.`);
+        }
+    }
+
+    /**
+     * Send dev card activation request to the controller
+     * @param {*} cardType 
+     * @param {*} additionalPayload payload specify by the card type other than player id 
+     * @returns 
+     */
+    submitActivateDevCard(cardType, additionalPayload) {
         if (this.gameController === null) {
             console.error("GameController not connected.");
             return;
         }
-        // client side quick check if the card can be played
-        const player = this.gameContext.players.find(p => p.id === this.id);
-        const devCard = player.devCards.find(card => (card.type === cardType && DevCardUtils.isPlayable(card, this.gameContext.turnNumber)));
-        if (!devCard) {
-            console.error(`Player ${this.id} does not have a ${cardType} development card to play.`);
-            return;
+
+        // setup pending callback if needed (e.g. for knight card to handle the result of robber placement)
+        switch (cardType) {
+            case DEV_CARD_TYPES.KNIGHT:
+                this._pendingAfterRobberPlacement(); // set up pending callback to handle the result update after submitting the robber placement for knight card
+                break;
+            default:
+                // no pending callback needed for other card types for now
+                break;
         }
-        this.gameController.inputEvent({ type: 'ACTIVATE_DEV_CARD', payload: { playerId: this.id, cardType: cardType } });
+
+        console.log(`Submitting activate dev card with type ${cardType} and payload:`, additionalPayload);
+        this.gameController.inputEvent({ type: 'ACTIVATE_DEV_CARD', payload: { playerId: this.id, cardType: cardType, ...additionalPayload } });
     }
 
 

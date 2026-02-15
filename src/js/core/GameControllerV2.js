@@ -364,8 +364,10 @@ export class GameControllerV2 {
         const cardType = payload.cardType;
         // validate dev card can be played
         const player = this.gameContext.players.find(p => p.id === playerId);
+        console.log(`Player :`, player);
         const devCard = player.devCards.find(card => (card.type === cardType && DevCardUtils.isPlayable(card, this.gameContext.turnNumber)));
         if (!devCard) {
+            console.error(`Player ${playerId} does not have a playable ${cardType} development card to activate.`);
             return {
                 status: StatusCodes.ERROR,
                 errorMessage: `Player ${playerId} does not have a ${cardType} development card to play.`
@@ -374,6 +376,7 @@ export class GameControllerV2 {
         payload.devCard = devCard; // add the dev card object to the payload for easy access in the effect function
         
         // activate dev card effect
+        console.log(`Activating dev card effect for ${cardType} with payload:`, payload);
         DevCardEffects[cardType](this, payload); // pass entire controller and the payload for generic interface
     }
 
@@ -608,7 +611,7 @@ export class GameControllerV2 {
     }
 
     handleStateMoveRobber(event) {
-        const validationResult = this._validateRequest(event, 'MOVE_ROBBER');
+        const validationResult = this._validateRequest(event, ['ROBBER_PLACEMENT', 'ACTIVATE_DEV_CARD_KNIGHT']);
         if (validationResult.status === StatusCodes.ERROR) {
             console.error("Invalid MOVE_ROBBER request:", validationResult.errorMessage);
             return validationResult;
@@ -625,7 +628,6 @@ export class GameControllerV2 {
                 errorMessage: `Invalid robStack format for MOVE_ROBBER: ${JSON.stringify(robStack)}`
             };
         }
-        console.log(`Submitting robber payload:`, event.payload);
 
         const tileId = event.payload.robStack[0].id;
         const vertexId = event.payload.robStack[1] ? event.payload.robStack[1].id : null;
@@ -683,6 +685,15 @@ export class GameControllerV2 {
         console.log(`change state to ${this.returnStateAfterRob}`);
         this.gameContext.currentState = this.returnStateAfterRob;
         this.returnStateAfterRob = null; // clear
+
+        if (event.type === 'ACTIVATE_DEV_CARD_KNIGHT') {
+            const currentPlayer = this._getCurrentPlayer();
+            // mark the card as played and update knights played count
+            const devCard = event.payload.devCard; // avoid searching again for the card, we already have it in the payload
+            devCard.played = true;
+            currentPlayer.achievements.knightsPlayed++;
+            this.updateLargestArmy(); 
+        }
 
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
