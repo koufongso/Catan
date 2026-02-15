@@ -12,8 +12,9 @@ export const DevCardEffects = {
     // create a "virtual" evnet to reuse the existing robber placement logic in the game controller
     const event = {
       type: 'ACTIVATE_DEV_CARD_KNIGHT',
-      payload: structuredClone(payload) // deep clone to avoid mutation issues
-    }
+      payload: payload // to mark the card as played, nedd to pass the original object 
+    };
+
     gameController.returnStateAfterRob = gameController.gameContext.currentState; // return the current state after completion of robber placement
     gameController.handleStateMoveRobber(event); // let the game controller handle the rest of the logic for moving the robber and stealing resources
   },
