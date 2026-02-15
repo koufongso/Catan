@@ -3,6 +3,7 @@ import { InputManager } from "./InputManager.js";
 import { GameRules } from "../../logic/GameRules.js";
 
 import { PlayerUtils } from "../../utils/PlayerUtils.js";
+import { DevCardUtils } from "../../utils/DevCardUtils.js";
 
 export class GameClient {
     constructor(id, name, color, isHuman) {
@@ -108,6 +109,7 @@ export class GameClient {
                 break;
             case 'MAIN':
                 this.inputManager.deactivateAllBtns();
+                this.inputManager.activateDevCards();
                 this.inputManager.activateBtn('btnBuildRoad');
                 this.inputManager.activateBtn('btnBuildSettlement');
                 this.inputManager.activateBtn('btnBuildCity');
@@ -307,6 +309,21 @@ export class GameClient {
         }
 
         this.gameController.inputEvent({ type: 'BUY_DEV_CARD', payload: { playerId: this.id } });
+    }
+
+    submitActivateDevCard(cardType) {
+        if (this.gameController === null) {
+            console.error("GameController not connected.");
+            return;
+        }
+        // client side quick check if the card can be played
+        const player = this.gameContext.players.find(p => p.id === this.id);
+        const devCard = player.devCards.find(card => (card.type === cardType && DevCardUtils.isPlayable(card, this.gameContext.turnNumber)));
+        if (!devCard) {
+            console.error(`Player ${this.id} does not have a ${cardType} development card to play.`);
+            return;
+        }
+        this.gameController.inputEvent({ type: 'ACTIVATE_DEV_CARD', payload: { playerId: this.id, cardType: cardType } });
     }
 
 

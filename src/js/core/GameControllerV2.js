@@ -14,6 +14,10 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { PlayerUtils } from "../utils/PlayerUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { DevCardDeckUtils } from "../utils/DeckUtils.js";
+import {DevCardUtils} from "../utils/DevCardUtils.js";
+
+// logic
+import { DevCardEffects } from "../logic/DevCardActions.js";
 
 
 export const GameState = Object.freeze({
@@ -316,10 +320,22 @@ export class GameControllerV2 {
         const playerId = event.payload.playerId;
 
         // roll dice
-        const rollResult = this.dice.roll();
-        console.log(`Player ${playerId} rolled a ${rollResult.sum} (${rollResult.values.join(' + ')})`);
+        switch (event.type) {
+            case 'ROLL':
+                const rollResult = this.dice.roll();
+                console.log(`Player ${playerId} rolled a ${rollResult.sum} (${rollResult.values.join(' + ')})`);
+                this._processRoll(rollResult.sum);
+                break;
+            case 'ACTIVATE_DEV_CARD':
+                this._activateDevCard(playerId, event.payload);
+                break;
+            default:
+                throw new Error(`Invalid event type ${event.type} for state ${this.gameContext.currentState}`);
+        }
+    }
 
-        if (rollResult.sum === 7) {
+    _processRoll(rolledNumber) {
+        if (rolledNumber === 7) {
             // start robber sequence
             this.returnStateAfterRob = GameState.MAIN;
             this.discardInfo = []; // reset discard list
@@ -327,8 +343,8 @@ export class GameControllerV2 {
             this._handleDiscardOrMoveRobber();
         } else {
             // distribute resources
-            console.log(`Distributing resources for roll ${rollResult.sum}`);
-            this._distributeResourcesByRoll(rollResult.sum);
+            console.log(`Distributing resources for roll ${rolledNumber}`);
+            this._distributeResourcesByRoll(rolledNumber);
             this.gameContext.currentState = GameState.MAIN;
 
             // broadcast turn change to MAIN phase
@@ -341,6 +357,36 @@ export class GameControllerV2 {
             };
             this._broadcast(newEvent);
         }
+    }
+
+    _activateDevCard(playerId, payload) {
+        console.log(`Player ${playerId} is attempting to activate dev card with payload:`, payload);
+        const cardType = payload.cardType;
+        // validate dev card can be played
+        const player = this.gameContext.players.find(p => p.id === playerId);
+        const devCard = player.devCards.find(card => (card.type === cardType && DevCardUtils.isPlayable(card, this.gameContext.turnNumber)));
+        if (!devCard) {
+            return {
+                status: StatusCodes.ERROR,
+                errorMessage: `Player ${playerId} does not have a ${cardType} development card to play.`
+            };
+        }
+        payload.devCard = devCard; // add the dev card object to the payload for easy access in the effect function
+        
+        // activate dev card effect
+        DevCardEffects[cardType](this, payload); // pass entire controller and the payload for generic interface
+    }
+
+    updateLargestArmy() {
+        this.gameContext.players.forEach(player => {
+            const armySize = player.achievements.knightPlayed;
+            if (armySize >= 3) {
+                if (!this.gameContext.playerWithLargestArmy || this.gameContext.players[this.gameContext.playerWithLargestArmy].achievements.knightPlayed < armySize) {
+                    // no current largest army holder or current player has larger army than existing holder
+                    this.gameContext.playerWithLargestArmy = player.id;
+                }
+            }
+        });
     }
 
     handleStateMain(event) {
@@ -373,7 +419,7 @@ export class GameControllerV2 {
                 break;
             case 'ACTIVATE_DEV_CARD':
                 // handle dev card activation logic
-                console.warn(`Player ${playerId} ACTIVATE_DEV_CARD action not implemented yet.`);
+                this._activateDevCard(playerId, event.payload);
                 break;
             case 'END_TURN':
                 // handle end turn logic

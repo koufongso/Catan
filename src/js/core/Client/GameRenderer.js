@@ -429,67 +429,8 @@ export class GameRenderer {
         // check if the card is locked (bought this turn)
         if (DevCardUtils.isLocked(devCard, currentTurnNumber)) {
             cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
-        } else if (!DevCardUtils.isPlayed(devCard) && PLAYERABLDE_DEVCARDS.includes(devCard.type)) {
-            // card can be played, pop up action menu on click
-
-            cardDiv.classList.add('dev-card-playable');
-            cardDiv.onclick = (event) => {
-                // 1. remove existing menu if any
-                HtmlUtils.removeElementById('card-action-menu');
-                // 2. create new menu on click
-                const actionMenuTemplate = document.getElementById('card-action-menu-template');
-                if (!actionMenuTemplate) {
-                    console.error("Card action menu template not found in DOM");
-                    return;
-                }
-
-                const actionMenuClone = actionMenuTemplate.content.cloneNode(true);
-                const actionMenu = actionMenuClone.querySelector('.card-popover');
-                actionMenu.id = 'card-action-menu';
-                document.body.appendChild(actionMenu);
-
-                // position the menu near the clicked point
-                const clientX = event.clientX
-                const clientY = event.clientY;
-                const rect = actionMenu.getBoundingClientRect();
-                actionMenu.style.left = `${clientX}px`;
-                actionMenu.style.top = `${clientY}px`;
-
-                // attach event listeners to menu buttons
-                const playBtn = actionMenu.querySelector('#play-dev-card-btn');
-
-                switch (devCard.type) {
-                    case DEV_CARD_TYPES.KNIGHT:
-                        playBtn.onclick = async () => {
-                            const res = await this.controller.inputEvent({ type: 'ACTIVATE_KNIGHT' });
-
-                            if (!StatusCodesUtils.isRequestSuccessful(res)) {
-                                return;
-                            }
-
-                            actionMenu.remove();
-
-                            // render updated player assets
-                            this.renderPlayerAssets(res.gameContext.players[res.gameContext.currentPlayerIndex], res.gameContext.turnNumber);
-                            this.renderInteractionHints(res.interaction);
-                            this.updateDebugDashboard(res.gameContext, "Knight card played. Select a tile to move the robber.");
-                        };
-                        break;
-                    case DEV_CARD_TYPES.YEAR_OF_PLENTY:
-                        playBtn.onclick = async () => {
-                            this.activateYearOfPlentyResourceSelection();
-                            actionMenu.remove();
-                        }
-                        break;
-                    default:
-                        throw new Error(`Unhandled playable dev card type: ${devCard.type}`);
-                }
-
-                const cancelBtn = actionMenu.querySelector('#cancel-dev-card-btn');
-                cancelBtn.onclick = () => {
-                    actionMenu.remove();
-                };
-            }
+        } else {
+            cardDiv.classList.add('dev-card-playable'); // can be played
         }
 
         return clone;

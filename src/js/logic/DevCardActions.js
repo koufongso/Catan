@@ -2,32 +2,46 @@
 import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { StatusCodes } from "../constants/StatusCodes.js";
-import { PlayerUtils } from "../utils/PlayerUtils.js"; // Import the Utils!
+import { PlayerUtils } from "../utils/PlayerUtils.js";
+
+import { GameState } from "../core/GameControllerV2.js";
 
 export const DevCardEffects = {
 
-  [DEV_CARD_TYPES.KNIGHT]: (gameController) => {
+  [DEV_CARD_TYPES.KNIGHT]: (gameController, payload = null) => { // note: no payload needed for Knight, but we keep the signature consistent for all cards
     console.log("Knight played: Switching to Robber State");
     
-    // 1. Get POJO
-    const currentPlayer = gameController.getCurrentPlayer();
+    // 1. Get player data
+    const currentPlayer = gameController._getCurrentPlayer();
     
-    // 2. Modify POJO directly
+    // 2. update largest army
     currentPlayer.achievements.knightsPlayed++;
-    
-    // 3. Call Controller method (The Controller is still a Class, so this is fine)
     gameController.updateLargestArmy(); 
-    
-    return gameController.activateRobber(gameController.gameContext.currentState);
+
+    // 3. enter the move robber routine
+    gameController.returnStateAfterRob = gameController.gameContext.currentState; // save current state to return to after moving robber
+    gameController.gameContext.currentState = GameState.MOVE_ROBBER;
+
+    // mark the card as played
+    const devCard = payload.devCard; // avoid searching again for the card, we already have it in the payload
+    devCard.played = true;
+
+    gameController._broadcast({
+        type: 'WAITING_FOR_ACTION',
+        payload: {
+            phase: 'MOVE_ROBBER',
+            activePlayerId: gameController.gameContext.currentPlayerId
+        }
+    });
   },
 
-  [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, selectedResources) => {
-    console.log("Year of Plenty played:", selectedResources);
+  [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, payload) => {
+    console.log("Year of Plenty played:", payload.selectedResources);
     
-    const currentPlayer = gameController.getCurrentPlayer();
+    const currentPlayer = gameController._getCurrentPlayer();
     
     // Check for errors first
-    for (const resource of selectedResources) {
+    for (const resource of payload.selectedResources) {
        if (!Object.values(RESOURCE_TYPES).includes(resource)) {
         return {
           status: StatusCodes.ERROR,
@@ -37,10 +51,9 @@ export const DevCardEffects = {
     }
 
     // Apply effects
-    selectedResources.forEach(resource => {
+    payload.selectedResources.forEach(resource => {
       console.log(`Year of Plenty: Giving ${resource}`);
       
-      // ✅ USE UTILS, NOT METHODS
       PlayerUtils.addResources(currentPlayer, { [resource]: 1 });
     });
 

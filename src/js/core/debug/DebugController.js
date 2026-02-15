@@ -182,7 +182,7 @@ export class DebugController {
                 this.controller._broadcast({
                     type: 'CHEAT_DEV_CARD_ADDED',
                     payload: {
-                        activePlayerId: player.id,
+                        activePlayerId: this.gameContext.players[playerIndex].id,
                         cardType: resolvedCardType,
                         amount: amountInt
                     }

@@ -151,9 +151,12 @@ export class InputManager {
     activateDevCards() {
         // enable dev card buttons
         this.devCardsGroup.onclick = (event) => {
-            const cardType = event.target.dataset.cardType;
-            if (cardType) {
-                this.gameClient.submitPlayDevCard(cardType);
+            const cardContainer = event.target.closest('.card-container');
+            if (cardContainer) {
+                const cardType = cardContainer.dataset.type;
+                if (cardType) {
+                    this.gameClient.submitActivateDevCard(cardType);
+                }
             }
         };
     }
@@ -857,7 +860,7 @@ export class InputManager {
                 if (!this.buildingPredictor.build("SETTLEMENT", settlementId)) {
                     console.error("Failed to add settlement to building predictor at:", settlementId);
                 }
-                break;  
+                break;
             case 'BUILD_CITY':
                 if (!this.buildingPredictor.build("CITY", settlementId)) {
                     console.error("Failed to add city to building predictor at:", settlementId);
