@@ -5,6 +5,7 @@ import { StatusCodes } from "../constants/StatusCodes.js";
 import { PlayerUtils } from "../utils/PlayerUtils.js";
 
 import { GameState } from "../core/GameControllerV2.js";
+import { GameRules } from "./GameRules.js";
 
 export const DevCardEffects = {
 
@@ -21,29 +22,30 @@ export const DevCardEffects = {
 
   [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, payload) => {
     console.log("Year of Plenty played:", payload.selectedResources);
-    
+
     const currentPlayer = gameController._getCurrentPlayer();
-    
-    // Check for errors first
-    for (const resource of payload.selectedResources) {
-       if (!Object.values(RESOURCE_TYPES).includes(resource)) {
-        return {
-          status: StatusCodes.ERROR,
-          error_message: `Invalid resource type: ${resource}`
-        };
-      }
+
+    // check if the selected resources are valid
+    if (!GameRules.isValidYOPSelection(payload.selectedResources)) {
+      return {
+        status: StatusCodes.ERROR,
+        message: 'Invalid resource selection for Year of Plenty. Please select 2 resources that you have the right to receive.'
+      };
     }
 
-    // Apply effects
-    payload.selectedResources.forEach(resource => {
-      console.log(`Year of Plenty: Giving ${resource}`);
-      
-      PlayerUtils.addResources(currentPlayer, { [resource]: 1 });
-    });
+    // add resources to player's inventory
+    PlayerUtils.addResources(currentPlayer, payload.selectedResources);
 
-    return {
-      status: StatusCodes.SUCCESS,
-      gameContext: gameController.gameContext
-    };
+    // mark the card as played
+    payload.devCard.played = true;
+
+    // boradcast the resource gain to all players (for UI update purposes)
+    gameController._broadcast({
+      type: 'WAITING_FOR_ACTION',
+      payload: {
+        phase: gameController.gameContext.currentState,
+        activePlayerId: gameController.gameContext.currentPlayerId,
+      }
+    })
   },
 };

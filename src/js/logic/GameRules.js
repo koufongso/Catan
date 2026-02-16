@@ -5,6 +5,7 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
+import {YEAR_OF_PLENTY_CONFIG} from "../constants/GameRuleConstants.js";
 
 
 export const GameRules = Object.freeze({
@@ -263,6 +264,42 @@ export const GameRules = Object.freeze({
 
         return vp;
     },
+
+    /* ----------------------------------------------------- Dev Card Effects ----------------------------------------------------- */
+
+    getYearOfPlentyConfig() {
+        // for year of plenty, player can select any 2 resources, so return all resource types with quantity of 2
+        return YEAR_OF_PLENTY_CONFIG;
+    },
+
+    /**
+     * Check if the selected resources for Year of Plenty are valid
+     * @param {Object} selectedResources - an array of selected resource types (e.g., ['BRICK', 'WHEAT'])
+     * @returns {boolean} - True if the selection is valid, false otherwise.
+     */
+    isValidYOPSelection(selectedResources) {
+        const yopConfig = this.getYearOfPlentyConfig();
+        const validResourceTypes = Object.keys(yopConfig.RESOURCE_OPTIONS);
+        const maxSelectable = yopConfig.NUMER_OF_RESOURCES_TO_SELECT;
+        // check if selected resources are valid
+
+        let resourceCount = 0;
+        for (let [resource, count] of Object.entries(selectedResources)) {
+            if (!validResourceTypes.includes(resource)) {
+                console.error(`Invalid resource type selected for Year of Plenty: ${resource}. Valid options are: ${validResourceTypes.join(', ')}`);
+                return false;
+            }
+            resourceCount += count;
+        } 
+
+        if (resourceCount !== maxSelectable) {
+            console.error(`Invalid number of resources selected for Year of Plenty. Expected: ${maxSelectable}, Got: ${resourceCount}`);
+            return false;
+        }
+        return true;
+    }
+
+    
 
 
 

@@ -338,7 +338,12 @@ export class GameClient {
         switch (cardType) {
             case DEV_CARD_TYPES.KNIGHT:
                 // move robber routine
+                // TODO: add a wrapper function for the knight card logic to make it cleaner
                 this.inputManager.activateRobberPlacementMode(this.id, this.gameContext.gameMap, 'ACTIVATE_DEV_CARD_KNIGHT', true);
+                break;
+            case DEV_CARD_TYPES.YEAR_OF_PLENTY:
+                // activate resource selection UI and wait for player to select resources, then submit the selected resources to the controller
+                this.inputManager.activateYOPSelectionMode();
                 break;
             default:
                 console.warn(`Dev card type ${cardType} activation not implemented yet.`);
@@ -358,10 +363,21 @@ export class GameClient {
         }
 
         // setup pending callback if needed (e.g. for knight card to handle the result of robber placement)
+        // or prelimiary check before submission (e.g. for year of plenty to check if the selected resources are valid)
         switch (cardType) {
             case DEV_CARD_TYPES.KNIGHT:
+                if (!additionalPayload.robStack) {
+                    console.error("Robber placement stack is required for activating Knight card.");
+                    return;
+                }
                 this._pendingAfterRobberPlacement(); // set up pending callback to handle the result update after submitting the robber placement for knight card
                 break;
+            case DEV_CARD_TYPES.YEAR_OF_PLENTY:
+                // the validity of the selected resources should have been checked in the input manager before submission, but do a quick check here as well
+                if (!GameRules.isValidYOPSelection(additionalPayload.selectedResources)) {
+                    console.error('Invalid resource selection for Year of Plenty:', additionalPayload.selectedResources);
+                    return;
+                }
             default:
                 // no pending callback needed for other card types for now
                 break;

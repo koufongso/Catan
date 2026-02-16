@@ -59,7 +59,7 @@ export class GameRenderer {
      * @param {*} gameMap 
      */
     drawStaticBoard(gameMap) {
-        console.log("Drawing static board elements:", gameMap);
+        // console.log("Drawing static board elements:", gameMap);
         this.setupPatterns(this.layers.defs);
 
         // Draw Hexes and Tokens once

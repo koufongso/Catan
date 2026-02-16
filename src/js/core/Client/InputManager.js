@@ -45,6 +45,9 @@ export class InputManager {
             interactionBtnConfirm: 'map-interaction-confirm-btn',
             interactionBtnCancel: 'map-interaction-cancel-btn',
             interactionBtnUndo: 'map-interaction-undo-btn',
+
+            // overlay modal ids
+            overlayContainer: 'overlay-container',
         }
 
         // button onclick handlers
@@ -69,6 +72,7 @@ export class InputManager {
             }
         }
 
+        this.interactionElementRegister = []; // keep track of all dynamically created elements and their handlers for easier cleanup when switching modes
 
 
     }
@@ -179,6 +183,7 @@ export class InputManager {
     _clearInteractionLayer() {
         console.warn("Clearing interaction layer.");
         HtmlUtils.clearElementById(this.elementIds.interactionLayer);
+        HtmlUtils.clearElementById(this.elementIds.overlayContainer);
     }
 
 
@@ -275,14 +280,14 @@ export class InputManager {
         const validBuildingSpots = buildingPredictor.lastResult.result;    // Set of valid road spot ids
         const placedBuildings = buildingPredictor.buildStack;   // Array of placed buildings {type, coord}
 
-        console.log("Drawing from BuildingPredictor with context:", {
-            buildingType,
-            validBuildingSpots,
-            placedBuildings
-        });
+        // console.log("Drawing from BuildingPredictor with context:", {
+        //     buildingType,
+        //     validBuildingSpots,
+        //     placedBuildings
+        // });
         // clear interaction layer
         this._clearInteractionLayer();
-        console.log("Start drawing interaction layer from BuildingPredictor.");
+        // console.log("Start drawing interaction layer from BuildingPredictor.");
 
         // redraw valid spots
         // settlement
@@ -457,7 +462,6 @@ export class InputManager {
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
-
     }
 
 
@@ -567,6 +571,7 @@ export class InputManager {
             case 'BUILD_CITY':
             case 'ROBBER_PLACEMENT':
             case 'ACTIVATE_DEV_CARD_KNIGHT':
+            case 'ACTIVATE_DEV_CARD_YOP':
                 // clear interaction layer
                 this._clearBuildingContext();
                 this._clearInteractionLayer();
@@ -591,27 +596,16 @@ export class InputManager {
                 break;
             case 'DISCARD':
                 // gather selected resources from modal
-                const modalBody = document.querySelector('#resource-selection-modal-overlay #modal-body');
-                const selectedCards = modalBody.querySelectorAll('.card-selected');
-                const resourcesToDiscard = {};
-                selectedCards.forEach(cardDiv => {
-                    const type = cardDiv.dataset.type;
-                    if (!resourcesToDiscard[type]) {
-                        resourcesToDiscard[type] = 0;
-                    }
-                    resourcesToDiscard[type] += 1;
-                });
-
-                // remove the modal
-                const modalOverlay = document.getElementById('resource-selection-modal-overlay');
-                if (modalOverlay) {
-                    modalOverlay.remove();
-                } else {
-                    console.warn("Resource selection modal overlay not found during discard confirm.");
-                }
-
+                const resourcesToDiscard = this._getSelectedResourcesFromModal();
+                this._clearInteractionLayer();
                 // submit discard event to client
                 this.gameClient.submitDiscardResources(resourcesToDiscard);
+                break;
+            case 'ACTIVATE_DEV_CARD_YOP':
+                // gather selected resources from modal
+                const selectedResources = this._getSelectedResourcesFromModal();
+                this._clearInteractionLayer();
+                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.YEAR_OF_PLENTY, { selectedResources });
                 break;
 
             case 'BUILD_ROAD':
@@ -633,12 +627,26 @@ export class InputManager {
                 var robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
                 this._clearRobberPlacementContext();
                 this._clearInteractionLayer();
-                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.KNIGHT, {robStack: robStackCopy});
+                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.KNIGHT, { robStack: robStackCopy });
                 break;
 
             default:
                 console.warn("Confirm button clicked in unknown mode:", this.currentMode);
         }
+    }
+
+    _getSelectedResourcesFromModal() {
+        const modalBody = document.querySelector('#resource-selection-modal-overlay #modal-body');
+        const selectedCards = modalBody.querySelectorAll('.card-selected');
+        const selectedResources = {};
+        selectedCards.forEach(cardDiv => {
+            const type = cardDiv.dataset.type;
+            if (!selectedResources[type]) {
+                selectedResources[type] = 0;
+            }
+            selectedResources[type] += 1;
+        });
+        return selectedResources;
     }
 
 
@@ -661,7 +669,7 @@ export class InputManager {
      * @param {*} msg message to display in modal title
      * @param {*} confirmEventName event name to emit when selection is confirmed
      */
-    _activateResourcesSelectionMode(resources, numToSelect, msg) {
+    _activateResourcesSelectionMode(resources, numToSelect, msg, allowCancel = false) {
         // render text (not implemented yet)
         // TODO: prompt/notify the player to discard cards
 
@@ -685,6 +693,16 @@ export class InputManager {
         confirmBtn.classList.add('btn-disabled');
         confirmBtn.disabled = true; // initially disabled
         btns.appendChild(confirmBtn);
+
+        // add cancel button if allowed
+        if (allowCancel) {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.classList.add('btn-cancel');
+            cancelBtn.onclick = this._handleCancelBtnClick.bind(this);
+            btns.appendChild(cancelBtn);
+        }
+
         // render player's resource cards into the modal body
         const modalBody = modalCard.querySelector('#modal-body');
         this._renderResourceCards(resources, modalBody, (clickedType, cardDiv) => {
@@ -716,8 +734,8 @@ export class InputManager {
         // send selected cards with action, this is action cannot be cancelled
         confirmBtn.onclick = this._handleConfirmBtnClick.bind(this);
 
-        // append to main wrapper
-        document.getElementById('main-wrapper').appendChild(clone);
+        const overlayContainer = document.getElementById(this.elementIds.overlayContainer);
+        overlayContainer.appendChild(overlay);
     }
 
 
@@ -770,7 +788,6 @@ export class InputManager {
      * @param {*} allowCancel 
      */
     activateRobberPlacementMode(playerId, gameMap, mode, allowCancel = false) {
-        console.log("Activating robber placement mode for player:", playerId);
         this._setRobberPlacementContext(playerId, gameMap); // set up context first (robbable tiles, etc.)
         this.setMode(mode);
 
@@ -782,7 +799,6 @@ export class InputManager {
 
         // create "virtual" hitboxes over the valid tiles and add event listeners
         this.robbableTiles.forEach(tile => {
-            console.log("Creating robber hitbox for tile:", tile);
             const hCoord = tile.coord;
             const tileId = HexUtils.coordToId(hCoord);
             const hexHitbox = HtmlUtils.createSvgPolygon(hCoord, ['robbable-tile'], tileId, HEX_SIZE);
@@ -1035,5 +1051,13 @@ export class InputManager {
                 console.error("Unknown mode after settlement placement:", this.currentMode);
         }
 
+    }
+
+    /* ---------------------------------------- Year of Plenty Dev Card Resource Selection Mode ---------------------------------------*/
+    activateYOPSelectionMode() {
+        // reuse 
+        this.setMode('ACTIVATE_DEV_CARD_YOP');
+        const yopConfig = GameRules.getYearOfPlentyConfig();
+        this._activateResourcesSelectionMode(yopConfig.RESOURCE_OPTIONS, yopConfig.NUMER_OF_RESOURCES_TO_SELECT, `Select ${yopConfig.NUMER_OF_RESOURCES_TO_SELECT} Resources for Year of Plenty`, true);
     }
 }
