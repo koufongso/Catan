@@ -40,6 +40,17 @@ export class DebugController {
                 const [type, qty, pIdx] = args;
                 const playerIndex = pIdx !== undefined ? parseInt(pIdx) : this.gameContext.currentPlayerIndex;
                 const player = this.gameContext.players[playerIndex];
+                // check if resource type is valid
+                if (!Object.values(RESOURCE_TYPES).includes(type)) {
+                    this.controller._broadcast({
+                        type: 'INVALID_CHEAT_COMMAND',
+                        payload: {
+                            activePlayerId: player.id,
+                        }
+                    });
+                    return;
+                }
+
                 PlayerUtils.addResources(player, { [type]: parseInt(qty) });
                 this.controller._broadcast({
                     type: 'CHEAT_RESOURCES_ADDED',

@@ -345,6 +345,10 @@ export class GameClient {
                 // activate resource selection UI and wait for player to select resources, then submit the selected resources to the controller
                 this.inputManager.activateYOPSelectionMode();
                 break;
+            case DEV_CARD_TYPES.ROAD_BUILDING:
+                // activate road building mode, but allow building 2 roads for free (no resource cost, and can build 2 roads in one submission)
+                this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'DEV_CARD_ROAD_BUILDING');
+                break;
             default:
                 console.warn(`Dev card type ${cardType} activation not implemented yet.`);
         }
@@ -378,6 +382,14 @@ export class GameClient {
                     console.error('Invalid resource selection for Year of Plenty:', additionalPayload.selectedResources);
                     return;
                 }
+            case DEV_CARD_TYPES.ROAD_BUILDING:
+                 // no pending callback or additional payload needed for road building card, the input manager will handle the road building logic and submission
+                 if (!additionalPayload.buildStack || additionalPayload.buildStack.length != 2) {
+                    console.log(`Invalid build stack for Road Building card activation:`, additionalPayload.buildStack);
+                    console.error("Build stack with 2 roads is required for activating Road Building card.");
+                    return;
+                }
+                 break;
             default:
                 // no pending callback needed for other card types for now
                 break;

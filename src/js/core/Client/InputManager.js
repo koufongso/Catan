@@ -383,12 +383,11 @@ export class InputManager {
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
+        this._disableConfirmBtn(); // disable confirm button until player makes a valid selection
 
         // check btn state
         if (res.result === null) {
-            document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-        } else {
-            document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+            this._enableConfirmBtn();
         }
     }
 
@@ -411,20 +410,30 @@ export class InputManager {
      */
     _setBuildingContext(playerId, gameMap, playerColor = 'rgba(0,255,0,0.5)', mode) {
         let predictorMode = null;
+        let maxRoads = 0;
+        let maxSettlements = 0;
+        let maxCities = 0;
         switch (mode) {
+            case 'DEV_CARD_ROAD_BUILDING':
+                maxRoads = 2;
+                predictorMode = "ROAD_ONLY";
+                break;
             case 'BUILD_ROAD':
+                maxRoads = 1000; // set a high value (effectly unlimited)
                 predictorMode = "ROAD_ONLY";
                 break;
             case 'BUILD_SETTLEMENT':
+                maxSettlements = 1000; // set a high value (effectly unlimited)
                 predictorMode = "SETTLEMENT_ONLY";
                 break;
             case 'BUILD_CITY':
+                maxCities = 1000; // set a high value (effectly unlimited)
                 predictorMode = "CITY_ONLY";
                 break;
             default:
                 throw new Error("Invalid building mode for setting building context:", mode);
         }
-        this.buildingPredictor.init(gameMap, playerId, predictorMode);
+        this.buildingPredictor.init(gameMap, playerId, predictorMode, maxRoads, maxSettlements, maxCities);
         this.gameMap = gameMap;
         this.playerColor = playerColor;
         this.playerId = playerId;
@@ -435,7 +444,7 @@ export class InputManager {
             console.error("Interaction layer not found!");
             return;
         }
-        const validModes = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY'];
+        const validModes = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'DEV_CARD_ROAD_BUILDING'];
         if (!validModes.includes(mode)) {
             console.error("Invalid building mode:", mode);
             return;
@@ -462,6 +471,8 @@ export class InputManager {
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
+
+        this._disableConfirmBtn(); // disable confirm button until player makes a valid selection
     }
 
 
@@ -493,15 +504,17 @@ export class InputManager {
                 for (let btn of btnGroup) {
                     this.interactionLayer.appendChild(btn);
                 }
+
+                this._disableConfirmBtn();
                 // check btn state
                 if (res.result === null) {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-                } else {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+                    this._enableConfirmBtn();
                 }
                 break;
+            case 'DEV_CARD_ROAD_BUILDING':
             case 'BUILD_ROAD':
             case 'BUILD_SETTLEMENT':
+            case 'BUILD_CITY':
                 // remove last selected building
                 if (!this.buildingPredictor.rollback()) {
                     console.warn("No more buildings to undo in initial placement.");
@@ -522,6 +535,7 @@ export class InputManager {
                 for (let btn of btnGroup) {
                     this.interactionLayer.appendChild(btn);
                 }
+                this._disableConfirmBtn(); // disable confirm button until player makes a new selection after undo
 
                 break;
             case 'ROBBER_PLACEMENT':
@@ -566,6 +580,7 @@ export class InputManager {
 
     _handleCancelBtnClick() {
         switch (this.currentMode) {
+            case 'DEV_CARD_ROAD_BUILDING':
             case 'BUILD_ROAD':
             case 'BUILD_SETTLEMENT':
             case 'BUILD_CITY':
@@ -607,15 +622,22 @@ export class InputManager {
                 this._clearInteractionLayer();
                 this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.YEAR_OF_PLENTY, { selectedResources });
                 break;
-
+            case 'DEV_CARD_ROAD_BUILDING':
+                var buildStackCopy = structuredClone(this.buildingPredictor.buildStack); // deep clone to avoid mutation after clear
+                // clear before submit to avoid async issue where player can continue to modify the build stack after clicking confirm but before server response
+                this._clearBuildingContext();
+                this._clearInteractionLayer();
+                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.ROAD_BUILDING, { buildStack: buildStackCopy });
+                break;
             case 'BUILD_ROAD':
             case 'BUILD_SETTLEMENT':
             case 'BUILD_CITY':
-                // submit the selected roads to server/controller
-                this.gameClient.submitBuild(this.buildingPredictor.buildStack, this.currentMode);
-                // clear interaction layer
+                var buildStackCopy = structuredClone(this.buildingPredictor.buildStack); // deep clone to avoid mutation after clear
+                // clear before submit to avoid async issue where player can continue to modify the build stack after clicking confirm but before server response
                 this._clearBuildingContext();
                 this._clearInteractionLayer();
+                // submit the selected roads to server/controller
+                this.gameClient.submitBuild(buildStackCopy, this.currentMode);
                 break;
             case 'ROBBER_PLACEMENT':
                 var robStackCopy = structuredClone(this.robStack); // deep clone to avoid mutation after clear
@@ -819,6 +841,8 @@ export class InputManager {
         for (let btn of btnGroup) {
             this.interactionLayer.appendChild(btn);
         }
+
+        this._disableConfirmBtn();
     }
 
 
@@ -933,12 +957,11 @@ export class InputManager {
                 for (let btn of btnGroup) {
                     this.interactionLayer.appendChild(btn);
                 }
+                this._disableConfirmBtn();
                 // check btn state
                 // if all buildings placed, enable confirm button
                 if (res.result === null) {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-                } else {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+                    this._enableConfirmBtn();
                 }
                 break;
             case 'BUILD_SETTLEMENT':
@@ -947,6 +970,7 @@ export class InputManager {
                 for (let btn of btnGroup2) {
                     this.interactionLayer.appendChild(btn);
                 }
+                this._enableConfirmBtn(); // enable confirm button in normal building mode after 1 valid click
                 break;
             default:
                 console.error("Unknown mode after settlement placement:", this.currentMode);
@@ -988,7 +1012,7 @@ export class InputManager {
 
     _handleEdgeClick(event) {
         // ealry return if not in road building mode
-        const validMode = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'INITIAL_PLACEMENT'];
+        const validMode = ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'INITIAL_PLACEMENT', 'DEV_CARD_ROAD_BUILDING'];
         if (!validMode.includes(this.currentMode)) {
             return; // ignore if not in build road mode
         }
@@ -1004,20 +1028,20 @@ export class InputManager {
         // placed roads
         // add to building predictor
         if (!this.buildingPredictor.build("ROAD", roadId)) {
-            console.error("Failed to add road to building predictor at:", roadId);
+            console.warn("Failed to add road to building predictor at:", roadId);
         }
 
         // get the next valid spots
         const res = this.buildingPredictor.getNextValidSpots();
         if (res.status !== StatusCodes.SUCCESS) {
-            console.error("Failed to get next valid spots after road placement:", res);
+            console.warn("Failed to get next valid spots after road placement:", res);
             return;
         }
 
         this._clearInteractionLayer();
         if (res.result === null) {
             // all buildings placed, wait for confirm
-            console.log("All settlements placed, waiting for confirm.");
+            console.log("All buildings placed, waiting for confirm.");
             // stop here, skip redraw valid spots
             this._drawFromBuildingPredictor(this.buildingPredictor, false, true);
         } else {
@@ -1031,12 +1055,21 @@ export class InputManager {
                 for (let btn of btnGroup) {
                     this.interactionLayer.appendChild(btn);
                 }
+                this._disableConfirmBtn();
                 // check btn state
                 // if all buildings placed, enable confirm button
                 if (res.result === null) {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.remove('svg-btn-disabled');
-                } else {
-                    document.getElementById(this.elementIds.interactionBtnConfirm).classList.add('svg-btn-disabled');
+                    this._enableConfirmBtn();
+                }
+                break;
+            case 'DEV_CARD_ROAD_BUILDING':
+                const btnGroup3 = this.createBtnGroup(0b111); // confirm, cancel, undo
+                for (let btn of btnGroup3) {
+                    this.interactionLayer.appendChild(btn);
+                }
+                this._disableConfirmBtn(); // disable confirm button until player makes a valid selection
+                if (res.result === null) {
+                    this._enableConfirmBtn(); // click on road is already a valid selection, enable confirm button right away
                 }
                 break;
             case 'BUILD_ROAD':
@@ -1046,6 +1079,7 @@ export class InputManager {
                 for (let btn of btnGroup2) {
                     this.interactionLayer.appendChild(btn);
                 }
+                this._enableConfirmBtn(); // click on road is already a valid selection, enable confirm button right away
                 break;
             default:
                 console.error("Unknown mode after settlement placement:", this.currentMode);

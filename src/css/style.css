@@ -811,6 +811,17 @@ body {
     filter: grayscale(1);
 }
 
+.dev-card-used {
+    /* Used Dev Card Style */
+    cursor: default; 
+}
+
+.dev-card-used:hover {
+    /* No hover effect for used cards */
+     transform: none;
+     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
 .card-selected {
     outline: 4px solid red;
 }

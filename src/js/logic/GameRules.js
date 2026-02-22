@@ -5,7 +5,9 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
-import {YEAR_OF_PLENTY_CONFIG} from "../constants/GameRuleConstants.js";
+import { YEAR_OF_PLENTY_CONFIG } from "../constants/GameRuleConstants.js";
+
+import { BuildingPredictor } from "../utils/BuildingPredictor.js";
 
 
 export const GameRules = Object.freeze({
@@ -290,16 +292,37 @@ export const GameRules = Object.freeze({
                 return false;
             }
             resourceCount += count;
-        } 
+        }
 
         if (resourceCount !== maxSelectable) {
             console.error(`Invalid number of resources selected for Year of Plenty. Expected: ${maxSelectable}, Got: ${resourceCount}`);
             return false;
         }
         return true;
+    },
+
+    /**
+     * Verify if the build stack for building is valid. Rules to follow:
+     * @param {*} gameMap 
+     * @param {*} playerId 
+     * @param {*} buildStack 
+     * @param {*} mode 'INITIAL_PLACEMENT', 'ROAD_ONLY', 'SETTLEMENT_ONLY', 'CITY_ONLY'
+     */
+    isValidBuild(gameMap, playerId, buildStack, mode) {
+        console.log(`Checking build stack validity for player ${playerId} with BuildingPredictor in mode ${mode}...`);
+        const buildingPredictor = new BuildingPredictor();
+        buildingPredictor.init(gameMap, playerId, mode);
+        buildingPredictor.getNextValidSpots(); // prepare valid spots for the player
+        buildStack.forEach((building) => {
+            console.log(`Verifying building: ${building.type} at ${building.coord}`);
+            if (!buildingPredictor.build(building.type, building.coord)) {
+                return false;
+            }
+        });
+        return true;
     }
 
-    
+
 
 
 

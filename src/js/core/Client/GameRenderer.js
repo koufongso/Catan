@@ -382,13 +382,21 @@ export class GameRenderer {
 
         // used dev cards
         devCards.forEach(card => {
+            let classList = [];
             if (DevCardUtils.isPlayed(card)) { // used dev cards (already played)
-                const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
+                classList = ['dev-card-used'];
+                const cardHtml = this.createDevCardHtml(card, classList);
                 usedDevCardsContainer.appendChild(cardHtml);
             } else { // unused dev cards (not played yet)
-                const cardHtml = this.createDevCardHtml(card, currentTurnNumber);
+                if (DevCardUtils.isLocked(card, currentTurnNumber)) {
+                    classList = ['dev-card-locked'];
+                } else {
+                    classList = ['dev-card-unlocked'];
+                }
+                const cardHtml = this.createDevCardHtml(card, classList);
                 devCardsContainer.appendChild(cardHtml);
             }
+
         });
     }
 
@@ -415,7 +423,7 @@ export class GameRenderer {
      * @param {DevCard} devCard a dev card object
      * @param {number} currentTurnNumber the current turn number (use to check if dev card is locked)
      */
-    createDevCardHtml(devCard, currentTurnNumber) {
+    createDevCardHtml(devCard, classList = []) {
         const template = document.getElementById('card-template');
         const clone = template.content.cloneNode(true);
         const cardDiv = clone.querySelector('.card-container');
@@ -423,15 +431,8 @@ export class GameRenderer {
 
         img.src = TEXTURE_PATHS.CARDS[devCard.type];
         img.alt = `${devCard.type} Dev Card`;
-        cardDiv.classList.add('dev-card');
+        cardDiv.classList.add(...classList);
         cardDiv.dataset.type = devCard.type;
-
-        // check if the card is locked (bought this turn)
-        if (DevCardUtils.isLocked(devCard, currentTurnNumber)) {
-            cardDiv.classList.add('dev-card-locked'); // cannot be played this turn
-        } else {
-            cardDiv.classList.add('dev-card-playable'); // can be played
-        }
 
         return clone;
     }

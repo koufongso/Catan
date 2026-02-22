@@ -3,6 +3,8 @@ import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { StatusCodes } from "../constants/StatusCodes.js";
 import { PlayerUtils } from "../utils/PlayerUtils.js";
+import { MapUtils } from "../utils/MapUtils.js";
+import { HexUtils } from "../utils/HexUtils.js";
 
 import { GameState } from "../core/GameControllerV2.js";
 import { GameRules } from "./GameRules.js";
@@ -48,4 +50,64 @@ export const DevCardEffects = {
       }
     })
   },
+
+  [DEV_CARD_TYPES.ROAD_BUILDING]: (gameController, payload) => {
+    const playerId = payload.playerId;
+    console.log("Road Building card played with build stack:", payload.buildStack);
+    // check if there are only 2 roads in the build stack
+    let countRoads = 0;
+    payload.buildStack.forEach(build => {
+      if (build.type === 'ROAD') {
+        countRoads++;
+        if (countRoads > 2) {
+          console.error("Too many roads in build stack for Road Building card. Only 2 roads are allowed.");
+          return {
+            status: StatusCodes.ERROR,
+            message: 'Too many roads in build stack for Road Building. Only 2 roads are allowed.'
+          };
+        }
+      } else {
+        console.error("Invalid build type in build stack for Road Building. Only roads are allowed.");
+        return {
+          status: StatusCodes.ERROR,
+          message: 'Invalid build type in build stack for Road Building. Only roads are allowed.'
+        };
+      }
+    });
+
+    if (countRoads !== 2) {
+      console.error("Too many roads in build stack for Road Building card. Only 2 roads are allowed.");
+      return {
+        status: StatusCodes.ERROR,
+        message: 'No roads in build stack for Road Building. Please add up to 2 roads to the build stack.'
+      };
+    }
+
+    // check if the build stack is valid according to game rules
+    const isValidBuild = GameRules.isValidBuild(gameController.gameContext.gameMap, gameController.gameContext.currentPlayerId, payload.buildStack, 'ROAD_ONLY');
+    if (!isValidBuild) {
+      return {
+        status: StatusCodes.ERROR,
+        message: 'Invalid build stack for Road Building. Please ensure the roads are placed in valid locations according to the game rules.'
+      };
+    }
+
+    // pass check, add the roads to the player's inventory
+    payload.buildStack.forEach(building => {
+      MapUtils.updateRoad(gameController.gameContext.gameMap, building.coord, playerId);
+      PlayerUtils.addRoad(gameController.gameContext.players.find(p => p.id === playerId), HexUtils.coordToId(building.coord));
+    });
+    // mark the card as played
+    payload.devCard.played = true;
+
+    // boradcast the resource gain to all players (for UI update purposes)
+    gameController._broadcast({
+      type: 'WAITING_FOR_ACTION',
+      payload: {
+        phase: gameController.gameContext.currentState,
+        activePlayerId: gameController.gameContext.currentPlayerId,
+      }
+    })
+
+  }
 };

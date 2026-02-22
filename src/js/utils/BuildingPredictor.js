@@ -13,6 +13,15 @@ export class BuildingPredictor {
         this.buildStack = []; // (type, coord) pairs
         this.playerId = null; // only valid for one player at a time
         this.gameMap = null;
+        
+        // define max limits for each building type
+        this.maxRoad = 1000; 
+        this.maxSettlements = 1000; 
+        this.maxCities = 1000;
+        // track how many of each building type built
+        this.roadBuilt = 0;
+        this.settlementBuilt = 0;
+        this.cityBuilt = 0;
 
         // current valid spot caches for quick lookup
         // will be updated after each build
@@ -24,7 +33,7 @@ export class BuildingPredictor {
         this.initialized = false;
     }
 
-    init(gameMap, playerId, mode) {
+    init(gameMap, playerId, mode, maxRoad = 1000, maxSettlements = 1000, maxCities = 1000) {
         this.gameMap = MapUtils.clone(gameMap); // construct a new instance from the deep copy data
         this.playerId = playerId;
         this.buildStack = []; // reset build stack
@@ -38,6 +47,14 @@ export class BuildingPredictor {
         this.lastBuildId = null;
         this.counter = 0;
         this.lastValidSpots = null; // cache last valid spots returned (useful for rendering)
+
+        this.maxRoad = maxRoad;
+        this.maxSettlements = maxSettlements;
+        this.maxCities = maxCities;
+        
+        this.roadBuilt = 0;
+        this.settlementBuilt = 0;
+        this.cityBuilt = 0;
 
         this.initialized = true;
     }
@@ -56,6 +73,14 @@ export class BuildingPredictor {
         this.lastValidSpots = null;
         this.counter = 0;
         this.initialized = false;
+
+        this.maxRoad = 1000;
+        this.maxSettlements = 1000;
+        this.maxCities = 1000;
+
+        this.roadBuilt = 0;
+        this.settlementBuilt = 0;
+        this.cityBuilt = 0;
     }
 
     /**
@@ -101,6 +126,14 @@ export class BuildingPredictor {
 
             case "ROAD_ONLY":
                 {
+                    if (this.roadBuilt === this.maxRoad) {
+                        return {
+                            status: StatusCodes.SUCCESS,
+                            type: 'ROAD',
+                            result: null // no more roads can be built
+                        }
+                    }
+
                     this.validRoadSpots = GameRules.getValidRoadFromSettlementIds(this.gameMap, this.playerId);
                     console.log(this.validRoadSpots);
                     this.lastResult = {
@@ -112,6 +145,14 @@ export class BuildingPredictor {
                 }
             case "SETTLEMENT_ONLY":
                 {
+                    if (this.settlementBuilt === this.maxSettlements) {
+                        return {
+                            status: StatusCodes.SUCCESS,
+                            type: 'SETTLEMENT',
+                            result: null // no more settlements can be built
+                        }
+                    }
+
                     this.validSettlementSpots = GameRules.getValidSettlementSpots(this.gameMap, this.playerId);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
@@ -122,6 +163,14 @@ export class BuildingPredictor {
                 }
             case "CITY_ONLY":
                 {
+                    if (this.cityBuilt === this.maxCities) {
+                        return {
+                            status: StatusCodes.SUCCESS,
+                            type: 'CITY',
+                            result: null // no more cities can be built
+                        }
+                    }
+
                     this.validCitySpots = GameRules.getValidCitySpots(this.gameMap, this.playerId);
                     this.lastResult = {
                         status: StatusCodes.SUCCESS,
@@ -149,6 +198,19 @@ export class BuildingPredictor {
         if (this.validRoadSpots.size === 0 && this.validSettlementSpots.size === 0 && this.validCitySpots.size === 0) {
             throw new Error("No valid spots computed. Call getNextValidSpots() before build().");
         }
+
+        if (type === 'ROAD' && this.roadBuilt >= this.maxRoad) {
+            return false;
+        }
+
+        if (type === 'SETTLEMENT' && this.settlementBuilt >= this.maxSettlements) {
+            return false;
+        }
+
+        if (type === 'CITY' && this.cityBuilt >= this.maxCities) {
+            return false;
+        }
+
         const coord = typeof location === 'string' ? HexUtils.idToCoord(location) : location;
         const coordId = HexUtils.coordToId(coord);
 
@@ -159,18 +221,22 @@ export class BuildingPredictor {
                     return false
                 }
                 MapUtils.updateSettlement(this.gameMap, coord, this.playerId, 1);
+                this.settlementBuilt += 1;
                 break;
             case 'ROAD':
                 if (!this.validRoadSpots.has(coordId)) {
                     return false
                 }
                 MapUtils.updateRoad(this.gameMap, coord, this.playerId);
+                this.roadBuilt += 1;
                 break;
             case 'CITY':
                 if (!this.validCitySpots.has(coordId)) {
                     return false
                 }
                 MapUtils.updateSettlement(this.gameMap, coord, this.playerId, 2);
+                this.cityBuilt += 1;
+                this.settlementBuilt -= 1; // upgrading a settlement to a city, so decrement settlement count
                 break;
             default:
                 throw new Error(`Invalid building type for BuildingPredictor: ${type}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);
@@ -218,12 +284,16 @@ export class BuildingPredictor {
         switch (buildType) {
             case 'SETTLEMENT':
                 MapUtils.removeSettlement(this.gameMap, buildId);
+                this.settlementBuilt -= 1;
                 break;
             case 'ROAD':
                 MapUtils.removeRoad(this.gameMap, buildId);
+                this.roadBuilt -= 1;
                 break;
             case 'CITY':
                 MapUtils.updateSettlement(this.gameMap, buildId, this.playerId, 1); // downgrade city back to settlement
+                this.cityBuilt -= 1;
+                this.settlementBuilt += 1;
                 break;
             default:
                 throw new Error(`Invalid building type in BuildingPredictor rollback: ${buildType}, must be 'SETTLEMENT', 'ROAD', or 'CITY'`);
