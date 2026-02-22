@@ -4,6 +4,7 @@ import { GameRules } from "../../logic/GameRules.js";
 
 // constants
 import { DEV_CARD_TYPES } from "../../constants/DevCardTypes.js";
+import { RESOURCE_TYPES } from "../../constants/ResourceTypes.js";
 
 // utils
 import { PlayerUtils } from "../../utils/PlayerUtils.js";
@@ -349,6 +350,10 @@ export class GameClient {
                 // activate road building mode, but allow building 2 roads for free (no resource cost, and can build 2 roads in one submission)
                 this.inputManager.activateBuildingMode(this.id, this.gameContext.gameMap, this.color, 'DEV_CARD_ROAD_BUILDING');
                 break;
+            case DEV_CARD_TYPES.MONOPOLY:
+                // activate resource selection UI for monopoly card, then submit the selected resource type to the controller
+                this.inputManager.activateMonopolySelectionMode();
+                break;
             default:
                 console.warn(`Dev card type ${cardType} activation not implemented yet.`);
         }
@@ -390,6 +395,11 @@ export class GameClient {
                     return;
                 }
                  break;
+            case DEV_CARD_TYPES.MONOPOLY:
+                if (!additionalPayload.selectedResource || !Object.values(RESOURCE_TYPES).includes(additionalPayload.selectedResource)) {
+                    console.error("Selected resource type is required for activating Monopoly card.");
+                    return;
+                }
             default:
                 // no pending callback needed for other card types for now
                 break;

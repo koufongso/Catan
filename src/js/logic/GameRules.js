@@ -5,7 +5,7 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
-import { YEAR_OF_PLENTY_CONFIG } from "../constants/GameRuleConstants.js";
+import { YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG } from "../constants/GameRuleConstants.js";
 
 import { BuildingPredictor } from "../utils/BuildingPredictor.js";
 
@@ -272,6 +272,11 @@ export const GameRules = Object.freeze({
     getYearOfPlentyConfig() {
         // for year of plenty, player can select any 2 resources, so return all resource types with quantity of 2
         return YEAR_OF_PLENTY_CONFIG;
+    },
+
+    getMonopolyConfig() {
+        // for monopoly, player can select any 1 resource, so return all resource types with quantity of 1
+        return MONOPOLY_CONFIG;
     },
 
     /**

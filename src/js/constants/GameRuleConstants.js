@@ -64,3 +64,15 @@ export const YEAR_OF_PLENTY_CONFIG = Object.freeze({
         [RESOURCE_TYPES.WHEAT]: yopNumResources
     }
 });
+
+const monolopyNumResources = 1;
+export const MONOPOLY_CONFIG = Object.freeze({
+    NUMER_OF_RESOURCES_TO_SELECT: monolopyNumResources,
+    RESOURCE_OPTIONS:{
+        [RESOURCE_TYPES.BRICK]: monolopyNumResources,
+        [RESOURCE_TYPES.LUMBER]: monolopyNumResources,
+        [RESOURCE_TYPES.ORE]: monolopyNumResources,
+        [RESOURCE_TYPES.WOOL]: monolopyNumResources,
+        [RESOURCE_TYPES.WHEAT]: monolopyNumResources
+    }
+});

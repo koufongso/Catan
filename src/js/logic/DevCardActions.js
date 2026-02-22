@@ -109,5 +109,44 @@ export const DevCardEffects = {
       }
     })
 
+  },
+
+  [DEV_CARD_TYPES.MONOPOLY]: (gameController, payload) => {
+    const playerId = payload.playerId;
+    const selectedResource = payload.selectedResource;
+
+    // check if the selected resource is valid
+    if (!Object.values(RESOURCE_TYPES).includes(selectedResource)) {
+      return {
+        status: StatusCodes.ERROR,
+        message: 'Invalid resource selection for Monopoly. Please select a valid resource type.'
+      };
+    }
+
+    // iterate through all players and steal the target resource
+    const playerInstance = gameController.gameContext.players.find(p => p.id === playerId);
+
+    gameController.gameContext.players.forEach(player => {
+      if (player.id !== playerId) {
+        const amountToSteal = player.resources[selectedResource];
+        if (amountToSteal > 0) {
+          PlayerUtils.deductResources(player, { [selectedResource]: amountToSteal }); // remove resources from other player
+          PlayerUtils.addResources(playerInstance, { [selectedResource]: amountToSteal }); // add resources to current player
+        }
+      }
+    });
+
+    // mark the card as played
+    payload.devCard.played = true;
+
+    // boardcast the resource gain to all players (for UI update purposes)
+    gameController._broadcast({
+      type: 'WAITING_FOR_ACTION',
+      payload: {
+        phase: gameController.gameContext.currentState,
+        activePlayerId: gameController.gameContext.currentPlayerId,
+      }
+    })
+  
   }
 };

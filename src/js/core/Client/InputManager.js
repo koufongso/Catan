@@ -587,6 +587,7 @@ export class InputManager {
             case 'ROBBER_PLACEMENT':
             case 'ACTIVATE_DEV_CARD_KNIGHT':
             case 'ACTIVATE_DEV_CARD_YOP':
+            case 'ACTIVATE_DEV_CARD_MONOPOLY':
                 // clear interaction layer
                 this._clearBuildingContext();
                 this._clearInteractionLayer();
@@ -621,6 +622,12 @@ export class InputManager {
                 const selectedResources = this._getSelectedResourcesFromModal();
                 this._clearInteractionLayer();
                 this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.YEAR_OF_PLENTY, { selectedResources });
+                break;
+            case 'ACTIVATE_DEV_CARD_MONOPOLY':
+                // gather selected resource type from modal (only allow selecting one type)
+                const selectedResource = Object.keys(this._getSelectedResourcesFromModal());
+                this._clearInteractionLayer();
+                this.gameClient.submitActivateDevCard(DEV_CARD_TYPES.MONOPOLY, { selectedResource: selectedResource[0]});
                 break;
             case 'DEV_CARD_ROAD_BUILDING':
                 var buildStackCopy = structuredClone(this.buildingPredictor.buildStack); // deep clone to avoid mutation after clear
@@ -1092,6 +1099,23 @@ export class InputManager {
         // reuse 
         this.setMode('ACTIVATE_DEV_CARD_YOP');
         const yopConfig = GameRules.getYearOfPlentyConfig();
-        this._activateResourcesSelectionMode(yopConfig.RESOURCE_OPTIONS, yopConfig.NUMER_OF_RESOURCES_TO_SELECT, `Select ${yopConfig.NUMER_OF_RESOURCES_TO_SELECT} Resources for Year of Plenty`, true);
+        this._activateResourcesSelectionMode(
+            yopConfig.RESOURCE_OPTIONS,
+            yopConfig.NUMER_OF_RESOURCES_TO_SELECT,
+            `Select ${yopConfig.NUMER_OF_RESOURCES_TO_SELECT} Resources for Year of Plenty`,
+            true
+        );
+    }
+
+
+    activateMonopolySelectionMode() {
+        this.setMode('ACTIVATE_DEV_CARD_MONOPOLY');
+        const monopolyConfig = GameRules.getMonopolyConfig();
+        this._activateResourcesSelectionMode(
+            monopolyConfig.RESOURCE_OPTIONS, 
+            monopolyConfig.NUMER_OF_RESOURCES_TO_SELECT,
+            `Select ${monopolyConfig.NUMER_OF_RESOURCES_TO_SELECT} Resource for Monopoly`,
+            true
+        );
     }
 }
