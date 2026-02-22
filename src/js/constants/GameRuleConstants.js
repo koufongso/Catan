@@ -2,6 +2,8 @@ import { DEV_CARD_TYPES } from './DevCardTypes.js';
 import { RESOURCE_TYPES } from './ResourceTypes.js';
 import { TERRAIN_TYPES } from './TerrainTypes.js';
 
+export const WINNING_VP = 10; // VP required to win the game
+
 // maximum number of players allowed in the game
 export const MAX_PLAYERS = 4;
 export const PLAYER_COLORS = ['Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple'];

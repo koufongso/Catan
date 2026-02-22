@@ -5,7 +5,9 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
-import { YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG } from "../constants/GameRuleConstants.js";
+import { WINNING_VP, YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG ,PLAYER_ASSET_LIMITS} from "../constants/GameRuleConstants.js";
+import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
+import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
 
 import { BuildingPredictor } from "../utils/BuildingPredictor.js";
 
@@ -258,13 +260,17 @@ export const GameRules = Object.freeze({
         // Count keys
         vp += Object.keys(player.settlements).length;
         vp += Object.keys(player.cities).length * 2;
-        vp += player.devCards.filter(card => card.type === 'VICTORY_POINT').length;
+        vp += player.devCards.filter(card => card.type === DEV_CARD_TYPES.VICTORY_POINT).length;
 
         if (player.achievements.hasLongestRoad) vp += 2;
         if (player.achievements.hasLargestArmy) vp += 2;
-        vp += player.achievements.cheatVP;
+        vp += player.achievements.cheatVP; // only for testing purpose
 
         return vp;
+    },
+
+    isPlayerWin: (player) => {
+        return GameRules.getVictoryPoints(player) >= WINNING_VP;
     },
 
     /* ----------------------------------------------------- Dev Card Effects ----------------------------------------------------- */
@@ -325,9 +331,66 @@ export const GameRules = Object.freeze({
             }
         });
         return true;
+    },
+
+    /*------------------------------------------------------ VP System ----------------------------------------------------- */
+
+    /**
+     * A helper function to determine the owner of an achievement (Longest Road or Largest Army). The logic is as follows:
+     * @param {Array{Object}} players an array of player objects
+     * @param {*} currentOwnerFlag 
+     * @param {*} getCountFunc a function that takes a player and returns the count relevant to the achievement
+     * @param {*} threshold the minimum number to qualify for the achievement (5 for longest road, 3 for largest army)
+     * @returns {string|null} the player id of the achievement owner, or null if no one qualifies
+     */
+    _getAchievementOwner(players, currentOwnerFlag, getCountFunc, threshold) {
+        let ownerId = null;
+        let maxValue = threshold - 1;
+
+        players.forEach(player => {
+            const count = getCountFunc(player);
+            const isCurrentOwner = player.achievements[currentOwnerFlag];
+
+            // Logic: Current owner keeps it if tied; others must beat it
+            if ((isCurrentOwner && count > maxValue) || (!isCurrentOwner && count > maxValue)) {
+                // Wait, the logic is actually simpler: 
+                // If you are the owner, you stay owner unless someone beats you.
+                // If you aren't, you must exceed the current leader.
+            }
+
+            // Cleanest version of your logic:
+            if (isCurrentOwner) {
+                if (count >= maxValue) {
+                    maxValue = count;
+                    ownerId = player.id;
+                }
+            } else {
+                if (count > maxValue) {
+                    maxValue = count;
+                    ownerId = player.id;
+                }
+            }
+        });
+        return ownerId;
+    },
+
+    getPlayerWithLongestRoad(players) {
+        return this._getAchievementOwner(
+            players,
+            'hasLongestRoad',
+            (p) => PLAYER_ASSET_LIMITS.roads - p.roadsLeft, // TODO: this is just a simple placeholder, need an actual longest path of undirected grpah algorithm
+            5
+        );
+    },
+
+    getPlayerWithLargestArmy(players) {
+        return this._getAchievementOwner(
+            players,
+            'hasLargestArmy',
+            (p) => p.achievements.knightsPlayed,
+            3
+        );
     }
-
-
 
 
 

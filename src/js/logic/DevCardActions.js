@@ -18,6 +18,14 @@ export const DevCardEffects = {
       payload: payload // to mark the card as played, nedd to pass the original object 
     };
 
+    // mark as played
+    payload.devCard.played = true;
+    const currentPlayer = gameController._getCurrentPlayer();
+    currentPlayer.achievements.knightsPlayed++;
+    // compute VP
+    gameController._updateGameAchievements();
+
+    // continue process of moving the robber and stealing resources as normal
     gameController.returnStateAfterRob = gameController.gameContext.currentState; // return the current state after completion of robber placement
     gameController.handleStateMoveRobber(event); // let the game controller handle the rest of the logic for moving the robber and stealing resources
   },
@@ -100,6 +108,9 @@ export const DevCardEffects = {
     // mark the card as played
     payload.devCard.played = true;
 
+    // udpate VP
+    gameController._updateGameAchievements();
+
     // boradcast the resource gain to all players (for UI update purposes)
     gameController._broadcast({
       type: 'WAITING_FOR_ACTION',
@@ -147,6 +158,6 @@ export const DevCardEffects = {
         activePlayerId: gameController.gameContext.currentPlayerId,
       }
     })
-  
+
   }
 };

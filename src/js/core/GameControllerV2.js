@@ -500,6 +500,9 @@ export class GameControllerV2 {
         // put resource back to bank
         this._addBankResource(totalCost);
 
+        // update achievements
+        this._updateGameAchievements();
+
         // broadcast update to all clients
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
@@ -543,8 +546,11 @@ export class GameControllerV2 {
         this._addBankResource(cost);
 
         // give player a dev card
-        const devCard = DevCardDeckUtils.drawCard(this.gameContext.devCardDeck, this.gameContext.turnNumber);
+        const devCard = DevCardDeckUtils.draw(this.gameContext.devCardDeck, this.gameContext.turnNumber);
         PlayerUtils.addDevCard(player, devCard);
+
+        // update achievements
+        this._updateGameAchievements();
 
         // broadcast update to all clients
         this._broadcast({
@@ -685,15 +691,6 @@ export class GameControllerV2 {
         console.log(`change state to ${this.returnStateAfterRob}`);
         this.gameContext.currentState = this.returnStateAfterRob;
         this.returnStateAfterRob = null; // clear
-
-        if (event.type === 'ACTIVATE_DEV_CARD_KNIGHT') {
-            const currentPlayer = this._getCurrentPlayer();
-            // mark the card as played and update knights played count
-            const devCard = event.payload.devCard; // avoid searching again for the card, we already have it in the payload
-            devCard.played = true;
-            currentPlayer.achievements.knightsPlayed++;
-            this.updateLargestArmy(); 
-        }
 
         this._broadcast({
             type: 'WAITING_FOR_ACTION',
@@ -1000,6 +997,35 @@ export class GameControllerV2 {
         PlayerUtils.addResources(activePlayer, stolenResources);
         return stolenResources;
     }
+
+    /**
+     * A helper function to update achievements (Longest Road and Largest Army) for all players, and check if there is a winner after each update.
+     */
+    _updateGameAchievements() {
+    const players = this.gameContext.players;
+
+    // 1. Recalculate Achievements Ownerships
+    const newLongestRoadId = GameRules.getPlayerWithLongestRoad(players);
+    const newLargestArmyId = GameRules.getPlayerWithLargestArmy(players);
+
+    // 2. Sync Player States
+    players.forEach(player => {
+        player.achievements.hasLongestRoad = (player.id === newLongestRoadId);
+        player.achievements.hasLargestArmy = (player.id === newLargestArmyId);
+        
+        // Update the context tracking IDs
+        this.gameContext.playerWithLongestRoad = newLongestRoadId;
+        this.gameContext.playerWithLargestArmy = newLargestArmyId;
+    });
+
+    // 3. Check for Winner
+    const winner = players.find(player => GameRules.isPlayerWin(player));
+    if (winner) {
+        // TODO: handle end game logic, e.g. broadcast game end event, update player stats, etc.
+        console.warn(`Player ${winner.id} wins the game with ${GameRules.getVictoryPoints(winner)} VP!`);
+        console.warn('This logic is not implemented yet, but at this point we should end the game and declare the winner.');
+    }
+}
 
 
 }
