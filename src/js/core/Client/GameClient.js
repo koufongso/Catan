@@ -44,7 +44,7 @@ export class GameClient {
             console.warn(`AI Client ${this.id} logic not implemented yet.`);
             return;
         }
-        console.log(`client ${this.id} this.pendingRobberResultCallback: ${this.pendingRobberResultCallback}`);
+        // console.log(`client ${this.id} this.pendingRobberResultCallback: ${this.pendingRobberResultCallback}`);
         if (this.pendingRobberResultCallback) {
             // If there is a pending callback for robber placement result, call it with the update packet
             await this.pendingRobberResultCallback(updatePacket);
@@ -191,6 +191,11 @@ export class GameClient {
 
 
         // check if has enough resources to build the roads
+        if (window.freeRoadMode) {
+            console.log("Free road mode is ON, skipping resource cost check for building roads.");
+            totalCost = {}; // set total cost to empty since it's free
+        }
+
         let player = this.gameContext.players.find(p => p.id === this.id);
 
 

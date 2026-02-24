@@ -14,7 +14,7 @@ import { HexUtils } from "../utils/HexUtils.js";
 import { PlayerUtils } from "../utils/PlayerUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
 import { DevCardDeckUtils } from "../utils/DeckUtils.js";
-import {DevCardUtils} from "../utils/DevCardUtils.js";
+import { DevCardUtils } from "../utils/DevCardUtils.js";
 
 // logic
 import { DevCardEffects } from "../logic/DevCardActions.js";
@@ -135,7 +135,6 @@ export class GameControllerV2 {
 
         // replaced with Sanitize player info
         gameContextCopy.players = this.gameContext.players.map(player => {
-            console.log(`Serializing player ${player.id} for viewingPlayerId ${viewingPlayerId} with showAll=${showAll}`);
             return PlayerUtils.serialize(player, !showAll && player.id !== viewingPlayerId);
         });
 
@@ -374,7 +373,7 @@ export class GameControllerV2 {
             };
         }
         payload.devCard = devCard; // add the dev card object to the payload for easy access in the effect function
-        
+
         // activate dev card effect
         console.log(`Activating dev card effect for ${cardType} with payload:`, payload);
         DevCardEffects[cardType](this, payload); // pass entire controller and the payload for generic interface
@@ -469,6 +468,11 @@ export class GameControllerV2 {
             }
         }
 
+        if (window.freeRoadMode) {
+            console.log("Free road mode is ON, skipping resource cost check for building roads.");
+            totalCost = {}; // set total cost to empty since it's free
+        }
+
         if (!PlayerUtils.canAfford(player, totalCost)) {
             return {
                 status: StatusCodes.ERROR,
@@ -492,6 +496,11 @@ export class GameControllerV2 {
         const validateRes = this._validateAndApplyBuildStack(playerId, buildStack, mode);
         if (validateRes.status !== StatusCodes.SUCCESS) {
             return validateRes;
+        }
+
+        // build new road, check longest path
+        if (eventType === 'BUILD_ROAD') {
+            this._updateLongestRoad();
         }
 
         // apply cost
@@ -998,34 +1007,40 @@ export class GameControllerV2 {
         return stolenResources;
     }
 
+    _updateLongestRoad() {
+        const newLongestRoadId = GameRules.getPlayerWithLongestRoad(this.gameContext.players);
+        this.gameContext.players.forEach(player => {
+            player.achievements.hasLongestRoad = (player.id === newLongestRoadId);
+        });
+        this.gameContext.playerWithLongestRoad = newLongestRoadId;
+    }
+
+    _updateLargestArmy() {
+        const newLargestArmyId = GameRules.getPlayerWithLargestArmy(this.gameContext.players);
+        this.gameContext.players.forEach(player => {
+            player.achievements.hasLargestArmy = (player.id === newLargestArmyId);
+            // Update the context tracking IDs
+            this.gameContext.playerWithLargestArmy = newLargestArmyId;
+        });
+    }
+
     /**
      * A helper function to update achievements (Longest Road and Largest Army) for all players, and check if there is a winner after each update.
      */
     _updateGameAchievements() {
-    const players = this.gameContext.players;
+        const players = this.gameContext.players;
 
-    // 1. Recalculate Achievements Ownerships
-    const newLongestRoadId = GameRules.getPlayerWithLongestRoad(players);
-    const newLargestArmyId = GameRules.getPlayerWithLargestArmy(players);
+        //this._updateLongestRoad(); // this might be too expensive to call both every time, consider only calling the relevant one based on road condition change
+        this._updateLargestArmy();
 
-    // 2. Sync Player States
-    players.forEach(player => {
-        player.achievements.hasLongestRoad = (player.id === newLongestRoadId);
-        player.achievements.hasLargestArmy = (player.id === newLargestArmyId);
-        
-        // Update the context tracking IDs
-        this.gameContext.playerWithLongestRoad = newLongestRoadId;
-        this.gameContext.playerWithLargestArmy = newLargestArmyId;
-    });
-
-    // 3. Check for Winner
-    const winner = players.find(player => GameRules.isPlayerWin(player));
-    if (winner) {
-        // TODO: handle end game logic, e.g. broadcast game end event, update player stats, etc.
-        console.warn(`Player ${winner.id} wins the game with ${GameRules.getVictoryPoints(winner)} VP!`);
-        console.warn('This logic is not implemented yet, but at this point we should end the game and declare the winner.');
+        // 3. Check for Winner
+        const winner = players.find(player => GameRules.isPlayerWin(player));
+        if (winner) {
+            // TODO: handle end game logic, e.g. broadcast game end event, update player stats, etc.
+            console.warn(`Player ${winner.id} wins the game with ${GameRules.getVictoryPoints(winner)} VP!`);
+            console.warn('This logic is not implemented yet, but at this point we should end the game and declare the winner.');
+        }
     }
-}
 
 
 }

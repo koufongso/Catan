@@ -181,7 +181,7 @@ export class InputManager {
     }
 
     _clearInteractionLayer() {
-        console.warn("Clearing interaction layer.");
+        // console.warn("Clearing interaction layer.");
         HtmlUtils.clearElementById(this.elementIds.interactionLayer);
         HtmlUtils.clearElementById(this.elementIds.overlayContainer);
     }
@@ -876,7 +876,7 @@ export class InputManager {
 
     /*---------------------------------------- basic element click handlers for building mode (road/settlement/city) -------------------------------------------------------*/
     _handleVertexClick(event) {
-        console.log("Vertex clicked:", event.target.dataset.id);
+        // console.log("Vertex clicked:", event.target.dataset.id);
 
         switch (this.currentMode) {
             case 'INITIAL_PLACEMENT':

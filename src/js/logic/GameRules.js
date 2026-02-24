@@ -3,6 +3,8 @@
  */
 import { HexUtils } from "../utils/HexUtils.js";
 import { MapUtils } from "../utils/MapUtils.js";
+import { RoadUtils } from "../utils/RoadUtils.js";
+
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
 import { WINNING_VP, YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG ,PLAYER_ASSET_LIMITS} from "../constants/GameRuleConstants.js";
@@ -59,7 +61,7 @@ export const GameRules = Object.freeze({
         if (playerSettlementIdSet === null) {
             playerSettlementIdSet = MapUtils.getPlayerSettlementVerticesIdSet(gameMap, playerId);
         }
-        console.log("Player settlement ids for road building:", playerSettlementIdSet);
+        // console.log("Player settlement ids for road building:", playerSettlementIdSet);
         const visitedVertexIds = new Set();
         const validRoadIds = new Set();
 
@@ -91,7 +93,6 @@ export const GameRules = Object.freeze({
 
                     // check the ownership of this road
                     const edgeOwner = MapUtils.getRoadOwner(gameMap, edgeCoord);
-                    console.log(`Checking edge ${HexUtils.coordToId(edgeCoord)} between ${vId0} and ${vId1}, owned by ${edgeOwner}`);
                     if (edgeOwner === null) {
                         // unoccupied road, valid placement, stop BFS in this direction
                         validRoadIds.add(HexUtils.coordToId(edgeCoord));
@@ -378,7 +379,7 @@ export const GameRules = Object.freeze({
         return this._getAchievementOwner(
             players,
             'hasLongestRoad',
-            (p) => PLAYER_ASSET_LIMITS.roads - p.roadsLeft, // TODO: this is just a simple placeholder, need an actual longest path of undirected grpah algorithm
+            (p) => RoadUtils.findLongestPath(p), // TODO: this is just a simple placeholder, need an actual longest path of undirected grpah algorithm
             5
         );
     },

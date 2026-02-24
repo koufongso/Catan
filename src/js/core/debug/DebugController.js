@@ -200,6 +200,13 @@ export class DebugController {
                 });
             },
 
+            freeroad: (args) => {
+                const state = args[0] === 'on' ? true : false;
+                // turn on free road mode, where players can build roads without spending resources
+                // just set a global variable for now for easy access 
+                window.freeRoadMode = state; // also set it on the global window for easy access in other modules
+            },
+
             /**
              * refresh the debug HUD
              * @param {*} args 
