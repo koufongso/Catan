@@ -375,11 +375,11 @@ export const GameRules = Object.freeze({
         return ownerId;
     },
 
-    getPlayerWithLongestRoad(players) {
+    getPlayerWithLongestRoad(players, gameMap) {
         return this._getAchievementOwner(
             players,
             'hasLongestRoad',
-            (p) => RoadUtils.findLongestPath(p), // TODO: this is just a simple placeholder, need an actual longest path of undirected grpah algorithm
+            (p) => RoadUtils.findLongestPath(p, gameMap), // TODO: this is just a simple placeholder, need an actual longest path of undirected grpah algorithm
             5
         );
     },

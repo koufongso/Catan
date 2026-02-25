@@ -2,23 +2,30 @@ import { HexUtils } from "./HexUtils.js";
 
 export const RoadUtils = {
     /**
-     * Get a set of adjacent road IDs that are directly connected to the given road ID.
+     * Get a set of adjacent roads of a given road location that belong to a player
+     * The adjacent road should not be blocked by another player's settlement or city
      * @param {Array || string} roadLocation
-     * @param {Object} player Optional player object to filter adjacent roads that belong to the player. If null, returns all adjacent roads regardless of ownership.
+     * @param {Object} player  
+     * @param {Object} gameMap the game map object, used to check for blocking settlements or cities
      * @returns {Set} A set of adjacent road IDs
      */
-    getAdjacentRoads: (roadLocation, player = null) => {
+    getAdjacentRoads: (roadLocation, player, gameMap) => {
         const eCoord = Array.isArray(roadLocation) ? roadLocation : HexUtils.idToCoord(roadLocation);
         const eId = HexUtils.coordToId(eCoord);
 
         let adjacentRoadIds = new Set();
         // get the two vertices that this road connects
         const vertices = HexUtils.getVerticesFromEdge(eCoord);
-        vertices.forEach(vertex => { // get the roads connected to each vertex, excluding the original road 
-            const adjRoadCoords = HexUtils.getAdjEdgesFromVertex(vertex);
-            adjRoadCoords.forEach(adjRoadCoord => {
-                const adjRoadId = HexUtils.coordToId(adjRoadCoord);
-                if (adjRoadId !== eId && (player === null || player.roads[adjRoadId])) {
+        vertices.forEach(vertexCoord => { // get the roads connected to each vertex, excluding the original road 
+            // verify if this vertex is blocked/occupied by another player's settlement or city, if so, skip this vertex and its adjacent roads
+            const vertexId = HexUtils.coordToId(vertexCoord);
+            if (gameMap.settlements[vertexId] && gameMap.settlements[vertexId].ownerId !== player.id) {
+                return; // skip this vertex and its adjacent roads
+            }
+            const adjRoadCoords = HexUtils.getAdjEdgesFromVertex(vertexCoord); // get the geometric adjacent roads (including the original road )
+            adjRoadCoords.forEach(adjRoadCoord => {// the adjacent road candidate
+                const adjRoadId = HexUtils.coordToId(adjRoadCoord); 
+                if (adjRoadId !== eId && player.roads[adjRoadId]) {
                     adjacentRoadIds.add(adjRoadId); // add to set, automatically handles duplicates
                 }
             });
@@ -29,7 +36,7 @@ export const RoadUtils = {
     /**
      * BFS to get all connected roads starting from a given road ID. Returns a Set of road IDs in the same connected component.
      */
-    getAllConnectedRoadsBFS: (roadLocation, player) => {
+    getAllConnectedRoadsBFS: (roadLocation, player, gameMap) => {
         const roadId = typeof roadLocation === 'string' ? roadLocation : HexUtils.coordToId(roadLocation);
 
         const visited = new Map(); // all the visted road IDs and the number of connected roads
@@ -38,7 +45,7 @@ export const RoadUtils = {
         while (queue.length > 0) {
             const currentRoadId = queue.shift();
             // Get adjacent roads that are connected to the current road
-            const adjacentRoadIds = RoadUtils.getAdjacentRoads(currentRoadId, player);
+            const adjacentRoadIds = RoadUtils.getAdjacentRoads(currentRoadId, player, gameMap);
             let connectedCount = 0;
             adjacentRoadIds.forEach(adjRoadId => {
                 connectedCount++; // count the number of connected roads for the current road (including vistied and unvisited)
@@ -60,14 +67,14 @@ export const RoadUtils = {
      * @param {*} player 
      * @return {Set} Set of road IDs that are the starting roads for longest road calculation
      */
-    _getStartingRoads(player) {
+    _getStartingRoads(player, gameMap) {
         // create a copy of reamining roads
         let remainingRoads = new Set(structuredClone(Object.keys(player.roads))); // this is a set of road IDs
         let startingRoads = new Set();
 
         while (remainingRoads.size > 0) {
             const roadId = remainingRoads.values().next().value;
-            const connectedRoads = this.getAllConnectedRoadsBFS(roadId, player); // get all connected roads in the same cluster/group
+            const connectedRoads = this.getAllConnectedRoadsBFS(roadId, player, gameMap); // get all connected roads in the same cluster/group
 
             // iterate to remove roads and get road with only 1 connection (dead end)
             // if no road with only 1 connection, then we have a circle and we can start from any road in the circle, so we just pick the first one
@@ -81,10 +88,8 @@ export const RoadUtils = {
             }
 
             if (startingRoad === null) {
-                startingRoad = connectedRoads.keys().next().value; // if no dead end, pick the first road in the connected roads set
+                startingRoads.add(connectedRoads.keys().next().value); // if no dead end, pick the first road in the connected roads set
             }
-
-            
         }
         return startingRoads;
     },
@@ -97,7 +102,7 @@ export const RoadUtils = {
      * @param {*} visited_parent visited roads from it parents, no need to worry abou the starting road
      * @param {*} noEnterRoad the road that we are not allowed to enter for 1 step, used for handling the case of circles where we want to prevent going back to the other branch
      */
-    findLongestPathDP(roadLocation, player, visited, noEnterRoads = null) {
+    findLongestPathDP(roadLocation, player, visited, noEnterRoads = null, gameMap) {
         const roadId = typeof roadLocation === 'string' ? roadLocation : HexUtils.coordToId(roadLocation);
 
         // just add roadLocation to ensure it is included in the visited set
@@ -106,7 +111,7 @@ export const RoadUtils = {
         let longestPath = 1; // longest base for the current "session", there is always a starting road so start with 1
 
         // get adjacent road that are connected to the current road
-        let adjacentRoadIds = RoadUtils.getAdjacentRoads(roadId, player);
+        let adjacentRoadIds = RoadUtils.getAdjacentRoads(roadId, player, gameMap);
 
         //remove visited in the current path to prevent cycles
         visited.forEach(roadId => {
@@ -130,7 +135,7 @@ export const RoadUtils = {
             visited.add(nextRoadId); // mark the next road as visited
             longestPath++; // increment the path length
             adjacentRoadIds.clear(); // clear adjacent roads for next iteration
-            adjacentRoadIds = RoadUtils.getAdjacentRoads(nextRoadId, player);
+            adjacentRoadIds = RoadUtils.getAdjacentRoads(nextRoadId, player, gameMap);
 
             //remove visited in the current path
             adjacentRoadIds.forEach(roadId => {
@@ -151,7 +156,7 @@ export const RoadUtils = {
                 noEnterRoads.delete(nextRoadId); // remove the current road from noEnterRoads to allow entering it in the next step
 
                 // the total path length for the current branch =  current legnth + longest path from the next road
-                const branchLength = currentLength + this.findLongestPathDP(nextRoadId, player, newVisited, noEnterRoads);
+                const branchLength = currentLength + this.findLongestPathDP(nextRoadId, player, newVisited, noEnterRoads, gameMap);
                 longestPath = Math.max(longestPath, branchLength);
             }
         }
@@ -160,16 +165,16 @@ export const RoadUtils = {
         return longestPath;
     },
 
-    findLongestPath(player) {
+    findLongestPath(player, gameMap) {
         // 1. get all the starting roads (dead ends or circles)
-        const startingRoads = this._getStartingRoads(player);
+        const startingRoads = this._getStartingRoads(player, gameMap);
         console.log(`Player ${player.name} has starting roads: ${[...startingRoads].join(", ")}`);
 
         // 2. for each starting road, sesarch for the longest path using dynamic programming
         let longestPath = 0;
         for (let roadId of startingRoads) {
             const visited = new Set(); // create a visited set to prevent cycles, start with the current road
-            const currentPathLength = this.findLongestPathDP(roadId, player, visited);
+            const currentPathLength = this.findLongestPathDP(roadId, player, visited, null, gameMap);
             longestPath = Math.max(longestPath, currentPathLength);
         }
         console.log(`Player ${player.name} has longest path: ${longestPath}`);

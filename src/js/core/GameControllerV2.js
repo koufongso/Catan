@@ -1008,7 +1008,7 @@ export class GameControllerV2 {
     }
 
     _updateLongestRoad() {
-        const newLongestRoadId = GameRules.getPlayerWithLongestRoad(this.gameContext.players);
+        const newLongestRoadId = GameRules.getPlayerWithLongestRoad(this.gameContext.players, this.gameContext.gameMap);
         this.gameContext.players.forEach(player => {
             player.achievements.hasLongestRoad = (player.id === newLongestRoadId);
         });
