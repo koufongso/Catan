@@ -10,7 +10,9 @@ body {
 }
 
 #map-svg {
-    background-color: #87ceeb;
+    /* background-color: #87ceeb; */
+    background-image: url("../assets/images/background/sea.png");
+    background-size: cover;
     display: block;
 }
 
