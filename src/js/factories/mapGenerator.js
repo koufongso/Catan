@@ -169,7 +169,10 @@ export const MapGenerator = {
     },
 
     _generatePorts(gameMap, rng) {
+        // the standard setup, the port is fixed in terms of type and position, we just use this fixed order here
+
         // there are 6 pices for the port, each has 3 slots position:
+        // the sequence should be like this (the order matter!):
         // 1: [None], [3:1 wild], [None]
         // 2: [None], [2:1 lumber], [None]
         // 3: [2:1 wool], [None], [3:1 wild]
@@ -194,16 +197,13 @@ export const MapGenerator = {
         const wheatPort = {[RESOURCE_TYPES.WHEAT]: 2};
 
         const ports = [
-            [null, wildPort, null],
-            [null,lumberPort, null],
             [woolPort, null, wildPort],
-            [brickPort, null, wildPort],
             [null, orePort, null],
-            [wheatPort, null, wildPort]
+            [wheatPort, null, wildPort],
+            [null,lumberPort, null],
+            [brickPort, null, wildPort],
+            [null, wildPort, null],
         ];
-
-        // shuffle the ports
-        rng.shuffle(ports);
 
         const portPositions = [
             [[2,-3,1], [1,-3,2],[0,-3,3]],
@@ -225,7 +225,6 @@ export const MapGenerator = {
             [[2,3], [3,4], [3,4]]
         ];
 
-        // assign ports to the positions
         for (let i = 0; i < ports.length; i++) {
             const portGroup = ports[i];
             const positionGroup = portPositions[i];
