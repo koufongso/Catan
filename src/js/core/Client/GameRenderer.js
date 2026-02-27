@@ -143,36 +143,58 @@ export class GameRenderer {
     }
 
     drawTradingPost(layer, tp) {
-        const [x0, y0] = HexUtils.hexToPixel(tp.coord, this.hexSize);
-        const RAD60 = Math.PI / 3;
-        const RAD30 = Math.PI / 6;
+        const width = 0.5 * this.hexSize; // width of the trading post rectangle
+        const height = 1* this.hexSize; // height of the trading post rectangle
+
+        const [xCenter, yCenter] = HexUtils.hexToPixel(tp.coord, this.hexSize); // center of the hex
+        const x0 = xCenter - width / 2; // offset to the center line
+        const y0 = yCenter;
+
+        // shorten the dock a little bit to make it look better
+        const dockHeight = height * 0.5;
+        const y0Dock = y0 + dockHeight;
+
 
         // Draw the visual connection lines to the vertices
         tp.indexList.forEach(index => {
-            const angle = RAD60 * index + RAD30;
-            const x = this.hexSize * Math.cos(angle) + x0;
-            const y = -this.hexSize * Math.sin(angle) + y0;
-            // Shorten line for better aesthetics
-            const shortenRatio = 0.5;
-            const xStart = x0 + (x - x0) * shortenRatio;
-            const yStart = y0 + (y - y0) * shortenRatio;
-
-            const line = HtmlUtils.createSvgLine(xStart, yStart, x, y, ["trading-post-line"]);
+            const rotation = -60 * index - 120;
+            const line = HtmlUtils.createSvgRect(x0, y0Dock, width, dockHeight, [rotation, xCenter, yCenter]);
+            line.setAttribute("fill", `url(#pattern-port-dock)`);
             layer.appendChild(line);
         });
 
-        // Add the resource label (e.g., "Brick:2")
+
+        const iconWidth = 1.0 * this.hexSize;
+        const iconHeight = 1.0 * this.hexSize; 
+        const x0Icon = xCenter - iconWidth / 2;
+        const y0Icon = yCenter - height / 2; // position the icon above the connection lines
+        const portIcon = HtmlUtils.createSvgRect(x0Icon, y0Icon, iconWidth, iconHeight, [0, 0, 0]);
+        
+        // check if it is a generic port (has all 5 resources), use the generic port icon, otherwise use the specific resource icon
+        let isGenericPort = true;
+        const allResources = [RESOURCE_TYPES.LUMBER, RESOURCE_TYPES.WHEAT, RESOURCE_TYPES.ORE, RESOURCE_TYPES.BRICK, RESOURCE_TYPES.WOOL];
+        for (let res of allResources) {
+            if (!(res in tp.tradeList)) {
+                isGenericPort = false;
+                break;
+            }
+        }
+
+        if (isGenericPort) {
+            portIcon.setAttribute("fill", `url(#pattern-port-generic)`);
+        } else {
+            const resourceType = Object.keys(tp.tradeList)[0];
+            portIcon.setAttribute("fill", `url(#pattern-port-${resourceType})`);
+        }
+        layer.appendChild(portIcon);
+
         const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
         label.setAttribute("x", x0);
         label.setAttribute("y", y0);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("class", "trading-post-label");
 
-        label.textContent = Object.entries(tp.tradeList)
-            .map(([res, val]) => `${res[0].toUpperCase()}:${val}`)
-            .join(" ");
-
-        layer.appendChild(label);
+        label.textContent = Object.values(tp.tradeList)[0] + ":1"; // display the first resource and its rate (e.g. "Lumber:2" or "Any:3")
     }
 
     drawRobber(layer, robberTileCoord) {
@@ -191,6 +213,26 @@ export class GameRenderer {
         for (const [type, path] of Object.entries(TEXTURE_PATHS.TERRAINS)) {
             const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
             pattern.setAttribute("id", `pattern-${type.toLowerCase()}`);
+            pattern.setAttribute("patternContentUnits", "objectBoundingBox");
+            pattern.setAttribute("width", "1");
+            pattern.setAttribute("height", "1");
+
+            const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            image.setAttributeNS("http://www.w3.org/1999/xlink", "href", path);
+            image.setAttribute("x", "0");
+            image.setAttribute("y", "0");
+            image.setAttribute("width", "1");
+            image.setAttribute("height", "1");
+            image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+
+            pattern.appendChild(image);
+            defs.appendChild(pattern);
+        }
+
+        // port patterns
+        for (const [type, path] of Object.entries(TEXTURE_PATHS.PORTS)) {
+            const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+            pattern.setAttribute("id", `pattern-port-${type.toLowerCase()}`);
             pattern.setAttribute("patternContentUnits", "objectBoundingBox");
             pattern.setAttribute("width", "1");
             pattern.setAttribute("height", "1");

@@ -51,5 +51,14 @@ export const TEXTURE_PATHS = {
     },
     UI: {
         PORT_ICON: '/src/assets/images/ui/port_icon.png'
+    },
+    PORTS:{
+        [RESOURCE_TYPES.LUMBER]: '/src/assets/images/ports/lumber.png',
+        [RESOURCE_TYPES.BRICK]: '/src/assets/images/ports/brick.png',
+        [RESOURCE_TYPES.WHEAT]: '/src/assets/images/ports/wheat.png',
+        [RESOURCE_TYPES.ORE]: '/src/assets/images/ports/ore.png',
+        [RESOURCE_TYPES.WOOL]: '/src/assets/images/ports/wool.png',
+        'generic': '/src/assets/images/ports/generic.png',
+        'dock': '/src/assets/images/ports/dock.png'
     }
 }

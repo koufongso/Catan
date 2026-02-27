@@ -83,6 +83,30 @@ export const HtmlUtils = Object.freeze({
         return line;
     },
 
+    /**
+     * Creates an SVG rectangle element with optional rotation and styling.
+     * @param {*} x 
+     * @param {*} y 
+     * @param {*} width 
+     * @param {*} height 
+     * @param {*} angle the rotation angle in degrees (optional, default 0)
+     * @param {*} classList 
+     * @param {*} id 
+     * @returns 
+     */
+    createSvgRect(x, y, width, height, rotation = [0, 0, 0], classList = [], id = null) {
+        const rect = document.createElementNS(SVG_NAMESPACE, "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", width);
+        rect.setAttribute("height", height);
+        if (rotation[0] !== 0) {
+            rect.setAttribute("transform", `rotate(${rotation[0]} ${rotation[1]} ${rotation[2]})`);
+        }
+        this._applyAttributes(rect, classList, id);
+        return rect;
+    },
+
 
     createSvgGroup(id = null, classList = []) {
         const g = document.createElementNS(SVG_NAMESPACE, "g");

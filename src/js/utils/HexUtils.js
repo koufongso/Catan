@@ -285,6 +285,32 @@ export const HexUtils = Object.freeze({
         return null; // not adjacent to the given hex
     },
 
+    getVertexFromHexIndex(hCoord, index) {
+        // input valid check
+        if (!this.isValidHex(hCoord)) {
+            throw new Error("Invalid hex coordinate");
+        }
+        if (index < 0 || index > 5) {
+            throw new Error("Invalid hex vertex index");
+        }
+        // 0: [1,0,0]
+        // 1: [0,-1,0]
+        // 2: [0,0,1]
+        // 3: [-1,0,0]
+        // 4: [0,1,0]
+        // 5: [0,0,-1]
+        let offsets = [
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 0, 1],
+            [-1, 0, 0],
+            [0, 1, 0],
+            [0, 0, -1]
+        ];
+        let offset = offsets[index];
+        return this.add(hCoord, offset);
+    },
+
 
     /*--------------------- hex edge ----------------------------- */
     /**

@@ -10,6 +10,7 @@ export const initGameMap = () => ({
     roads: {},        // Map<string (id), Road>
     settlements: {},  // Map<string (id), Settlement>
     tradingPosts: {}, // Map<string (id), TradingPost>
+    vertexToTradingPost: {}, // Map<string (vertexId), Set<tradingPostId>>
     robberCoord: [0, 0, 0],
     allVertexId: {},
     allEdgeId: {},
@@ -27,6 +28,7 @@ export const copyGameMap = (mapData) => {
     gameMap.roads = structuredClone(mapData.roads);
     gameMap.settlements = structuredClone(mapData.settlements);
     gameMap.tradingPosts = structuredClone(mapData.tradingPosts);
+    gameMap.vertexToTradingPost = structuredClone(mapData.vertexToTradingPost);
     gameMap.robberCoord = structuredClone(mapData.robberCoord);
     return gameMap;
 };

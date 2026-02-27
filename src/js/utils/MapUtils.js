@@ -270,5 +270,41 @@ export const MapUtils = {
 
     updateNumberToken(tile, newNumberToken) {
         tile.numberToken = newNumberToken;
+    },
+
+    updateTradingPost(gameMap, tradingPost) {
+        // add trading post to map
+        gameMap.tradingPosts[tradingPost.id] = tradingPost;
+
+        // iterate the its vertex index to register the vertex that connect to this trading post for fast lookup
+        for (const vertexIndex of tradingPost.indexList) {
+            const vertexCoord = HexUtils.getVertexFromHexIndex(tradingPost.coord, vertexIndex);
+            const vertexId = HexUtils.coordToId(vertexCoord);
+            if (!gameMap.vertexToTradingPost[vertexId]) { // create a new set if this vertex is not registered before
+                gameMap.vertexToTradingPost[vertexId] = new Set();
+            }
+            gameMap.vertexToTradingPost[vertexId].add(tradingPost.id);
+        }
+    },
+
+    removeTradingPost(gameMap, tradingPostId) {
+        const tradingPost = gameMap.tradingPosts[tradingPostId];
+        if (!tradingPost) {
+            console.warn(`MapUtils.removeTradingPost: Trading post with id ${tradingPostId} does not exist.`);
+            return;
+        }
+
+        // remove the trading post from map
+        delete gameMap.tradingPosts[tradingPostId];
+
+        // iterate the its vertex index to unregister the vertex that connect to this trading post for fast lookup
+        for (const vertexIndex of tradingPost.indexList) {
+            const vertexCoord = HexUtils.getVertexFromHexIndex(tradingPost.coord, vertexIndex);
+            const vertexId = HexUtils.coordToId(vertexCoord);
+            gameMap.vertexToTradingPost[vertexId].delete(tradingPost.id);
+            if (gameMap.vertexToTradingPost[vertexId].size === 0) { // if no trading post is connected to this vertex, we can delete the entry to save space
+                delete gameMap.vertexToTradingPost[vertexId];
+            }
+        }
     }
 };
