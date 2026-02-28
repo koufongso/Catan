@@ -117,6 +117,20 @@ export class GameRenderer {
             const roadElement = HtmlUtils.createRoadElement(road.coord, { color: playerColors[road.ownerId] }, ["road"], this.hexSize);
             this.layers.road.appendChild(roadElement);
         }
+
+        // highlight trading posts by owener color if any
+        for (const tp of Object.values(gameMap.tradingPosts)) {
+            if (tp.ownerId!=null) {
+                const color = playerColors[tp.ownerId];
+                console.warn(`Trading post ${tp.id} is owned by player ${tp.ownerId}, applying highlight with color ${color}.`);
+                // we simply add a filter to the svg element
+                const portElement = document.getElementById(`port-${tp.id}`);
+                if (portElement) {
+                    portElement.setAttribute("filter", `drop-shadow(0 0 5px ${color}) drop-shadow(0 0 5px ${color})`); // add a double drop shadow for stronger highlight
+                    console.warn(`Highlighting trading post ${tp.id} with color ${color} for owner ${tp.ownerId}`);
+                }
+            }
+        }
     }
 
 
@@ -168,7 +182,7 @@ export class GameRenderer {
         const iconHeight = 1.0 * this.hexSize; 
         const x0Icon = xCenter - iconWidth / 2;
         const y0Icon = yCenter - height / 2; // position the icon above the connection lines
-        const portIcon = HtmlUtils.createSvgRect(x0Icon, y0Icon, iconWidth, iconHeight, [0, 0, 0]);
+        const portIcon = HtmlUtils.createSvgRect(x0Icon, y0Icon, iconWidth, iconHeight, [0, 0, 0],[], `port-${tp.id}`);
         
         // check if it is a generic port (has all 5 resources), use the generic port icon, otherwise use the specific resource icon
         let isGenericPort = true;

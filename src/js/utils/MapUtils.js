@@ -121,6 +121,14 @@ export const MapUtils = {
             const coord = HexUtils.idToCoord(id);
             map.settlements[id] = createSettlement(coord, ownerId, level);
         }
+
+        // check if this settlement is connected to a trading post, if yes we also update the trading post owner for UI highlight
+        const tradingPostIds = map.vertexToTradingPost[id];
+        if (tradingPostIds) {
+            for (const tpId of tradingPostIds) {
+                map.tradingPosts[tpId].ownerId = ownerId;
+            }
+        }
     },
 
     removeRoad: (map, location) => {

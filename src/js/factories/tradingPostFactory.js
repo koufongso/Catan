@@ -11,5 +11,6 @@ export const createTradingPost = (coord, indexList=[], tradeList={}) =>({
     coord,
     id: HexUtils.coordToId(coord),
     indexList,
-    tradeList
+    tradeList,
+    ownerId: null // we assume only one player can own a trading post, use to highlight the player color (mainly for UI purpose)
 })
