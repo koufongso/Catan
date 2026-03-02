@@ -12,6 +12,9 @@ import { GameRules } from "./GameRules.js";
 export const DevCardEffects = {
 
   [DEV_CARD_TYPES.KNIGHT]: (gameController, payload) => {
+    const playerId = payload.playerId;
+    const player = gameController.gameContext.players.find(p => p.id === playerId);
+
     // create a "virtual" evnet to reuse the existing robber placement logic in the game controller
     const event = {
       type: 'ACTIVATE_DEV_CARD_KNIGHT',
@@ -19,9 +22,10 @@ export const DevCardEffects = {
     };
 
     // mark as played
+
     payload.devCard.played = true;
-    const currentPlayer = gameController._getCurrentPlayer();
-    currentPlayer.achievements.knightsPlayed++;
+    player.devCardsPlayedThisTurn++;
+    player.achievements.knightsPlayed++;
     // compute VP
     gameController._updateGameAchievements();
 
@@ -33,8 +37,9 @@ export const DevCardEffects = {
   [DEV_CARD_TYPES.YEAR_OF_PLENTY]: (gameController, payload) => {
     console.log("Year of Plenty played:", payload.selectedResources);
 
-    const currentPlayer = gameController._getCurrentPlayer();
-
+    const playerId = payload.playerId;
+    const player = gameController.gameContext.players.find(p => p.id === playerId);
+    
     // check if the selected resources are valid
     if (!GameRules.isValidYOPSelection(payload.selectedResources)) {
       return {
@@ -44,11 +49,11 @@ export const DevCardEffects = {
     }
 
     // add resources to player's inventory
-    PlayerUtils.addResources(currentPlayer, payload.selectedResources);
+    PlayerUtils.addResources(player, payload.selectedResources);
 
     // mark the card as played
     payload.devCard.played = true;
-
+    player.devCardsPlayedThisTurn++;
     // boradcast the resource gain to all players (for UI update purposes)
     gameController._broadcast({
       type: 'WAITING_FOR_ACTION',
@@ -61,6 +66,7 @@ export const DevCardEffects = {
 
   [DEV_CARD_TYPES.ROAD_BUILDING]: (gameController, payload) => {
     const playerId = payload.playerId;
+    const player = gameController.gameContext.players.find(p => p.id === playerId);
     console.log("Road Building card played with build stack:", payload.buildStack);
     // check if there are only 2 roads in the build stack
     let countRoads = 0;
@@ -107,7 +113,7 @@ export const DevCardEffects = {
     });
     // mark the card as played
     payload.devCard.played = true;
-
+    player.devCardsPlayedThisTurn++;
     // udpate VP
     gameController._updateGameAchievements();
 
@@ -135,21 +141,22 @@ export const DevCardEffects = {
     }
 
     // iterate through all players and steal the target resource
-    const playerInstance = gameController.gameContext.players.find(p => p.id === playerId);
+    const player = gameController.gameContext.players.find(p => p.id === playerId);
 
-    gameController.gameContext.players.forEach(player => {
-      if (player.id !== playerId) {
-        const amountToSteal = player.resources[selectedResource];
+    gameController.gameContext.players.forEach(targetPlayer => {
+      if (player.id !== targetPlayer.id) {
+        const amountToSteal = targetPlayer.resources[selectedResource];
         if (amountToSteal > 0) {
-          PlayerUtils.deductResources(player, { [selectedResource]: amountToSteal }); // remove resources from other player
-          PlayerUtils.addResources(playerInstance, { [selectedResource]: amountToSteal }); // add resources to current player
+          PlayerUtils.deductResources(targetPlayer, { [selectedResource]: amountToSteal }); // remove resources from other player
+          PlayerUtils.addResources(player, { [selectedResource]: amountToSteal }); // add resources to current player
         }
       }
     });
 
     // mark the card as played
     payload.devCard.played = true;
-
+    player.devCardsPlayedThisTurn++;
+    
     // boardcast the resource gain to all players (for UI update purposes)
     gameController._broadcast({
       type: 'WAITING_FOR_ACTION',

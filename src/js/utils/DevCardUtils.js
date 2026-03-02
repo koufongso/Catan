@@ -10,21 +10,6 @@ export const DevCardUtils = {
     // Replaces isPlayed()
     isPlayed: (card) => card.played,
 
-    // Replaces isLocked()
-    isLocked: (card, currentTurnNumber) => {
-        if (currentTurnNumber === undefined) {
-            throw new Error("Current turn number is required");
-        }
-        // VP cards are never "locked" in the sense that they reveal instantly at end game, 
-        // but regular cards are locked if bought this turn.
-        return (card.type !== DEV_CARD_TYPES.VICTORY_POINT && currentTurnNumber <= card.turnBought);
-    },
-
-    // Replaces isPlayable()
-    isPlayable: (card, currentTurnNumber) => {
-        return !card.played && !DevCardUtils.isLocked(card, currentTurnNumber);
-    },
-
     /**
      * Replaces activate()
      * NOTE: This function MUTATES the card object (card.played = true).

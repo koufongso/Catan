@@ -7,7 +7,7 @@ import { RoadUtils } from "../utils/RoadUtils.js";
 
 import { COSTS } from "../constants/GameRuleConstants.js";
 import { PRODUCTION_TABLE } from "../constants/GameRuleConstants.js";
-import { WINNING_VP, YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG ,PLAYER_ASSET_LIMITS} from "../constants/GameRuleConstants.js";
+import { WINNING_VP, YEAR_OF_PLENTY_CONFIG, MONOPOLY_CONFIG, PLAYER_ASSET_LIMITS } from "../constants/GameRuleConstants.js";
 import { RESOURCE_TYPES } from "../constants/ResourceTypes.js";
 import { DEV_CARD_TYPES } from "../constants/DevCardTypes.js";
 
@@ -248,6 +248,33 @@ export const GameRules = Object.freeze({
 
 
     /* ----------------------------------------------------- Player VP Helpers ----------------------------------------------------- */
+    isDevCardLocked: (card, currentTurnNumber) => {
+        if (card.type === DEV_CARD_TYPES.VICTORY_POINT) return false;
+        return currentTurnNumber <= card.turnBought;
+    },
+
+    // Replaces isPlayable()
+    isDevCardPlayable: (card, currentTurnNumber) => {
+        return !card.played && !GameRules.isDevCardLocked(card, currentTurnNumber);
+    },
+
+    getValidDevCardToPlay(player, cardType, gameContext) {
+        // player already played a dev card this turn, can't play another one
+        if (player.devCardsPlayedThisTurn >= 1) {
+            console.error(`Player has already played a development card this turn. Can't play another one.`);
+            return null;
+        }
+
+        const currentTurnNumber = gameContext.turnNumber;
+        // check if player has an unplayed dev card
+        const devCard = player.devCards.find(card => (
+            card.type === cardType &&
+            GameRules.isDevCardPlayable(card, currentTurnNumber)
+        ));
+
+        return devCard;
+    },
+
 
     /**
      * Get IDs as an array (useful for iteration)

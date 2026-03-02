@@ -7,6 +7,7 @@ import { HtmlUtils } from "../../utils/HtmlUtils.js";
 import { HexUtils } from "../../utils/HexUtils.js";
 import { PlayerUtils } from "../../utils/PlayerUtils.js";
 import { DevCardUtils } from "../../utils/DevCardUtils.js";
+import { GameRules } from "../../logic/GameRules.js";
 
 
 // constants for hex geometry
@@ -444,7 +445,7 @@ export class GameRenderer {
                 const cardHtml = this.createDevCardHtml(card, classList);
                 usedDevCardsContainer.appendChild(cardHtml);
             } else { // unused dev cards (not played yet)
-                if (DevCardUtils.isLocked(card, currentTurnNumber)) {
+                if (GameRules.isDevCardLocked(card, currentTurnNumber)) {
                     classList = ['dev-card-locked'];
                 } else {
                     classList = ['dev-card-unlocked'];

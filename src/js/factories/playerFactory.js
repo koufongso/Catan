@@ -30,7 +30,8 @@ export const createPlayer = (id, name, color) => ({
     
     // DevCards must remain an Array because order matters (FIFO for playing)
     // and they don't have unique board IDs.
-    devCards: [],    
+    devCards: [], 
+    devCardsPlayedThisTurn: 0, // Track if a dev card has been played this turn for rule enforcement   
 
     // Status
     achievements: {

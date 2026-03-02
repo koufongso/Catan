@@ -140,13 +140,13 @@ export class DebugDashboard {
                 if (!acc[card.type]) acc[card.type] = { count: 0, playable: 0, played: 0, locked: 0 };
                 acc[card.type].count++;
                 console.log(`Processing card for player ${player.id}:`, card);
-                if (DevCardUtils.isPlayable(card, gameContext.turnNumber)) { // track playable cards (not played and not bought this turn)
+                if (GameRules.isDevCardPlayable(card, gameContext.turnNumber)) { // track playable cards (not played and not bought this turn)
                     acc[card.type].playable++;
                 }
                 if (DevCardUtils.isPlayed(card)) { // track played cards
                     acc[card.type].played++;
                 }
-                if (DevCardUtils.isLocked(card, gameContext.turnNumber)) { // track locked cards
+                if (GameRules.isDevCardLocked(card, gameContext.turnNumber)) { // track locked cards
                     acc[card.type].locked++;
                 }
 

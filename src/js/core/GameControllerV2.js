@@ -364,7 +364,7 @@ export class GameControllerV2 {
         // validate dev card can be played
         const player = this.gameContext.players.find(p => p.id === playerId);
         console.log(`Player :`, player);
-        const devCard = player.devCards.find(card => (card.type === cardType && DevCardUtils.isPlayable(card, this.gameContext.turnNumber)));
+        const devCard = GameRules.getValidDevCardToPlay(player, cardType, this.gameContext);
         if (!devCard) {
             console.error(`Player ${playerId} does not have a playable ${cardType} development card to activate.`);
             return {
@@ -575,6 +575,10 @@ export class GameControllerV2 {
 
 
     _handleStateMainEndTurn(event) {
+        // reset dev card play count for all players at the end of each turn
+        this.gameContext.players.forEach(player => {
+            player.devCardsPlayedThisTurn = 0;
+        });
         this._nextPlayer();
         this.gameContext.currentState = GameState.ROLL;
         this._broadcast({
